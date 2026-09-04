@@ -1,0 +1,312 @@
+/* Ajustes de composição das páginas públicas LHL.
+   Fundo continua full-width; conteúdo ganha eixo visual, respiro e proporção. */
+
+/* HOME */
+body:has(#inicio) header > div,
+body:has(#inicio) section > div,
+body:has(#inicio) footer > div {
+  max-width: 1540px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body:has(#inicio) #inicio > div {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr) !important;
+  align-items: stretch;
+  min-height: clamp(590px, 72vh, 820px);
+}
+
+body:has(#inicio) #inicio > div > div:first-child {
+  padding-left: clamp(1.5rem, 4vw, 5rem) !important;
+  padding-right: clamp(1.5rem, 3.2vw, 4rem) !important;
+}
+
+body:has(#inicio) #inicio > div > div:first-child > div.relative {
+  width: min(100%, 650px);
+  margin-inline: auto;
+}
+
+body:has(#inicio) #inicio h1 {
+  max-width: 12.5ch !important;
+  font-size: clamp(3rem, 4.45vw, 5.8rem) !important;
+  line-height: .94 !important;
+  text-wrap: balance;
+}
+
+body:has(#inicio) #inicio p {
+  max-width: 31rem !important;
+  font-size: clamp(1.02rem, 1vw, 1.22rem) !important;
+  line-height: 1.6 !important;
+}
+
+body:has(#inicio) #inicio > div > div:last-child {
+  min-height: 100%;
+}
+
+body:has(#inicio) #inicio > div > div:last-child > img {
+  object-position: center center;
+}
+
+body:has(#inicio) #modalidades {
+  padding-top: clamp(2rem, 3vw, 3.75rem) !important;
+  padding-bottom: clamp(2rem, 3vw, 3.75rem) !important;
+}
+
+body:has(#inicio) #modalidades > div {
+  gap: clamp(1.1rem, 1.4vw, 1.7rem) !important;
+}
+
+body:has(#inicio) #modalidades article {
+  min-height: 300px !important;
+  grid-template-columns: minmax(150px, .9fr) minmax(0, 1.1fr) !important;
+  padding: clamp(1.25rem, 1.5vw, 1.8rem) !important;
+  align-items: center;
+}
+
+body:has(#inicio) #modalidades article img {
+  width: min(100%, 220px) !important;
+  justify-self: center;
+  aspect-ratio: 1 / 1;
+}
+
+body:has(#inicio) #modalidades article > div {
+  padding-left: clamp(1rem, 1.4vw, 1.6rem) !important;
+  max-width: 330px;
+}
+
+body:has(#inicio) #modalidades h2 {
+  font-size: clamp(2rem, 2vw, 2.8rem) !important;
+  line-height: 1 !important;
+  text-wrap: balance;
+}
+
+body:has(#inicio) #modalidades p {
+  font-size: clamp(.98rem, .82vw, 1.08rem) !important;
+  max-width: 29ch;
+}
+
+body:has(#inicio) #como-funciona > div,
+body:has(#inicio) #decoracoes > div,
+body:has(#inicio) #clientes > div {
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 2.28fr) !important;
+  gap: clamp(2.5rem, 4vw, 5.5rem) !important;
+  align-items: center;
+}
+
+body:has(#inicio) #como-funciona > div > div:first-child,
+body:has(#inicio) #decoracoes > div > div:first-child,
+body:has(#inicio) #clientes > div > div:first-child {
+  max-width: 360px;
+}
+
+body:has(#inicio) #como-funciona h2,
+body:has(#inicio) #decoracoes h2,
+body:has(#inicio) #clientes h2 {
+  font-size: clamp(2.8rem, 3.2vw, 4.7rem) !important;
+  line-height: .96 !important;
+  text-wrap: balance;
+}
+
+body:has(#inicio) #decoracoes .grid,
+body:has(#inicio) #clientes .grid {
+  align-items: stretch;
+}
+
+body:has(#inicio) #decoracoes img {
+  height: 100%;
+  min-height: 330px;
+  max-height: 520px;
+}
+
+body:has(#inicio) #clientes article {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* ORÇAMENTO */
+body:has(#orcamento) header > div,
+body:has(#orcamento) section > div,
+body:has(#orcamento) footer > div {
+  max-width: 1540px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child {
+  grid-template-columns: minmax(0, .95fr) minmax(360px, 1.05fr) !important;
+  align-items: center !important;
+  gap: clamp(3rem, 5vw, 7rem) !important;
+  min-height: clamp(610px, 72vh, 820px) !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child > div:first-child {
+  width: min(100%, 650px);
+  justify-self: end;
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child > div:last-child {
+  width: min(100%, 620px);
+  justify-self: start;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 {
+  max-width: 12ch !important;
+  font-size: clamp(3rem, 4.25vw, 5.7rem) !important;
+  line-height: .96 !important;
+  text-wrap: balance;
+}
+
+body:has(#orcamento) > div > section:first-of-type p {
+  max-width: 31rem;
+  font-size: clamp(1.02rem, 1vw, 1.2rem) !important;
+  line-height: 1.6 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type img {
+  width: 100%;
+  aspect-ratio: 4 / 4.35 !important;
+  object-fit: cover;
+  object-position: center;
+}
+
+body:has(#orcamento) #orcamento {
+  max-width: min(980px, calc(100vw - 2rem)) !important;
+  padding: clamp(1.5rem, 2.5vw, 3rem) !important;
+}
+
+body:has(#orcamento) #orcamento > div:first-child {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+body:has(#orcamento) #orcamento h2 {
+  font-size: clamp(2.2rem, 2.7vw, 3.55rem) !important;
+  line-height: 1.02 !important;
+  text-wrap: balance;
+}
+
+body:has(#orcamento) section:not(:first-of-type) > div {
+  max-width: 1440px !important;
+}
+
+body:has(#orcamento) section:not(:first-of-type) h2 {
+  max-width: 18ch;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: clamp(2.35rem, 2.9vw, 3.9rem) !important;
+  text-wrap: balance;
+}
+
+body:has(#orcamento) section:not(:first-of-type) .max-w-2xl p,
+body:has(#orcamento) section:not(:first-of-type) .max-w-3xl p {
+  max-width: 62ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Tablet: imagem e texto deixam de competir; empilham com proporções previsíveis. */
+@media (max-width: 1100px) {
+  body:has(#inicio) #inicio > div,
+  body:has(#orcamento) > div > section:first-of-type > div:first-child {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:has(#inicio) #inicio > div > div:first-child > div.relative,
+  body:has(#orcamento) > div > section:first-of-type > div:first-child > div:first-child,
+  body:has(#orcamento) > div > section:first-of-type > div:first-child > div:last-child {
+    width: min(100%, 760px);
+    margin-inline: auto;
+    justify-self: center;
+  }
+
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: clamp(460px, 64vw, 700px) !important;
+  }
+
+  body:has(#inicio) #modalidades > div {
+    grid-template-columns: 1fr !important;
+    max-width: 900px !important;
+  }
+
+  body:has(#inicio) #modalidades article {
+    grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr) !important;
+  }
+
+  body:has(#inicio) #como-funciona > div,
+  body:has(#inicio) #decoracoes > div,
+  body:has(#inicio) #clientes > div {
+    grid-template-columns: 1fr !important;
+  }
+
+  body:has(#inicio) #como-funciona > div > div:first-child,
+  body:has(#inicio) #decoracoes > div > div:first-child,
+  body:has(#inicio) #clientes > div > div:first-child {
+    max-width: 680px;
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  body:has(#inicio) #decoracoes > div > div:first-child > div,
+  body:has(#inicio) #clientes > div > div:first-child > div {
+    justify-content: center;
+  }
+
+  body:has(#inicio) #decoracoes > div > div:first-child > p,
+  body:has(#inicio) #clientes > div > div:first-child > p {
+    margin-inline: auto;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type > div:first-child > div:last-child {
+    max-width: 680px;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#inicio) #inicio > div > div:first-child {
+    padding: 3.25rem 1.1rem !important;
+  }
+
+  body:has(#inicio) #inicio h1,
+  body:has(#orcamento) > div > section:first-of-type h1 {
+    max-width: 10.8ch !important;
+    font-size: clamp(2.65rem, 11.5vw, 4rem) !important;
+  }
+
+  body:has(#inicio) #modalidades article {
+    grid-template-columns: 1fr !important;
+    text-align: center;
+  }
+
+  body:has(#inicio) #modalidades article > div {
+    max-width: 430px;
+    padding-left: 0 !important;
+    margin-inline: auto;
+  }
+
+  body:has(#inicio) #modalidades article p {
+    margin-inline: auto;
+  }
+
+  body:has(#inicio) #modalidades article img {
+    width: min(72vw, 290px) !important;
+  }
+
+  body:has(#inicio) #decoracoes img {
+    min-height: 230px;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type > div:first-child {
+    padding-top: 3.25rem !important;
+    padding-bottom: 5rem !important;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type > div:first-child > div:first-child {
+    text-align: left;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type img {
+    aspect-ratio: 4 / 4.6 !important;
+  }
+}
