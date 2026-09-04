@@ -1,0 +1,21 @@
+{
+  "name": "LHL Festas",
+  "customizations": {},
+  "remoteEnv": {},
+  "otherPortsAttributes": {},
+  "forwardPorts": [],
+  "features": {},
+  "hostRequirements": {},
+  "waitFor": "updateContentCommand",
+  "updateContentCommand": "echo Codespace pronto",
+  "postCreateCommand": "echo Ambiente LHL Festas criado",
+  "codespaces": {
+    "repositories": {
+      "heavenmarketof-ui/lhl-festas-abf33ac5": {
+        "permissions": {
+          "contents": "read"
+        }
+      }
+    }
+  }
+}
