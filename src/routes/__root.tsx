@@ -12,6 +12,7 @@ import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import publicThemeCss from "../public-theme.css?url";
+import publicLayoutCss from "../public-layout.css?url";
 
 function NotFoundComponent() {
   return (
@@ -104,6 +105,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         href: publicThemeCss,
+      },
+      {
+        rel: "stylesheet",
+        href: publicLayoutCss,
       },
     ],
     scripts: [
