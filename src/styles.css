@@ -39,39 +39,27 @@
 
 :root {
   --radius: 1rem;
-  /* Ivory cream */
   --background: oklch(0.975 0.012 75);
   --foreground: oklch(0.32 0.03 20);
-
   --card: oklch(0.99 0.008 75);
   --card-foreground: oklch(0.32 0.03 20);
   --popover: oklch(0.99 0.008 75);
   --popover-foreground: oklch(0.32 0.03 20);
-
-  /* Dusty rose / rose velho */
   --primary: oklch(0.7 0.07 15);
   --primary-foreground: oklch(0.99 0.008 75);
-
   --secondary: oklch(0.94 0.02 30);
   --secondary-foreground: oklch(0.4 0.05 20);
-
   --muted: oklch(0.95 0.015 60);
   --muted-foreground: oklch(0.5 0.03 30);
-
   --accent: oklch(0.92 0.025 30);
   --accent-foreground: oklch(0.4 0.05 20);
-
   --destructive: oklch(0.6 0.2 25);
   --destructive-foreground: oklch(0.99 0 0);
-
   --border: oklch(0.88 0.02 40);
   --input: oklch(0.9 0.018 40);
   --ring: oklch(0.75 0.08 60);
-
-  /* Soft gold */
   --gold: oklch(0.75 0.1 75);
   --gold-foreground: oklch(0.3 0.04 30);
-
   --gradient-elegant: linear-gradient(135deg, oklch(0.7 0.07 15), oklch(0.75 0.1 75));
   --shadow-soft: 0 10px 40px -10px oklch(0.7 0.07 15 / 0.25);
 }
@@ -84,6 +72,116 @@
     font-family: var(--font-sans);
   }
   h1, h2, h3, h4 { font-family: var(--font-serif); }
+}
+
+/* Home LHL — layout realmente fluido. Escopado pela presença do #inicio para não afetar o Admin. */
+body:has(#inicio) {
+  overflow-x: hidden;
+}
+
+body:has(#inicio) .max-w-7xl {
+  width: 100%;
+  max-width: none;
+}
+
+body:has(#inicio) header > div,
+body:has(#inicio) section > div,
+body:has(#inicio) footer > div {
+  padding-left: clamp(1rem, 3vw, 4.5rem);
+  padding-right: clamp(1rem, 3vw, 4.5rem);
+}
+
+body:has(#inicio) #inicio > div {
+  min-height: clamp(560px, 74vh, 900px);
+}
+
+body:has(#inicio) #inicio h1 {
+  font-size: clamp(2.65rem, 5.1vw, 6.3rem);
+}
+
+body:has(#inicio) #modalidades > div {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body:has(#inicio) #decoracoes img {
+  min-height: 0;
+}
+
+@media (max-width: 1100px) {
+  body:has(#inicio) #modalidades > div {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(#inicio) #modalidades article {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 1023px) {
+  body:has(#inicio) #inicio > div {
+    min-height: auto;
+  }
+
+  body:has(#inicio) #inicio > div > div:first-child {
+    min-height: auto;
+  }
+
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: clamp(430px, 64vw, 660px);
+  }
+
+  body:has(#inicio) #como-funciona > div,
+  body:has(#inicio) #decoracoes > div,
+  body:has(#inicio) #clientes > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#inicio) header > div,
+  body:has(#inicio) section > div,
+  body:has(#inicio) footer > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  body:has(#inicio) #inicio h1 {
+    font-size: clamp(2.5rem, 12vw, 4.1rem);
+  }
+
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: 430px;
+  }
+
+  body:has(#inicio) #modalidades article {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  body:has(#inicio) #modalidades article img {
+    width: min(78vw, 310px);
+    margin-inline: auto;
+  }
+
+  body:has(#inicio) #modalidades article > div {
+    padding-left: 0;
+  }
+
+  body:has(#inicio) #decoracoes .grid-cols-2 {
+    gap: .75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: 360px;
+  }
+
+  body:has(#inicio) #inicio .grid-cols-4 {
+    gap: .5rem;
+    font-size: .68rem;
+  }
 }
 
 @media print {
@@ -102,9 +200,7 @@
   .avoid-break { break-inside: avoid; page-break-inside: avoid; }
 }
 
-
-/* ── HEAVEN FESTAS (apresentação pública isolada em /heaven) ──────────────
-   Identidade própria, escopada. Não afeta o ERP da LHL Festas. */
+/* ── HEAVEN FESTAS (apresentação pública isolada em /heaven) ────────────── */
 .heaven-theme {
   --background: oklch(0.99 0.004 250);
   --foreground: oklch(0.24 0.02 260);
