@@ -95,8 +95,99 @@ body:has(#inicio) #inicio > div {
   min-height: clamp(560px, 74vh, 900px);
 }
 
+/* Tipografia proporcional e responsiva da Home */
+body:has(#inicio) header nav {
+  font-size: clamp(.88rem, .82vw, 1.08rem);
+}
+
+body:has(#inicio) header button,
+body:has(#inicio) header a button {
+  font-size: clamp(.9rem, .8vw, 1.05rem);
+}
+
 body:has(#inicio) #inicio h1 {
-  font-size: clamp(2.65rem, 5.1vw, 6.3rem);
+  font-size: clamp(3rem, 5.2vw, 6.5rem);
+  line-height: .92;
+  max-width: 13ch;
+}
+
+body:has(#inicio) #inicio p {
+  font-size: clamp(1.05rem, 1.25vw, 1.45rem);
+  line-height: 1.55;
+  max-width: 34rem;
+}
+
+body:has(#inicio) #inicio button {
+  min-height: 3.4rem;
+  padding-inline: clamp(1.3rem, 2vw, 2.2rem);
+  font-size: clamp(.98rem, 1vw, 1.15rem);
+}
+
+body:has(#inicio) #inicio .grid-cols-4 {
+  max-width: 34rem;
+  font-size: clamp(.82rem, .85vw, 1rem);
+}
+
+body:has(#inicio) #modalidades h2 {
+  font-size: clamp(2rem, 2.4vw, 3.4rem);
+  line-height: .95;
+}
+
+body:has(#inicio) #modalidades p {
+  font-size: clamp(.98rem, 1.05vw, 1.18rem);
+  line-height: 1.5;
+}
+
+body:has(#inicio) #modalidades button {
+  min-height: 2.8rem;
+  padding-inline: 1.3rem;
+  font-size: clamp(.9rem, .9vw, 1.02rem);
+}
+
+body:has(#inicio) #como-funciona h2,
+body:has(#inicio) #decoracoes h2,
+body:has(#inicio) #clientes h2 {
+  font-size: clamp(2.8rem, 4vw, 5.4rem);
+  line-height: .92;
+}
+
+body:has(#inicio) #como-funciona > div > div:first-child > p,
+body:has(#inicio) #decoracoes > div > div:first-child > p,
+body:has(#inicio) #clientes > div > div:first-child > p {
+  font-size: clamp(1rem, 1.05vw, 1.2rem);
+  line-height: 1.55;
+}
+
+body:has(#inicio) #como-funciona h3 {
+  font-size: clamp(1.3rem, 1.45vw, 1.75rem);
+}
+
+body:has(#inicio) #como-funciona .grid > div > p {
+  font-size: clamp(.92rem, .9vw, 1.08rem);
+  line-height: 1.5;
+}
+
+body:has(#inicio) #decoracoes a {
+  font-size: clamp(.95rem, .9vw, 1.08rem);
+}
+
+body:has(#inicio) #clientes article p {
+  font-size: clamp(.95rem, .95vw, 1.1rem);
+  line-height: 1.55;
+}
+
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) h2 {
+  font-size: clamp(2.3rem, 3.2vw, 4.5rem);
+  line-height: 1;
+}
+
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) p,
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) div {
+  font-size: clamp(.96rem, .92vw, 1.1rem);
+}
+
+body:has(#inicio) footer {
+  font-size: clamp(.9rem, .85vw, 1.02rem);
 }
 
 body:has(#inicio) #modalidades > div {
@@ -146,7 +237,17 @@ body:has(#inicio) #decoracoes img {
   }
 
   body:has(#inicio) #inicio h1 {
-    font-size: clamp(2.5rem, 12vw, 4.1rem);
+    font-size: clamp(2.7rem, 12vw, 4.3rem);
+    max-width: 11ch;
+  }
+
+  body:has(#inicio) #inicio p {
+    font-size: clamp(1rem, 4vw, 1.18rem);
+  }
+
+  body:has(#inicio) #inicio button {
+    min-height: 3.2rem;
+    font-size: .98rem;
   }
 
   body:has(#inicio) #inicio > div > div:last-child {
@@ -168,6 +269,20 @@ body:has(#inicio) #decoracoes img {
     padding-left: 0;
   }
 
+  body:has(#inicio) #modalidades h2 {
+    font-size: clamp(2.2rem, 9vw, 3.2rem);
+  }
+
+  body:has(#inicio) #modalidades p {
+    font-size: 1rem;
+  }
+
+  body:has(#inicio) #como-funciona h2,
+  body:has(#inicio) #decoracoes h2,
+  body:has(#inicio) #clientes h2 {
+    font-size: clamp(2.6rem, 10vw, 4rem);
+  }
+
   body:has(#inicio) #decoracoes .grid-cols-2 {
     gap: .75rem;
   }
@@ -180,7 +295,7 @@ body:has(#inicio) #decoracoes img {
 
   body:has(#inicio) #inicio .grid-cols-4 {
     gap: .5rem;
-    font-size: .68rem;
+    font-size: .76rem;
   }
 }
 
