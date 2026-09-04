@@ -299,6 +299,198 @@ body:has(#inicio) #decoracoes img {
   }
 }
 
+/* Orçamento LHL — nova identidade pública, preservando toda a lógica existente */
+body:has(#orcamento) {
+  overflow-x: hidden;
+  --background: #fff8f0;
+  --foreground: #4b1a21;
+  --card: #fffdf9;
+  --card-foreground: #4b1a21;
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --secondary: #f6dbd7;
+  --secondary-foreground: #651421;
+  --muted: #f8eee8;
+  --muted-foreground: #765d58;
+  --accent: #ead1ca;
+  --accent-foreground: #651421;
+  --border: #e8d5cc;
+  --input: #decac1;
+  --ring: #c89b58;
+  background: #fff8f0;
+}
+
+body:has(#orcamento) header {
+  background: linear-gradient(90deg, #470b15, #651421) !important;
+  border-color: rgba(200,155,88,.25) !important;
+  color: #fff;
+}
+
+body:has(#orcamento) header > div,
+body:has(#orcamento) section > div,
+body:has(#orcamento) footer > div {
+  width: 100%;
+  max-width: none !important;
+  padding-left: clamp(1rem, 3vw, 4.5rem) !important;
+  padding-right: clamp(1rem, 3vw, 4.5rem) !important;
+}
+
+body:has(#orcamento) header span {
+  color: #f3d8d3;
+}
+
+body:has(#orcamento) header button {
+  background: #d87982 !important;
+  color: #4a0d18 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  min-height: 2.7rem;
+  padding-inline: 1.25rem;
+  font-size: clamp(.9rem, .9vw, 1.02rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type {
+  background: linear-gradient(115deg, #4a0d18 0%, #651421 48%, #7b2834 100%);
+  color: #fff;
+  padding-bottom: clamp(2.5rem, 5vw, 5rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child {
+  min-height: clamp(620px, 78vh, 900px);
+  gap: clamp(2rem, 4vw, 6rem);
+  padding-top: clamp(3rem, 6vw, 6rem) !important;
+  padding-bottom: clamp(3rem, 6vw, 6rem) !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 {
+  color: #fff !important;
+  font-size: clamp(3rem, 5vw, 6.2rem) !important;
+  line-height: .94 !important;
+  max-width: 11ch;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 span {
+  color: #f0b7b6 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type p,
+body:has(#orcamento) > div > section:first-of-type li {
+  color: rgba(255,255,255,.82) !important;
+  font-size: clamp(1rem, 1.15vw, 1.28rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child > div:first-child > div:first-child {
+  border-color: rgba(255,255,255,.2) !important;
+  background: rgba(255,255,255,.08) !important;
+  color: #f3d8d3 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type button {
+  background: #d87982 !important;
+  color: #4a0d18 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type img {
+  border-radius: 2rem;
+}
+
+body:has(#orcamento) #orcamento {
+  max-width: min(920px, calc(100vw - 2rem)) !important;
+  margin-top: clamp(-4rem, -5vw, -2rem) !important;
+  margin-bottom: 2rem !important;
+  border: 1px solid rgba(200,155,88,.28) !important;
+  box-shadow: 0 24px 70px -30px rgba(74,13,24,.45) !important;
+}
+
+body:has(#orcamento) #orcamento h2 {
+  color: #651421 !important;
+  font-size: clamp(2.2rem, 3.3vw, 4rem) !important;
+}
+
+body:has(#orcamento) #orcamento label,
+body:has(#orcamento) #orcamento p,
+body:has(#orcamento) #orcamento li {
+  font-size: clamp(.95rem, .95vw, 1.08rem);
+}
+
+body:has(#orcamento) #orcamento input,
+body:has(#orcamento) #orcamento select,
+body:has(#orcamento) #orcamento textarea {
+  min-height: 3.2rem;
+  border-radius: .85rem;
+  background: #fffdf9;
+}
+
+body:has(#orcamento) #orcamento button[type="submit"] {
+  min-height: 3.6rem;
+  border-radius: 999px;
+  background: #651421 !important;
+  color: #fff8f0 !important;
+  font-size: clamp(1rem, 1vw, 1.12rem);
+}
+
+body:has(#orcamento) section h2 {
+  color: #651421;
+  font-size: clamp(2.5rem, 3.5vw, 4.5rem) !important;
+  line-height: .98;
+}
+
+body:has(#orcamento) section p,
+body:has(#orcamento) section li,
+body:has(#orcamento) section button,
+body:has(#orcamento) section a {
+  font-size: clamp(.95rem, .9vw, 1.08rem);
+}
+
+body:has(#orcamento) section.bg-muted\/40 {
+  background: #f8eee8 !important;
+}
+
+body:has(#orcamento) section .rounded-2xl,
+body:has(#orcamento) section .rounded-xl {
+  border-color: #e5cfc7 !important;
+}
+
+body:has(#orcamento) footer {
+  background: #390b12 !important;
+  color: rgba(255,255,255,.72) !important;
+  border-color: rgba(200,155,88,.2) !important;
+}
+
+body:has(#orcamento) footer a {
+  color: #efb6b5;
+}
+
+@media (max-width: 1023px) {
+  body:has(#orcamento) > div > section:first-of-type > div:first-child {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type h1 {
+    max-width: 13ch;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#orcamento) header > div,
+  body:has(#orcamento) section > div,
+  body:has(#orcamento) footer > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type h1 {
+    font-size: clamp(2.7rem, 12vw, 4.2rem) !important;
+  }
+
+  body:has(#orcamento) #orcamento {
+    padding: 1.25rem !important;
+  }
+}
+
 @media print {
   @page { size: A4; margin: 18mm 16mm; }
   html, body { background: white !important; }
