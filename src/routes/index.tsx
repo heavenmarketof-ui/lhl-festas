@@ -31,7 +31,7 @@ import { WHATSAPP_NUMBER } from "@/lib/orders-storage";
 
 const ConsultorFAB = lazy(() => import("@/components/consultor/ConsultorFAB"));
 
-const HERO_IMAGE = "https://drive.google.com/uc?export=view&id=1AtLMBa4oqSDJBX22NZofnl4yt3jI3bYl";
+const HERO_IMAGE = "/hero-principal.jpg";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Olá! Quero solicitar um orçamento com a LHL Festas.")}`;
 
 const vinho = "#651421";
@@ -116,7 +116,7 @@ function Hero() {
             </div>
           </div>
         </div>
-        <div className="relative min-h-[500px] lg:min-h-full"><img src={HERO_IMAGE} alt="Decoração LHL Festas" className="absolute inset-0 h-full w-full object-cover" fetchPriority="high"/><div className="absolute inset-0 bg-gradient-to-r from-[#651421] via-[#651421]/20 to-transparent"/><div className="absolute right-5 top-12 max-w-[170px] rounded-2xl bg-[#f6d9d3]/95 p-4 text-xs leading-relaxed text-[#5d1720] shadow-xl"><strong className="mb-1 block uppercase text-[10px] tracking-wider">Peg & Monte</strong>Com praticidade e muito mais tempo para o que realmente importa: celebrar!</div></div>
+        <div className="relative min-h-[500px] lg:min-h-full"><img src={HERO_IMAGE} alt="Decoração LHL Festas" className="absolute inset-0 h-full w-full object-cover object-center" fetchPriority="high"/><div className="absolute inset-0 bg-gradient-to-r from-[#651421] via-[#651421]/20 to-transparent"/><div className="absolute right-5 top-12 max-w-[170px] rounded-2xl bg-[#f6d9d3]/95 p-4 text-xs leading-relaxed text-[#5d1720] shadow-xl"><strong className="mb-1 block uppercase text-[10px] tracking-wider">Peg & Monte</strong>Com praticidade e muito mais tempo para o que realmente importa: celebrar!</div></div>
       </div>
     </section>
   );
