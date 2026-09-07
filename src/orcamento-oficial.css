@@ -83,9 +83,10 @@ body:has(#orcamento) header + section h1 span {
   color: #efb6b5 !important;
 }
 
-body:has(#orcamento) header + section p,
-body:has(#orcamento) header + section li {
-  color: rgba(255,255,255,.82) !important;
+/* Somente os textos do hero ficam claros. O formulário é tratado abaixo. */
+body:has(#orcamento) header + section > div:first-child p,
+body:has(#orcamento) header + section > div:first-child li {
+  color: rgba(255,255,255,.86) !important;
 }
 
 body:has(#orcamento) header + section > div:first-child > div:first-child > p {
@@ -138,18 +139,39 @@ body:has(#orcamento) #orcamento {
   padding: clamp(1.5rem, 4vw, 3.25rem) !important;
   border-radius: 30px !important;
   border: 1px solid rgba(200,155,88,.42) !important;
-  background: rgba(255,250,244,.98) !important;
+  background: rgba(255,250,244,.99) !important;
+  color: var(--orc-texto) !important;
   box-shadow: 0 26px 75px rgba(71,11,21,.16) !important;
 }
 
-body:has(#orcamento) #orcamento h2 {
+body:has(#orcamento) #orcamento h2,
+body:has(#orcamento) #orcamento h3,
+body:has(#orcamento) #orcamento .text-foreground {
   color: var(--orc-vinho) !important;
+}
+
+body:has(#orcamento) #orcamento h2 {
   font-size: clamp(2.15rem, 3.4vw, 3.5rem) !important;
   line-height: 1.03 !important;
 }
 
-body:has(#orcamento) #orcamento p {
-  line-height: 1.6;
+body:has(#orcamento) #orcamento p,
+body:has(#orcamento) #orcamento li,
+body:has(#orcamento) #orcamento label,
+body:has(#orcamento) #orcamento .text-muted-foreground,
+body:has(#orcamento) #orcamento .text-foreground\/80,
+body:has(#orcamento) #orcamento .text-foreground\/85 {
+  color: #65474a !important;
+  opacity: 1 !important;
+}
+
+body:has(#orcamento) #orcamento label {
+  color: #5a252d !important;
+  font-weight: 650 !important;
+}
+
+body:has(#orcamento) #orcamento > div:first-child > div:first-child {
+  color: var(--orc-vinho) !important;
 }
 
 body:has(#orcamento) #orcamento input:not([type="file"]),
@@ -157,14 +179,36 @@ body:has(#orcamento) #orcamento select,
 body:has(#orcamento) #orcamento textarea {
   min-height: 52px !important;
   border-radius: 14px !important;
-  border-color: #dfc5bb !important;
+  border-color: #d8b4aa !important;
   background: #fff !important;
   font-size: 1rem !important;
   color: #442126 !important;
 }
 
+body:has(#orcamento) #orcamento input::placeholder,
+body:has(#orcamento) #orcamento textarea::placeholder {
+  color: #8e7376 !important;
+  opacity: 1 !important;
+}
+
+body:has(#orcamento) #orcamento select:disabled {
+  color: #8e7376 !important;
+  background: #f7efeb !important;
+  opacity: 1 !important;
+}
+
 body:has(#orcamento) #orcamento textarea {
   min-height: 130px !important;
+}
+
+body:has(#orcamento) #orcamento input[type="file"] {
+  color: #5e3a3f !important;
+  background: #fff !important;
+  border-radius: 14px !important;
+}
+
+body:has(#orcamento) #orcamento button:not([type="submit"]) {
+  color: var(--orc-vinho-escuro);
 }
 
 body:has(#orcamento) #orcamento button[type="submit"] {
