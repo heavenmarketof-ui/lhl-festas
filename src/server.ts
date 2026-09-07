@@ -8,7 +8,28 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
+type RuntimeBindings = Record<string, unknown>;
+
 let serverEntryPromise: Promise<ServerEntry> | undefined;
+let runtimeEnvHydrated = false;
+
+/**
+ * O Cloudflare entrega variáveis e secrets como bindings no parâmetro `env`.
+ * O código legado do servidor usa process.env; por isso copiamos somente valores
+ * textuais para process.env antes de importar o server-entry do TanStack.
+ * Nunca substituímos o objeto process.env inteiro e nunca registramos valores.
+ */
+function hydrateProcessEnv(env: unknown) {
+  if (runtimeEnvHydrated || !env || typeof env !== "object") return;
+
+  for (const [key, value] of Object.entries(env as RuntimeBindings)) {
+    if (typeof value === "string" && process.env[key] == null) {
+      process.env[key] = value;
+    }
+  }
+
+  runtimeEnvHydrated = true;
+}
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
@@ -70,6 +91,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      hydrateProcessEnv(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
