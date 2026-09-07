@@ -47,7 +47,7 @@ function isDevReadonlyAllowed() {
 /* ------------------------------ Público ------------------------------ */
 
 export const gasPublicPost = createServerFn({ method: "POST" })
-  .inputValidator((input: { body: Record<string, unknown> }) => input)
+  .validator((input: { body: Record<string, unknown> }) => input)
   .handler(async ({ data }) => {
     const action = String(data.body?.action || "");
     if (!PUBLIC_POST_ACTIONS.has(action)) throw new Error("Ação não permitida");
@@ -57,7 +57,7 @@ export const gasPublicPost = createServerFn({ method: "POST" })
   });
 
 export const gasPublicOrderById = createServerFn({ method: "POST" })
-  .inputValidator((input: { id: string }) => ({ id: String(input.id || "").slice(0, 120) }))
+  .validator((input: { id: string }) => ({ id: String(input.id || "").slice(0, 120) }))
   .handler(async ({ data }) => {
     if (!data.id) return { row: null };
     const { callGas } = await import("./sheets-endpoint.server");
@@ -74,7 +74,7 @@ export const gasPublicOrderById = createServerFn({ method: "POST" })
 
 export const gasAdminGet = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { query?: string }) => ({ query: String(input?.query || "") }))
+  .validator((input: { query?: string }) => ({ query: String(input?.query || "") }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context as any);
     const { callGas } = await import("./sheets-endpoint.server");
@@ -86,7 +86,7 @@ export const gasAdminGet = createServerFn({ method: "POST" })
  * Não aceita POST e não altera nenhuma informação.
  */
 export const gasDevReadonlyGet = createServerFn({ method: "POST" })
-  .inputValidator((input: { query?: string }) => ({ query: String(input?.query || "") }))
+  .validator((input: { query?: string }) => ({ query: String(input?.query || "") }))
   .handler(async ({ data }) => {
     if (!isDevReadonlyAllowed()) throw new Error("Leitura de desenvolvimento indisponível em produção");
     const { callGas, gasSharedToken } = await import("./sheets-endpoint.server");
@@ -116,7 +116,7 @@ export const gasDevConnectionStatus = createServerFn({ method: "POST" })
 
 export const gasAdminPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { body: Record<string, unknown> }) => input)
+  .validator((input: { body: Record<string, unknown> }) => input)
   .handler(async ({ data, context }) => {
     await assertAdmin(context as any);
     const { callGas, leadsAdminToken } = await import("./sheets-endpoint.server");
