@@ -1,0 +1,132 @@
+name: Corrigir Reserva Temporariamente
+
+on:
+  push:
+    branches: [home-nova]
+    paths:
+      - '.github/workflows/fix-reserva-temporario.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: home-nova
+      - name: Remover armazenamento local e exigir persistência
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('src/routes/reserva.tsx')
+          s = p.read_text()
+          s = s.replace('  saveOrder,\n', '')
+          s = s.replace('  const [aceites, setAceites] = useState<boolean[]>(() => ACEITE_ITEMS.map(() => false));\n', '  const [aceites, setAceites] = useState<boolean[]>(() => ACEITE_ITEMS.map(() => false));\n  const [submitting, setSubmitting] = useState(false);\n')
+          s = s.replace('  const onSubmit = (e: FormEvent) => {', '  const onSubmit = async (e: FormEvent) => {')
+
+          start = s.index('    const orderInput = {')
+          end = s.index('    const msg = buildWhatsAppMessage({', start)
+          replacement = '''    const orderId = crypto.randomUUID();
+    const createdAt = nowIso;
+
+    setSubmitting(true);
+    try {
+      await postOrderToSheet({
+        id: orderId,
+        createdAt,
+        status: "Pendente",
+        nomeCompleto: form.nome,
+        cpf: form.cpf,
+        rg: "",
+        telefone: form.telefone,
+        email: form.email,
+        endereco: enderecoCompleto,
+        cidadeUf: form.cidade,
+        tema: form.tema,
+        modalidade: form.modalidade,
+        plano: form.plano,
+        dataEvento: form.dataEvento,
+        nomeAniversariante: form.nomeAniversariante,
+        idadeAniversariante: form.idadeAniversariante,
+        tipoFesta: form.tipoFesta,
+        valorTotal: "",
+        valorSinal: "",
+        valorRestante: "",
+        caucao: isMontagem ? "0" : "",
+        demaisPecas: "",
+        observacoes: "",
+        kitJson: JSON.stringify(details.kit),
+        aceiteContrato: "Sim",
+        dataHoraAceite: nowIso,
+        rua: form.rua,
+        numero: form.numero,
+        bairro: form.bairro,
+        cidade: form.cidade,
+        cep: form.cep,
+        servicoMontagem: isMontagem ? "Sim" : "Não",
+      });
+    } catch {
+      toast.error("Não foi possível registrar sua solicitação.", {
+        description: "Seus dados não foram apagados. Tente novamente em alguns instantes.",
+      });
+      setSubmitting(false);
+      return;
+    }
+
+'''
+          s = s[:start] + replacement + s[end:]
+          s = s.replace('    setForm(empty);\n    navigate({ to: "/obrigado" });', '    setForm(empty);\n    setAceites(ACEITE_ITEMS.map(() => false));\n    setSubmitting(false);\n    navigate({ to: "/obrigado" });')
+          s = s.replace('disabled={!allAceites}', 'disabled={!allAceites || submitting}')
+          p.write_text(s)
+
+          p = Path('src/lib/sheets-api.ts')
+          s = p.read_text()
+          old = '''export async function postOrderToSheet(payload: SheetOrderPayload): Promise<void> {
+  // Reserva pública: ação da lista branca no servidor.
+  await sheetPublicPost({ action: "create", ...payload });
+}'''
+          new = '''export async function postOrderToSheet(payload: SheetOrderPayload): Promise<void> {
+  // Reserva pública: só consideramos concluída após resposta válida do backend.
+  const result = await sheetPublicPost({ action: "create", ...payload });
+  if (!result || typeof result !== "object" || result.ok === false || result.error) {
+    throw new Error(String(result?.error || "Não foi possível confirmar o registro da reserva"));
+  }
+}'''
+          if old not in s:
+            raise SystemExit('Bloco postOrderToSheet esperado não encontrado')
+          p.write_text(s.replace(old, new))
+
+          p = Path('src/lib/sheets-gateway.ts')
+          s = p.read_text()
+          old = '''export async function sheetPublicPost(body: Record<string, unknown>): Promise<any> {
+  const { text } = await gasPublicPost({ data: { body } });
+  return parse(text);
+}'''
+          new = '''export async function sheetPublicPost(body: Record<string, unknown>): Promise<any> {
+  const { text } = await gasPublicPost({ data: { body } });
+  const json = parse(text);
+  if (looksDenied(json)) throw new Error(String(json.error || "Solicitação recusada"));
+  if (looksEmptyGatewayResponse(json)) throw new Error("Servidor respondeu sem confirmação do registro");
+  return json;
+}'''
+          if old not in s:
+            raise SystemExit('Bloco sheetPublicPost esperado não encontrado')
+          p.write_text(s.replace(old, new))
+          PY
+      - name: Garantir que reserva não persiste dados pessoais no navegador
+        run: |
+          ! grep -q 'saveOrder' src/routes/reserva.tsx
+          ! grep -q 'localStorage' src/routes/reserva.tsx
+          grep -q 'await postOrderToSheet' src/routes/reserva.tsx
+      - name: Commitar correção
+        run: |
+          git config user.name "heavenmarketof-ui"
+          git config user.email "heavenmarketof@gmail.com"
+          git add src/routes/reserva.tsx src/lib/sheets-api.ts src/lib/sheets-gateway.ts
+          git commit -m "Protege persistência da reserva pública"
+          git push origin home-nova
