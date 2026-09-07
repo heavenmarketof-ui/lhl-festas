@@ -44,6 +44,8 @@ export function textoPesquisaSolicitacao(
     contexto.tema,
     contexto.modalidade,
     contexto.plano,
+    contexto.retirada,
+    contexto.festa,
     solicitacao.pedidoCliente,
     solicitacao.pedidoId,
     solicitacao.ordemProducao,
@@ -52,4 +54,24 @@ export function textoPesquisaSolicitacao(
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
+}
+
+/** Linha curta usada na fila e nos cards móveis. */
+export function resumoFestaDaSolicitacao(contexto: SolicitacaoContextoFesta): string {
+  return [contexto.tema, contexto.modalidade, contexto.plano]
+    .map((v) => String(v || "").trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/**
+ * Identifica se a solicitação está ligada a uma festa real do sistema.
+ * Solicitações manuais sem contrato continuam válidas, mas não recebem
+ * contexto inventado de cliente/tema/data.
+ */
+export function temContextoDeContrato(
+  solicitacao: Solicitacao,
+  order?: StoredOrder | null,
+): boolean {
+  return Boolean(order?.id || String(solicitacao.pedidoId || "").trim());
 }
