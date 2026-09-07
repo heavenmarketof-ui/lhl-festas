@@ -8,7 +8,7 @@ import type { ParcelaInput, ParcelaStatus } from "./parcelas.server";
 
 export const listarParcelasFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { contratoId?: string }) => input || {})
+  .validator((input: { contratoId?: string }) => input || {})
   .handler(async ({ data, context }) => {
     const m = await import("./parcelas.server");
     return m.listarParcelasServer(context as any, data.contratoId);
@@ -16,7 +16,7 @@ export const listarParcelasFn = createServerFn({ method: "GET" })
 
 export const salvarParcelasFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (input: { contratoId: string; contratoCliente?: string; parcelas: ParcelaInput[] }) => input,
   )
   .handler(async ({ data, context }) => {
@@ -26,7 +26,7 @@ export const salvarParcelasFn = createServerFn({ method: "POST" })
 
 export const atualizarStatusParcelaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; status: ParcelaStatus; observacoes?: string }) => input)
+  .validator((input: { id: string; status: ParcelaStatus; observacoes?: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./parcelas.server");
     return m.atualizarStatusParcelaServer(context as any, data);
@@ -34,14 +34,14 @@ export const atualizarStatusParcelaFn = createServerFn({ method: "POST" })
 
 export const registrarPagamentoParcelaFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; valorPago?: number; lancamentoId: string }) => input)
+  .validator((input: { id: string; valorPago?: number; lancamentoId: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./parcelas.server");
     return m.registrarPagamentoParcelaServer(context as any, data);
   });
 
 export const listarParcelasPublicoFn = createServerFn({ method: "GET" })
-  .inputValidator((input: { contratoId: string }) => input)
+  .validator((input: { contratoId: string }) => input)
   .handler(async ({ data }) => {
     const m = await import("./parcelas.server");
     return m.listarParcelasPublicoServer(String(data.contratoId || ""));
