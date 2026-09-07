@@ -1,11 +1,16 @@
 import { decidirRemocaoCompra, type DecisaoRemocaoCompra } from "./compra-remocao";
-import { fetchSolicitacao, cancelarSolicitacao } from "./solicitacoes-api";
+import {
+  fetchSolicitacao,
+  cancelarSolicitacao,
+  revogarAutorizacao,
+} from "./solicitacoes-api";
 import { fetchOrdens, saveOrdem, type OrdemProducao } from "./producao-api";
 
 export type ResultadoRemocaoCompra = {
   op: OrdemProducao;
   decisao: DecisaoRemocaoCompra;
   solicitacaoCancelada: boolean;
+  autorizacaoRevogada: boolean;
 };
 
 /**
@@ -14,8 +19,10 @@ export type ResultadoRemocaoCompra = {
  * - item inicial: exclusão física + tombstone para o merge não ressuscitar;
  * - item com histórico: permanece na OP como cancelado;
  * - item comprado/pago: nunca é apagado como se não tivesse existido;
- * - solicitação vinculada é cancelada antes de retirar o item da fila ativa,
- *   desde que ainda não exista lançamento financeiro.
+ * - solicitação pendente é cancelada;
+ * - solicitação autorizada tem a autorização revogada e depois é cancelada;
+ * - solicitação já comprada permanece como histórico da compra realizada;
+ * - solicitação lançada bloqueia a remoção e exige correção pelo Financeiro.
  */
 export async function removerItemCompraSeguro(
   opId: string,
@@ -31,16 +38,26 @@ export async function removerItemCompraSeguro(
   if (decisao.acao === "bloquear") throw new Error(decisao.motivo);
 
   let solicitacaoCancelada = false;
+  let autorizacaoRevogada = false;
+
   if (item.solicitacaoId) {
     const solicitacao = await fetchSolicitacao(item.solicitacaoId);
     if (solicitacao) {
       if (solicitacao.lancamentoId || solicitacao.status === "lancada") {
         throw new Error("Este item já possui lançamento financeiro. Corrija pelo Financeiro em vez de remover o histórico.");
       }
-      if (solicitacao.status !== "cancelada") {
+
+      if (solicitacao.status === "autorizada") {
+        await revogarAutorizacao(solicitacao.id);
+        autorizacaoRevogada = true;
+        await cancelarSolicitacao(solicitacao.id, "Item removido da necessidade operacional");
+        solicitacaoCancelada = true;
+      } else if (solicitacao.status === "pendente") {
         await cancelarSolicitacao(solicitacao.id, "Item removido da necessidade operacional");
         solicitacaoCancelada = true;
       }
+      // "comprada" é evidência histórica: não apagamos nem tentamos reescrever
+      // o passado. Apenas o item operacional será marcado como cancelado.
     }
   }
 
@@ -73,5 +90,5 @@ export async function removerItemCompraSeguro(
       };
 
   const salva = await saveOrdem(atualizada);
-  return { op: salva, decisao, solicitacaoCancelada };
+  return { op: salva, decisao, solicitacaoCancelada, autorizacaoRevogada };
 }
