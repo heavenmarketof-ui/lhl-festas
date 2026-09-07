@@ -1,42 +1,107 @@
-# LHL Festas Client Form
+# Sistema Oficial LHL Festas
 
-📱 Prompt 1: A Página do Cliente (Formulário Público)
+Este repositório é o projeto independente e oficial da LHL Festas.
 
-"Crie a página pública de captação de dados para o cliente da empresa LHL Festas – Peg & Monte. Utilize a imagem do logotipo anexada para extrair a identidade visual exata: fundo marfim/clean, detalhes em rosa seco/velho, dourado suave e fontes delicadas/premium.
+## Regra de separação
 
-Requisitos da Página:
+Este projeto **não é sincronizado com o Lovable** e não deve ser enviado para o projeto antigo.
 
-Cabeçalho: Um topo elegante com o nome 'LHL Festas', o subtítulo 'Peg & Monte' e a frase destaque 'Prático, lindo e feito para você'.
+- `heavenmarketof-ui/lhl-festas` → desenvolvimento oficial independente.
+- `heavenmarketof-ui/lhl-festas-abf33ac5` → sistema antigo / referência de leitura enquanto a migração não termina.
 
-Seção 1 - Dados Pessoais: Campos bem espaçados para: Nome Completo, CPF, RG, Telefone, E-mail, Endereço Completo, Cidade/UF.
+O sistema antigo continua operando normalmente até que este projeto esteja totalmente validado e pronto para assumir o domínio oficial.
 
-Seção 2 - Escolha da Festa: > - Campo para digitar o 'Tema Escolhido'.
+## Arquitetura atual
 
-Seleção por botões (Radio) para 'Modalidade': [Festa na Mesa] ou [Pegue e Monte Tradicional].
+- React 19
+- TanStack Start / Router
+- Vite 7
+- Node.js 22
+- Tailwind CSS
+- Google Sheets + Apps Script para dados operacionais já existentes
+- Supabase para recursos que ainda dependem da integração atual
+- Cloudflare preparado como destino de hospedagem independente
 
-Seleção por botões (Radio) para 'Plano': [Bronze], [Prata] ou [Ouro].
+## Áreas públicas
 
-Ação: Um botão estilizado no final escrito 'Enviar Dados'. Ao clicar, exiba uma mensagem de sucesso flutuante e limpe o formulário. O design deve ser totalmente responsivo (focado em celulares)."
+- Home
+- Catálogo
+- Festa na Mesa
+- Peg & Monte
+- Tema Personalizado
+- Orçamento
+- Reserva e páginas de confirmação ainda mantidas durante a migração
 
-This project was built with [Lovable](https://lovable.dev).
+Domínio oficial planejado:
 
-**Live app**: https://lhl-festas.lovable.app
+`https://www.lhlfestas.com.br`
 
-## Build with Lovable
+## Admin
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/7a762848-fb40-4ceb-917f-25958af14d55).
+A estrutura administrativa nova está organizada em:
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+- Hoje
+- CRM / Leads
+- Clientes
+- Festas
+- Agenda
+- Operação
+- Produção
+- Financeiro
+- Gestão
+- Patrimônio
+- Solicitações
+- Auditoria
 
-## Development
+### Regra operacional central
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Pré-contrato sem recebimento confirmado não libera operação.
+
+Um recebimento real de contrato libera Agenda, Operação, Produção e Compras. Caução é garantia e **não** conta como receita nem como pagamento do serviço.
+
+## Desenvolvimento
+
+Requisito: Node.js 22.
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+npm ci
+npm run dev -- --host 0.0.0.0
 ```
+
+Build de produção:
+
+```sh
+npm run build
+```
+
+## Validação automática
+
+O workflow `.github/workflows/validate.yml` executa o build automaticamente no GitHub quando há alterações nas branches de desenvolvimento e em pull requests.
+
+A intenção é detectar problemas de compilação sem depender do Lovable ou de uma publicação externa.
+
+## Variáveis e segredos
+
+Segredos nunca devem ser versionados.
+
+Arquivos locais como `.env`, `.env.local` e variantes permanecem fora do Git através do `.gitignore`.
+
+Variáveis atualmente usadas pelo projeto incluem, conforme o ambiente:
+
+- `GAS_SHARED_TOKEN`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+Nunca coloque os valores reais dessas variáveis no README, em commits ou em arquivos versionados.
+
+## Diretriz de migração
+
+Enquanto a migração estiver em andamento:
+
+1. desenvolver e testar somente neste repositório;
+2. usar o sistema antigo apenas como referência e operação atual;
+3. preservar compatibilidade com os dados existentes;
+4. validar fluxo comercial, financeiro e operacional antes do corte;
+5. somente depois conectar `www.lhlfestas.com.br` ao novo sistema.
