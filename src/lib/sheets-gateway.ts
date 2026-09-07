@@ -36,33 +36,30 @@ function looksEmptyGatewayResponse(json: any) {
   return !!json && typeof json === "object" && !Array.isArray(json) && Object.keys(json).length === 0;
 }
 
+function validateReadJson(json: any) {
+  if (looksDenied(json)) throw new Error(String(json.error || "Apps Script recusou a leitura"));
+  if (looksEmptyGatewayResponse(json)) throw new Error("Apps Script respondeu sem dados legíveis");
+  return json;
+}
+
 /**
- * GET administrativo. Em desenvolvimento, se a leitura autenticada falhar
- * OU vier vazia pelo middleware/gateway, tenta a rota SOMENTE-LEITURA.
- * Nenhum POST é executado por este fluxo.
+ * GET administrativo.
+ *
+ * No Codespaces/Vite usamos PRIMEIRO a função somente-leitura do servidor.
+ * Isso evita que a validação de sessão/admin do ambiente de preview impeça a
+ * visualização dos dados reais. A função de desenvolvimento aceita apenas GET
+ * e continua usando GAS_SHARED_TOKEN no servidor; nenhuma escrita é possível.
+ *
+ * Em produção usamos exclusivamente o gateway administrativo autenticado.
  */
 export async function sheetGet(query = ""): Promise<any> {
-  let firstError: unknown;
-  try {
-    const { text } = await gasAdminGet({ data: { query } });
-    const json = parse(text);
-    if (!looksDenied(json) && !looksEmptyGatewayResponse(json)) return json;
-    firstError = looksDenied(json)
-      ? new Error(String(json.error || "Apps Script recusou a leitura"))
-      : new Error("Gateway administrativo respondeu vazio");
-  } catch (err) {
-    firstError = err;
-  }
-
   if (import.meta.env.DEV) {
     const { text } = await gasDevReadonlyGet({ data: { query } });
-    const json = parse(text);
-    if (looksDenied(json)) throw new Error(String(json.error || "Apps Script recusou a leitura"));
-    if (looksEmptyGatewayResponse(json)) throw new Error("Apps Script respondeu sem dados legíveis");
-    return json;
+    return validateReadJson(parse(text));
   }
 
-  throw firstError instanceof Error ? firstError : new Error("Falha ao consultar o Apps Script");
+  const { text } = await gasAdminGet({ data: { query } });
+  return validateReadJson(parse(text));
 }
 
 /** Retorna apenas informações de saúde da conexão, nunca URL ou token. */
