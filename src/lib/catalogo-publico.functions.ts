@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getServerEnv } from "./runtime-env.server";
 
 export type CatalogImage = {
   url: string;
@@ -58,7 +59,7 @@ function normalizePayload(raw: any): CatalogPayload {
 export const fetchCatalogoPublico = createServerFn({ method: "GET" }).handler(async () => {
   if (cache && cache.expiresAt > Date.now()) return cache.payload;
 
-  const source = String(process.env.CATALOGO_PUBLIC_URL || FALLBACK_CATALOG_SOURCE).trim();
+  const source = getServerEnv("CATALOGO_PUBLIC_URL") || FALLBACK_CATALOG_SOURCE;
   const response = await fetch(source, {
     headers: { Accept: "application/json" },
     signal: AbortSignal.timeout(15_000),
