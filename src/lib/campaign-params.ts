@@ -1,7 +1,7 @@
 // Helpers para preservar parâmetros de campanha (UTM/gclid/fbclid) entre
-// o site principal, o catálogo externo e o formulário de orçamento.
+// as páginas públicas do site oficial da LHL Festas.
 
-export const CATALOG_URL = "https://catalogo-lhlfestas.lovable.app/";
+export const CATALOG_URL = "/catalogo";
 
 export const CAMPAIGN_KEYS = [
   "utm_source",
@@ -22,7 +22,7 @@ function isBrowser() {
 }
 
 /** Lê parâmetros da URL atual, mescla com o que já estiver salvo em
- *  sessionStorage e persiste novamente. Retorna o objeto mesclado. */
+ * sessionStorage e persiste novamente. Retorna o objeto mesclado. */
 export function readAndPersistCampaignParams(): CampaignParams {
   if (!isBrowser()) return {};
   let stored: CampaignParams = {};
@@ -65,12 +65,12 @@ export function appendCampaignParams(baseUrl: string, extra: Record<string, stri
   return s ? `${baseUrl}${sep}${s}` : baseUrl;
 }
 
-/** URL do catálogo com UTMs e origem preservados. */
+/** URL do catálogo interno com UTMs e origem preservados. */
 export function buildCatalogUrl(origem: string): string {
   return appendCampaignParams(CATALOG_URL, { origem });
 }
 
-/** URL de retorno ao catálogo preservando modalidade e (opcional) âncora. */
+/** URL de retorno ao catálogo interno preservando a modalidade escolhida. */
 export function buildCatalogReturnUrl(opts: { modalidade?: string; personalizado?: boolean } = {}): string {
   const extra: Record<string, string> = {};
   const mod = (opts.modalidade || "").toLowerCase();
