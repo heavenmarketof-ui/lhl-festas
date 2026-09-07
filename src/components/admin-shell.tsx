@@ -38,7 +38,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const nav = [
     { label: "Hoje", to: "/admin", icon: Home, exact: true, desc: "Operação do dia" },
     { label: "Clientes", to: "/admin/clientes", icon: Users, desc: "Histórico por pessoa" },
-    { label: "Festas", to: "/admin/contratos", icon: FileText, desc: "Contratos e eventos" },
+    { label: "Festas", to: "/admin/festas", icon: FileText, desc: "Contratos e eventos" },
     { label: "Agenda", to: "/admin/agenda", icon: CalendarDays, desc: "Calendário de festas" },
     { label: "Produção", to: "/admin/producao", icon: Factory, desc: "Kits, compras e preparação", search: { filtro: "pendentes", etapa: "todas", q: "" } },
     { label: "Financeiro", to: "/admin/financeiro", icon: Wallet, desc: "Entradas e saídas", search: { tab: "dashboard" } },
@@ -70,13 +70,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <div id="admin-app" className="min-h-screen bg-[#f8f5f1] text-[#3f2529] lg:grid lg:grid-cols-[270px_minmax(0,1fr)]">
       <aside className="hidden min-h-screen flex-col bg-gradient-to-b from-[#4a0d18] via-[#651421] to-[#3c0911] p-4 text-white lg:sticky lg:top-0 lg:flex lg:h-screen">
-        <Link to="/admin" className="mb-4 flex items-center gap-3 rounded-2xl px-2 py-2"><img src={logo} alt="LHL Festas" className="h-12 w-12 rounded-full border border-[#d7ad68]/45 object-cover" /><div><p className="font-serif text-xl leading-none text-[#f2d091]">LHL Festas</p><p className="mt-1 text-[10px] uppercase tracking-[.18em] text-white/45">Admin Oficial</p></div></Link>
+        <Link to="/admin" className="mb-5 flex items-center gap-3 rounded-2xl px-2 py-2"><img src={logo} alt="LHL Festas" className="h-12 w-12 rounded-full border border-[#d7ad68]/45 object-cover" /><div><p className="font-serif text-xl leading-none text-[#f2d091]">LHL Festas</p><p className="mt-1 text-[10px] uppercase tracking-[.18em] text-white/45">Admin Oficial</p></div></Link>
+
         {previewReadOnly && (
-          <div className="mb-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2.5 text-[11px] leading-relaxed text-emerald-50">
-            <div className="flex items-center gap-2 font-semibold"><Database className="h-3.5 w-3.5" /> Dados reais conectados</div>
-            <div className="mt-1 text-emerald-50/65">Modo visualização • alterações no Apps Script bloqueadas.</div>
+          <div className="mb-5 rounded-2xl border border-white/20 bg-white/7 px-3 py-3 text-[11px] leading-relaxed text-white/70">
+            <div className="flex items-center gap-2 font-semibold text-white"><Database className="h-4 w-4" /> Dados reais conectados</div>
+            <p className="mt-1">Modo visualização · alterações no Apps Script bloqueadas.</p>
           </div>
         )}
+
         <div className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-white/38">Operação</div>
         <nav className="space-y-1 overflow-y-auto pr-1">{nav.map((item) => <NavItem key={item.label} item={item} />)}</nav>
         <div className="mt-5 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[.18em] text-white/38">Apoio</div>
@@ -86,8 +88,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
       <div className="min-w-0">
         <header className="sticky top-0 z-40 border-b border-[#eadfd8] bg-[#fffaf6]/94 backdrop-blur lg:hidden">
-          <div className="flex h-16 items-center justify-between px-4"><Link to="/admin" className="flex items-center gap-2"><img src={logo} alt="LHL Festas" className="h-10 w-10 rounded-full object-cover" /><div><p className="font-serif text-lg leading-none text-[#651421]">LHL Festas</p><p className="text-[10px] text-[#8a7074]">Admin{previewReadOnly ? " • leitura" : ""}</p></div></Link><button onClick={() => setMobileOpen((v) => !v)} className="grid h-10 w-10 place-items-center rounded-xl border border-[#e8d8d1] bg-white" aria-label="Abrir menu">{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button></div>
-          {mobileOpen && <div className="border-t border-[#eadfd8] bg-[#5b111d] p-3">{previewReadOnly && <div className="mb-3 rounded-xl bg-emerald-300/10 px-3 py-2 text-xs text-emerald-50">Dados reais conectados • alterações bloqueadas</div>}<nav className="grid gap-1 sm:grid-cols-2">{nav.map((item) => <NavItem key={item.label} item={item} />)}{secondary.map((item) => <NavItem key={item.label} item={item} />)}</nav><div className="mt-2 flex gap-2 border-t border-white/10 pt-3"><Button asChild variant="ghost" className="flex-1 text-white/70 hover:bg-white/10 hover:text-white"><Link to="/"><Eye className="mr-2 h-4 w-4" /> Ver site</Link></Button><Button variant="ghost" className="flex-1 text-white/70 hover:bg-white/10 hover:text-white" onClick={() => signOutAdmin().then(() => navigate({ to: "/auth", replace: true }))}><LogOut className="mr-2 h-4 w-4" /> Sair</Button></div></div>}
+          <div className="flex h-16 items-center justify-between px-4"><Link to="/admin" className="flex items-center gap-2"><img src={logo} alt="LHL Festas" className="h-10 w-10 rounded-full object-cover" /><div><p className="font-serif text-lg leading-none text-[#651421]">LHL Festas</p><p className="text-[10px] text-[#8a7074]">Admin</p></div></Link><button onClick={() => setMobileOpen((v) => !v)} className="grid h-10 w-10 place-items-center rounded-xl border border-[#e8d8d1] bg-white" aria-label="Abrir menu">{mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button></div>
+          {mobileOpen && <div className="border-t border-[#eadfd8] bg-[#5b111d] p-3"><nav className="grid gap-1 sm:grid-cols-2">{nav.map((item) => <NavItem key={item.label} item={item} />)}{secondary.map((item) => <NavItem key={item.label} item={item} />)}</nav><div className="mt-2 flex gap-2 border-t border-white/10 pt-3"><Button asChild variant="ghost" className="flex-1 text-white/70 hover:bg-white/10 hover:text-white"><Link to="/"><Eye className="mr-2 h-4 w-4" /> Ver site</Link></Button><Button variant="ghost" className="flex-1 text-white/70 hover:bg-white/10 hover:text-white" onClick={() => signOutAdmin().then(() => navigate({ to: "/auth", replace: true }))}><LogOut className="mr-2 h-4 w-4" /> Sair</Button></div></div>}
         </header>
         <main className="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(216,121,130,.10),transparent_28%),#f8f5f1]"><SectionBoundary label="conteúdo desta página">{children}</SectionBoundary></main>
       </div>
