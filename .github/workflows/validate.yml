@@ -26,5 +26,19 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Impedir retorno de links públicos do Lovable
+        shell: bash
+        run: |
+          if grep -R "https://lhl-festas.lovable.app" src/routes src/components/consultor src/lib/consultor --include='*.ts' --include='*.tsx'; then
+            echo "Foi encontrada uma referência pública direta ao site antigo do Lovable."
+            exit 1
+          fi
+
+      - name: Validar configuração do domínio oficial
+        shell: bash
+        run: |
+          grep -q '"name": "lhl-festas"' wrangler.jsonc
+          grep -q '"compatibility_flags": \["nodejs_compat"\]' wrangler.jsonc
+
       - name: Compilar projeto
         run: npm run build
