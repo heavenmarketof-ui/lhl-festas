@@ -22,7 +22,6 @@ export const STATUS_LABEL: Record<SolicitacaoStatus, string> = {
   cancelada: "Cancelada",
 };
 
-
 export const STATUS_EMOJI: Record<SolicitacaoStatus, string> = {
   pendente: "🟡",
   autorizada: "🟢",
@@ -41,7 +40,6 @@ export const STATUS_BADGE_LABEL: Record<SolicitacaoStatus, string> = {
   recusada: "Recusada",
   cancelada: "Cancelada",
 };
-
 
 export const STATUS_CLASS: Record<SolicitacaoStatus, string> = {
   pendente: "bg-yellow-500/15 text-yellow-600 border-yellow-500/40",
@@ -186,10 +184,29 @@ export function podeRegistrarPagamento(s: Solicitacao): boolean {
 export function podeRecusar(s: Solicitacao): boolean {
   return s.status === "pendente";
 }
+
+/**
+ * Cancelar a solicitação não remove o item da Ordem de Produção.
+ * É uma decisão financeira/administrativa e só é permitida enquanto pendente.
+ */
 export function podeCancelar(s: Solicitacao): boolean {
   return s.status === "pendente";
 }
 
+/**
+ * Revogar autorização é diferente de remover o item da compra:
+ * - revogar: desfaz apenas a autorização financeira e mantém a solicitação/item;
+ * - remover item: é uma ação da Ordem de Produção e deve respeitar o histórico.
+ */
+export function podeRevogarAutorizacao(s: Solicitacao): boolean {
+  return s.status === "autorizada" && !s.lancamentoId;
+}
+
+export const REVOGAR_AUTORIZACAO_EXPLICACAO =
+  "Revogar autorização mantém o item na compra e devolve a solicitação para pendente. Não apaga histórico.";
+
+export const REMOVER_ITEM_EXPLICACAO =
+  "Remover item é uma ação operacional da Ordem de Produção. Itens com histórico, autorização, compra ou pagamento não podem ser apagados definitivamente; devem ser cancelados e preservados no histórico.";
 
 /** Marca gravada no campo `origem` do lançamento — permite o link de volta. */
 export function origemLancamento(solicitacaoId: string): string {
