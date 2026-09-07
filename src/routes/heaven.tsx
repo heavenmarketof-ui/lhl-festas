@@ -29,12 +29,12 @@ import {
   Title,
 } from "@/components/heaven/heaven-ui";
 import { HeavenForm } from "@/components/heaven/heaven-form";
-import producaoCentralAsset from "@/assets/producao-central.png.asset.json";
-import leadsCentralAsset from "@/assets/leads-central.png.asset.json";
-import opIndividualAsset from "@/assets/op-individual.png.asset.json";
-import financeiroCentralAsset from "@/assets/financeiro-central.png.asset.json";
-import painelOperacionalAsset from "@/assets/painel-operacional.png.asset.json";
-import loginAcessoAsset from "@/assets/login-acesso.png.asset.json";
+import producaoCentralAsset from "@/assets/producao-central.png";
+import leadsCentralAsset from "@/assets/leads-central.png";
+import opIndividualAsset from "@/assets/op-individual.png";
+import financeiroCentralAsset from "@/assets/financeiro-central.png";
+import painelOperacionalAsset from "@/assets/painel-operacional.png";
+import loginAcessoAsset from "@/assets/login-acesso.png";
 
 const CANONICAL = "https://www.lhlfestas.com.br/heaven";
 const TITLE = "Heaven Festas | Gestão para quem trabalha com festas";
@@ -198,7 +198,7 @@ function Hero() {
         </div>
         <Reveal delay={180}>
           <Screenshot
-            src={painelOperacionalAsset.url}
+            src={painelOperacionalAsset}
             alt="Dashboard Operacional da Heaven Festas"
             device="desktop"
           />
@@ -329,7 +329,7 @@ function HeavenPage() {
           <div className="mt-8">
             <Reveal>
               <Screenshot
-                src={painelOperacionalAsset.url}
+                src={painelOperacionalAsset}
                 alt="Dashboard Operacional com calendário e prioridades"
                 title="Dashboard Operacional"
                 description="Calendário, “Faça isso primeiro”, avisos, retiradas, compras liberadas, produções pendentes, separações, conferências e pedidos prontos."
@@ -388,7 +388,7 @@ function HeavenPage() {
             </Reveal>
             <Reveal delay={120}>
               <Screenshot
-                src={producaoCentralAsset.url}
+                src={producaoCentralAsset}
                 alt="Calendário operacional da plataforma"
               />
             </Reveal>
@@ -400,7 +400,7 @@ function HeavenPage() {
           <div className="grid items-center gap-10 lg:grid-cols-2">
             <Reveal delay={100} className="order-2 lg:order-1">
               <Screenshot
-                src={leadsCentralAsset.url}
+                src={leadsCentralAsset}
                 alt="Tela de leads da plataforma"
               />
             </Reveal>
@@ -488,7 +488,7 @@ function HeavenPage() {
             </Reveal>
             <Reveal delay={120}>
               <Screenshot
-                src={opIndividualAsset.url}
+                src={opIndividualAsset}
                 alt="Fluxo de compras na Ordem de Produção"
                 device="mobile"
               />
@@ -509,7 +509,7 @@ function HeavenPage() {
           <div className="mt-8">
             <Reveal>
               <Screenshot
-                src={opIndividualAsset.url}
+                src={opIndividualAsset}
                 alt="Ordem de Produção"
                 title="Cada festa vira um processo organizado, do pedido à entrega."
                 highlights={["Compras", "Produção", "Separação", "Conferência", "Kit pronto"]}
@@ -536,7 +536,7 @@ function HeavenPage() {
             </Reveal>
             <Reveal delay={120}>
               <Screenshot
-                src={producaoCentralAsset.url}
+                src={producaoCentralAsset}
                 alt="Central de Produção"
                 title="Central de Produção"
                 description="Da compra à conferência, cada festa segue um fluxo."
@@ -600,7 +600,7 @@ function HeavenPage() {
             </Reveal>
             <Reveal delay={120}>
               <Screenshot
-                src={financeiroCentralAsset.url}
+                src={financeiroCentralAsset}
                 alt="Gestão financeira da plataforma"
                 title="Não basta saber quanto vendeu. É preciso saber quanto sobrou."
                 highlights={["Recebido no mês", "Contas a receber", "Saldo previsto", "Saldo em conta"]}
@@ -772,7 +772,7 @@ function HeavenPage() {
           </Reveal>
           <Reveal delay={180} className="mt-12">
             <Screenshot
-              src={loginAcessoAsset.url}
+              src={loginAcessoAsset}
               alt="Acesso Administrativo Heaven Festas"
               title="Sua operação organizada em um único lugar."
             />
