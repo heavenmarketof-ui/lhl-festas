@@ -26,6 +26,10 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      - name: Auditar vulnerabilidades críticas de produção
+        shell: bash
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Impedir retorno de links públicos do Lovable
         shell: bash
         run: |
@@ -53,11 +57,22 @@ jobs:
             exit 1
           fi
 
+      - name: Impedir regressões de privacidade nos formulários públicos
+        shell: bash
+        run: |
+          ! grep -q 'saveOrder' src/routes/reserva.tsx
+          ! grep -q 'localStorage' src/routes/reserva.tsx
+          ! grep -q 'lhl_leads\|lhl_orcamento_draft\|saveDraft' src/routes/orcamento.tsx
+          ! grep -q 'getOrderFromSheet' 'src/routes/checklist/$id.tsx'
+          grep -q 'Política de Privacidade' src/routes/reserva.tsx
+
       - name: Validar configuração do domínio oficial
         shell: bash
         run: |
           grep -q '"name": "lhl-festas"' wrangler.jsonc
           grep -q '"compatibility_flags": \["nodejs_compat"\]' wrangler.jsonc
+          grep -q 'https://www.lhlfestas.com.br' 'src/routes/sitemap[.]xml.ts'
+          grep -q '/privacidade' 'src/routes/sitemap[.]xml.ts'
 
       - name: Rodar testes de regras de negócio
         run: npm test
