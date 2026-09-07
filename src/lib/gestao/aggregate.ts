@@ -185,12 +185,12 @@ function nucleo(snap: Snapshot, p: Periodo, fim: string | null): Nucleo {
   );
   const vendido = money(pedidos.reduce((total, o) => total + valorContrato(o), 0));
 
-  // FATURAMENTO = somente festas/entregas efetivamente ocorridas até hoje.
-  // Eventos futuros permanecem na carteira/a receber, mas não entram como realizado.
+  // FATURAMENTO = valor de todas as festas/entregas pertencentes ao período
+  // selecionado. No mês atual, inclui também eventos agendados para os próximos
+  // dias do próprio mês; recebimentos e saídas continuam realizados até hoje.
   const entregues = snap.orders.filter((o) => {
     if (cancelado(o)) return false;
-    const ev = dataEvento(o);
-    return dentroRealizado(p, fim, ev);
+    return dentro(p, dataEvento(o));
   });
   const faturamento = money(entregues.reduce((total, o) => total + valorContrato(o), 0));
 
@@ -465,7 +465,7 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
     const entregasLote = snap.orders.filter((o) => {
       if (cancelado(o)) return false;
       const ev = dataEvento(o);
-      return !!fimAtual && !!ev && ev >= b.inicio && ev <= b.fim && ev <= fimAtual;
+      return !!ev && ev >= b.inicio && ev <= b.fim;
     });
     const vendidoLote = money(vendasLote.reduce((total, o) => total + valorContrato(o), 0));
     const fat = money(entregasLote.reduce((total, o) => total + valorContrato(o), 0));
@@ -546,8 +546,7 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
   /* -------- Modalidades (dinâmico) -------- */
   const entreguesPeriodo = snap.orders.filter((o) => {
     if (cancelado(o)) return false;
-    const ev = dataEvento(o);
-    return dentroRealizado(periodo, fimAtual, ev);
+    return dentro(periodo, dataEvento(o));
   });
   const nomesModalidade = new Set<string>([
     ...at.pedidos.map(modalidadeDe),
