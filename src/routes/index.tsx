@@ -49,7 +49,6 @@ const vinhoEscuro = "#470b15";
 const rosa = "#d87982";
 const rosaClaro = "#f6dbd7";
 const marfim = "#fff8f0";
-const dourado = "#c89b58";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -80,6 +79,7 @@ function trackHomeEvent(event: string, extra: Record<string, unknown> = {}) {
 
 const NAV = [
   { label: "Início", href: "#inicio" },
+  { label: "Catálogo", href: "/catalogo" },
   { label: "Festa na Mesa", href: "#modalidades" },
   { label: "Peg & Monte", href: "#modalidades" },
   { label: "Tema Personalizado", href: "#personalizado" },
@@ -151,11 +151,18 @@ function Hero() {
             <p className="max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
               Decorações completas, práticas e cheias de encanto para tornar a sua celebração inesquecível.
             </p>
-            <Link to="/orcamento" onClick={() => trackHomeEvent("home_budget_click", { location: "hero" })}>
-              <Button size="lg" className="mt-8 rounded-full border-0 px-7 font-semibold shadow-xl" style={{ background: rosa }}>
-                <MessageCircle className="mr-2 h-5 w-5" /> Quero fazer um orçamento <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link to="/catalogo" onClick={() => trackHomeEvent("home_catalog_click", { location: "hero" })}>
+                <Button size="lg" className="rounded-full border border-white/25 bg-white/10 px-7 font-semibold text-white shadow-xl hover:bg-white/20">
+                  Ver decorações <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link to="/orcamento" onClick={() => trackHomeEvent("home_budget_click", { location: "hero" })}>
+                <Button size="lg" className="rounded-full border-0 px-7 font-semibold shadow-xl" style={{ background: rosa }}>
+                  <MessageCircle className="mr-2 h-5 w-5" /> Quero fazer um orçamento <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
             <div className="mt-10 grid max-w-md grid-cols-4 gap-4 text-center text-xs text-white/90">
               {[['Locou', CalendarDays], ['Retirou', PackageCheck], ['Montou', Settings2], ['Devolveu', Truck]].map(([label, Icon]) => {
                 const C = Icon as typeof CalendarDays;
@@ -185,12 +192,14 @@ function Modalidades() {
       image: FESTA_NA_MESA_IMAGE,
       text: "Decorações completas e encantadoras para celebrações intimistas.",
       cta: "Ver temas",
+      href: "/catalogo?m=festa-na-mesa",
     },
     {
       title: "Peg & Monte",
       image: PEG_MONTE_IMAGE,
       text: "Decorações práticas para você montar do seu jeito.",
       cta: "Ver temas",
+      href: "/catalogo?m=peg-e-monte",
       dark: true,
     },
     {
@@ -198,6 +207,7 @@ function Modalidades() {
       image: PERSONALIZADO_IMAGE,
       text: "Não encontrou o tema ideal? Criamos uma proposta especial para você.",
       cta: "Solicitar orçamento",
+      href: "/orcamento?tipoSolicitacao=tema-personalizado",
     },
   ];
 
@@ -210,11 +220,11 @@ function Modalidades() {
             <div className="pl-5">
               <h2 className="font-serif text-3xl italic">{card.title}</h2>
               <p className={`mt-3 text-sm leading-relaxed ${card.dark ? 'text-white/80' : ''}`}>{card.text}</p>
-              <Link to="/orcamento">
+              <a href={card.href}>
                 <Button className="mt-5 rounded-full border-0 text-xs" style={{ background: card.dark ? marfim : rosa, color: vinho }}>
                   {card.cta}<ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
-              </Link>
+              </a>
             </div>
           </article>
         ))}
@@ -260,7 +270,7 @@ function Inspiracoes() {
           <h2 className="font-serif text-5xl leading-none">Festas<br /><span className="italic text-[#efb6b5]">que inspiram</span></h2>
           <div className="my-6 flex items-center gap-3 text-[#efb6b5]"><span className="h-px w-20 bg-current" /><Heart className="h-4 w-4 fill-current" /></div>
           <p className="max-w-xs text-sm leading-relaxed text-white/75">Cada decoração é única, assim como cada história. Aqui estão algumas das festas reais da LHL que mais representam o nosso trabalho.</p>
-          <a href="#modalidades" className="mt-7 inline-flex w-fit items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: rosa }}>Ver mais decorações <ArrowRight className="h-4 w-4" /></a>
+          <Link to="/catalogo" className="mt-7 inline-flex w-fit items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: rosa }}>Ver mais decorações <ArrowRight className="h-4 w-4" /></Link>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {INSPIRACOES.map((src, i) => (
@@ -364,7 +374,10 @@ function Footer() {
           <img src={logoImages[0]} className="h-12 w-12 rounded-full" alt="LHL Festas" />
           <div><div className="font-serif text-xl text-[#f0cf91]">LHL Festas</div><div className="text-xs text-white/50">Transformamos momentos em memórias especiais.</div></div>
         </div>
-        <a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><Instagram className="h-4 w-4" />@lhl_festas</a>
+        <div className="flex items-center gap-5">
+          <Link to="/catalogo" className="text-sm text-white/70 hover:text-white">Catálogo</Link>
+          <a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><Instagram className="h-4 w-4" />@lhl_festas</a>
+        </div>
       </div>
     </footer>
   );
