@@ -28,6 +28,7 @@ import {
   type OrdemProducao,
 } from "@/lib/producao-api";
 import {
+  assertOperacaoLiberada,
   OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
   resolveOperacaoGate,
   type OperacaoGateStatus,
@@ -100,10 +101,10 @@ export function ConfirmarKitDialog({
     }
     setSalvando(true);
     try {
-      // A função operacional também valida as pendências. O gate é checado aqui
-      // imediatamente antes da confirmação para evitar avanço por tela antiga.
-      const { status } = await resolveOperacaoGate(alvo.op.contratoId);
-      if (!status.liberada) throw new Error(status.motivo);
+      // Barreira arquitetural executada imediatamente antes da mutation.
+      // Assim, mesmo uma tela antiga ou estado visual desatualizado não consegue
+      // confirmar Kit Pronto sem recebimento real vinculado ao contrato.
+      await assertOperacaoLiberada(alvo.op.contratoId);
 
       const atualizada = await confirmarKitPronto(alvo.op, alvo.origem);
       toast.success(`Kit Pronto confirmado — ${atualizada.numero}`);
