@@ -1,6 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ChevronLeft, ChevronRight, Images, Loader2, Search, Sparkles, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Images,
+  Instagram,
+  Loader2,
+  Search,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { getCampaignParams, readAndPersistCampaignParams } from "@/lib/campaign-params";
 
 const CATALOG_API = "https://catalogo-lhlfestas.lovable.app/api/public/catalog.json";
 
@@ -40,9 +52,10 @@ export const Route = createFileRoute("/catalogo")({
       { title: "Catálogo de Temas | LHL Festas" },
       {
         name: "description",
-        content: "Explore os temas disponíveis da LHL Festas para Festa na Mesa e Peg & Monte.",
+        content: "Explore os temas disponíveis da LHL Festas para Festa na Mesa, Peg & Monte e projetos personalizados.",
       },
       { property: "og:title", content: "Catálogo de Temas | LHL Festas" },
+      { property: "og:description", content: "Escolha seu tema e envie sua decoração preferida direto para o orçamento da LHL Festas." },
       { property: "og:url", content: "https://www.lhlfestas.com.br/catalogo" },
     ],
     links: [{ rel: "canonical", href: "https://www.lhlfestas.com.br/catalogo" }],
@@ -59,6 +72,21 @@ function normalize(value: string) {
     .trim();
 }
 
+function requestedModality(payload: CatalogPayload): string {
+  if (typeof window === "undefined") return "Todos";
+  const raw = normalize(new URLSearchParams(window.location.search).get("m") || "");
+  if (!raw) return "Todos";
+
+  const available = Array.from(new Set(payload.themes.flatMap((theme) => theme.modalities)));
+  if (raw.includes("mesa")) {
+    return available.find((m) => normalize(m).includes("mesa")) || "Todos";
+  }
+  if (raw.includes("peg")) {
+    return available.find((m) => normalize(m).includes("peg")) || "Todos";
+  }
+  return "Todos";
+}
+
 function buildBudgetUrl(theme: CatalogTheme, image: CatalogImage) {
   const params = new URLSearchParams();
   params.set("tema", theme.name);
@@ -67,9 +95,12 @@ function buildBudgetUrl(theme: CatalogTheme, image: CatalogImage) {
   params.set("imagem", image.url);
   params.set("themeId", theme.id);
   params.set("origem", "catalogo");
-  params.set("utm_source", "catalogo");
-  params.set("utm_medium", "site");
-  params.set("utm_campaign", "escolha_tema");
+
+  const campaign = getCampaignParams();
+  for (const [key, value] of Object.entries(campaign)) {
+    if (value) params.set(key, value);
+  }
+
   return `/orcamento?${params.toString()}`;
 }
 
@@ -81,6 +112,7 @@ function CatalogoPage() {
   const [selected, setSelected] = useState<CatalogTheme | null>(null);
 
   useEffect(() => {
+    readAndPersistCampaignParams();
     let active = true;
     fetch(CATALOG_API, { headers: { Accept: "application/json" } })
       .then(async (res) => {
@@ -88,7 +120,9 @@ function CatalogoPage() {
         return res.json() as Promise<CatalogPayload>;
       })
       .then((payload) => {
-        if (active) setData(payload);
+        if (!active) return;
+        setData(payload);
+        setModality(requestedModality(payload));
       })
       .catch((err) => {
         if (active) setError(err instanceof Error ? err.message : "Não foi possível carregar o catálogo.");
@@ -119,22 +153,32 @@ function CatalogoPage() {
 
   return (
     <div className="min-h-screen" style={{ background: marfim, color: vinho }}>
-      <header className="sticky top-0 z-40 border-b border-white/10 text-white shadow-lg" style={{ background: `linear-gradient(90deg, ${vinhoEscuro}, ${vinho})` }}>
+      <header
+        className="sticky top-0 z-40 border-b border-white/10 text-white shadow-lg"
+        style={{ background: `linear-gradient(90deg, ${vinhoEscuro}, ${vinho})` }}
+      >
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-4 md:px-8">
           <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-white/85 hover:text-white">
-            <ArrowLeft className="h-4 w-4" /> Voltar para o site
+            <ArrowLeft className="h-4 w-4" /> <span className="hidden sm:inline">Voltar para o site</span><span className="sm:hidden">Voltar</span>
           </Link>
           <div className="text-center">
             <div className="font-serif text-xl text-[#f4d49b]">Catálogo LHL Festas</div>
             <div className="text-[10px] uppercase tracking-[.2em] text-white/60">Escolha seu tema</div>
           </div>
-          <Link to="/orcamento" className="rounded-full px-4 py-2 text-sm font-semibold text-[#4a0d18] shadow" style={{ background: rosa }}>
+          <Link
+            to="/orcamento"
+            className="rounded-full px-4 py-2 text-sm font-semibold text-[#4a0d18] shadow"
+            style={{ background: rosa }}
+          >
             Orçamento
           </Link>
         </div>
       </header>
 
-      <section className="border-b" style={{ borderColor: "#ead2c8", background: `linear-gradient(135deg, ${rosaClaro}, #fffaf4)` }}>
+      <section
+        className="border-b"
+        style={{ borderColor: "#ead2c8", background: `linear-gradient(135deg, ${rosaClaro}, #fffaf4)` }}
+      >
         <div className="mx-auto grid w-full max-w-[1600px] gap-8 px-4 py-10 md:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-end lg:py-14">
           <div>
             <span className="text-xs font-semibold uppercase tracking-[.22em]" style={{ color: dourado }}>Catálogo de temas</span>
@@ -142,9 +186,10 @@ function CatalogoPage() {
               Encontre a decoração que combina com a sua festa.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-relaxed text-[#6d4c49] sm:text-lg">
-              Escolha a modalidade, pesquise pelo tema e veja as opções de artes disponíveis. Depois, envie sua escolha direto para o orçamento.
+              Escolha a modalidade, pesquise pelo tema e veja as opções disponíveis. Quando encontrar a sua preferida, envie a escolha direto para o orçamento.
             </p>
           </div>
+
           <div className="rounded-3xl border bg-white/80 p-5 shadow-sm" style={{ borderColor: "#e8cfc5" }}>
             <div className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9b7470]" />
@@ -187,6 +232,9 @@ function CatalogoPage() {
           <div className="mx-auto max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-sm" style={{ borderColor: "#e8cfc5" }}>
             <h2 className="font-serif text-3xl">Não conseguimos carregar o catálogo agora.</h2>
             <p className="mt-3 text-sm text-[#765d58]">{error}</p>
+            <Link to="/orcamento" className="mt-6 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white" style={{ background: vinho }}>
+              Solicitar orçamento mesmo assim
+            </Link>
           </div>
         )}
 
@@ -197,6 +245,7 @@ function CatalogoPage() {
                 <h2 className="font-serif text-3xl sm:text-4xl">Temas disponíveis</h2>
                 <p className="mt-1 text-sm text-[#765d58]">
                   {filtered.length} {filtered.length === 1 ? "tema encontrado" : "temas encontrados"}
+                  {data.totalThemes ? ` · ${data.totalThemes} temas no catálogo` : ""}
                 </p>
               </div>
               <button
@@ -217,14 +266,22 @@ function CatalogoPage() {
                 <p className="mx-auto mt-2 max-w-xl text-sm text-[#765d58]">
                   A LHL também trabalha com temas personalizados. Conte para a gente o que você imaginou.
                 </p>
-                <Link to="/orcamento" search={{ tipoSolicitacao: "tema-personalizado" } as never} className="mt-5 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white" style={{ background: vinho }}>
+                <a
+                  href="/orcamento?tipoSolicitacao=tema-personalizado&origem=catalogo"
+                  className="mt-5 inline-flex rounded-full px-5 py-3 text-sm font-semibold text-white"
+                  style={{ background: vinho }}
+                >
                   Solicitar tema personalizado
-                </Link>
+                </a>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {filtered.map((theme) => (
-                  <article key={theme.id} className="group overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg" style={{ borderColor: "#ead4cb" }}>
+                  <article
+                    key={theme.id}
+                    className="group overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
+                    style={{ borderColor: "#ead4cb" }}
+                  >
                     <button type="button" onClick={() => setSelected(theme)} className="block w-full text-left">
                       <div className="aspect-square overflow-hidden rounded-xl bg-[#f5e8e2]">
                         <img
@@ -245,7 +302,11 @@ function CatalogoPage() {
                         )}
                       </div>
                     </button>
-                    <button onClick={() => setSelected(theme)} className="mt-3 w-full rounded-full px-3 py-2 text-xs font-semibold text-white" style={{ background: vinho }}>
+                    <button
+                      onClick={() => setSelected(theme)}
+                      className="mt-3 w-full rounded-full px-3 py-2 text-xs font-semibold text-white"
+                      style={{ background: vinho }}
+                    >
                       {theme.images.length > 1 ? "Ver opções" : "Ver tema"}
                     </button>
                   </article>
@@ -254,7 +315,38 @@ function CatalogoPage() {
             )}
           </>
         )}
+
+        <section id="tema-personalizado" className="mt-16 overflow-hidden rounded-[2rem] text-white shadow-xl" style={{ background: `linear-gradient(120deg, ${vinhoEscuro}, ${vinho})` }}>
+          <div className="grid items-center gap-8 px-6 py-10 md:grid-cols-[1.5fr_.7fr] md:px-10">
+            <div>
+              <div className="flex items-center gap-2 text-[#efb6b5]"><Heart className="h-5 w-5 fill-current" /> Tema personalizado</div>
+              <h2 className="mt-3 max-w-3xl font-serif text-4xl leading-tight sm:text-5xl">Não encontrou exatamente o que imaginou?</h2>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-white/75 sm:text-base">
+                Envie sua ideia ou uma imagem de referência. Nossa equipe analisa a proposta e prepara um orçamento personalizado para a sua festa.
+              </p>
+            </div>
+            <div className="md:text-right">
+              <a href="/orcamento?tipoSolicitacao=tema-personalizado&origem=catalogo" className="inline-flex rounded-full px-6 py-3.5 text-sm font-semibold text-[#4a0d18] shadow-lg" style={{ background: rosa }}>
+                Quero um tema personalizado
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <footer className="mt-8 border-t border-white/10 px-5 py-8 text-white" style={{ background: "#390b12" }}>
+        <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-4 md:flex-row">
+          <div>
+            <div className="font-serif text-xl text-[#f0cf91]">LHL Festas</div>
+            <div className="mt-1 text-xs text-white/50">Transformamos momentos em memórias especiais.</div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-sm text-white/70">
+            <Link to="/">Início</Link>
+            <Link to="/orcamento">Orçamento</Link>
+            <a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2"><Instagram className="h-4 w-4" /> @lhl_festas</a>
+          </div>
+        </div>
+      </footer>
 
       {selected && <ThemeModal theme={selected} onClose={() => setSelected(null)} />}
     </div>
@@ -287,19 +379,28 @@ function ThemeModal({ theme, onClose }: { theme: CatalogTheme; onClose: () => vo
         </button>
         <div className="pr-12">
           <h2 className="font-serif text-3xl sm:text-4xl" style={{ color: vinho }}>{theme.name}</h2>
-          <p className="mt-1 text-sm text-[#765d58]">Escolha a arte que mais gostar.</p>
+          <p className="mt-1 text-sm text-[#765d58]">Escolha a opção que mais gostar.</p>
         </div>
 
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {theme.images.map((image, index) => (
             <article key={`${image.url}-${index}`} className="rounded-2xl border bg-white p-3 shadow-sm" style={{ borderColor: "#ead4cb" }}>
               <button onClick={() => setZoomIndex(index)} className="block aspect-square w-full overflow-hidden rounded-xl bg-[#f5e8e2]">
-                <img src={image.thumbnailUrl || image.url} alt={`${theme.name} - opção ${index + 1}`} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                <img
+                  src={image.thumbnailUrl || image.url}
+                  alt={`${theme.name} - opção ${index + 1}`}
+                  className="h-full w-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </button>
               <div className="mt-3 text-center">
                 <div className="font-semibold" style={{ color: vinho }}>Opção {index + 1}</div>
                 <div className="mt-1 text-xs text-[#8d716c]">{image.modality}</div>
-                <a href={buildBudgetUrl(theme, image)} className="mt-3 inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-white" style={{ background: vinho }}>
+                <a
+                  href={buildBudgetUrl(theme, image)}
+                  className="mt-3 inline-flex w-full items-center justify-center rounded-full px-4 py-2.5 text-sm font-semibold text-white"
+                  style={{ background: vinho }}
+                >
                   Escolher este tema
                 </a>
               </div>
@@ -310,15 +411,40 @@ function ThemeModal({ theme, onClose }: { theme: CatalogTheme; onClose: () => vo
 
       {current && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4" onClick={() => setZoomIndex(null)}>
-          <button className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-3 text-white" onClick={(e) => { e.stopPropagation(); setZoomIndex((zoomIndex! - 1 + theme.images.length) % theme.images.length); }}>
+          <button
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-3 text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomIndex((zoomIndex! - 1 + theme.images.length) % theme.images.length);
+            }}
+            aria-label="Imagem anterior"
+          >
             <ChevronLeft />
           </button>
-          <img src={current.url} alt={theme.name} className="max-h-[84vh] max-w-[88vw] rounded-xl object-contain" referrerPolicy="no-referrer" onClick={(e) => e.stopPropagation()} />
-          <button className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-3 text-white" onClick={(e) => { e.stopPropagation(); setZoomIndex((zoomIndex! + 1) % theme.images.length); }}>
+          <img
+            src={current.url}
+            alt={theme.name}
+            className="max-h-[84vh] max-w-[88vw] rounded-xl object-contain"
+            referrerPolicy="no-referrer"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/15 p-3 text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              setZoomIndex((zoomIndex! + 1) % theme.images.length);
+            }}
+            aria-label="Próxima imagem"
+          >
             <ChevronRight />
           </button>
-          <button className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white" onClick={() => setZoomIndex(null)}><X /></button>
-          <a href={buildBudgetUrl(theme, current)} className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-xl" style={{ background: vinho }} onClick={(e) => e.stopPropagation()}>
+          <button className="absolute right-4 top-4 rounded-full bg-white/15 p-2 text-white" onClick={() => setZoomIndex(null)} aria-label="Fechar imagem"><X /></button>
+          <a
+            href={buildBudgetUrl(theme, current)}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full px-5 py-3 text-sm font-semibold text-white shadow-xl"
+            style={{ background: vinho }}
+            onClick={(e) => e.stopPropagation()}
+          >
             Escolher este tema
           </a>
         </div>
