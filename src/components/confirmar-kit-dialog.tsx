@@ -5,9 +5,12 @@
 // compras nem produções pendentes, ele apenas avisa e pede a confirmação de
 // uma pessoa. Ao confirmar, registramos usuário, data/hora, origem da ação,
 // número da OP e contrato no histórico da Ordem de Produção.
+//
+// REGRA SOBERANA: pré-contrato sem recebimento confirmado não pode avançar na
+// operação. O diálogo consulta o gate financeiro antes de habilitar a ação.
 // ============================================================================
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,12 +21,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PackageCheck } from "lucide-react";
+import { AlertTriangle, Loader2, PackageCheck } from "lucide-react";
 import {
   confirmarKitPronto,
   pendenciasOperacionais,
   type OrdemProducao,
 } from "@/lib/producao-api";
+import {
+  OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
+  resolveOperacaoGate,
+  type OperacaoGateStatus,
+} from "@/lib/operacao-gate";
 
 export type ConfirmarKitAlvo = {
   op: OrdemProducao;
@@ -42,14 +50,61 @@ export function ConfirmarKitDialog({
   onAtualizado?: (op: OrdemProducao) => void;
 }) {
   const [salvando, setSalvando] = useState(false);
+  const [checandoGate, setChecandoGate] = useState(false);
+  const [gate, setGate] = useState<OperacaoGateStatus | null>(null);
+
+  useEffect(() => {
+    let ativo = true;
+    if (!alvo) {
+      setGate(null);
+      setChecandoGate(false);
+      return;
+    }
+
+    setChecandoGate(true);
+    setGate(null);
+    void resolveOperacaoGate(alvo.op.contratoId)
+      .then(({ status }) => {
+        if (ativo) setGate(status);
+      })
+      .catch(() => {
+        if (ativo) {
+          setGate({
+            liberada: false,
+            totalRecebido: 0,
+            origemLegado: false,
+            motivo: "Não foi possível confirmar o recebimento deste contrato agora.",
+          });
+        }
+      })
+      .finally(() => {
+        if (ativo) setChecandoGate(false);
+      });
+
+    return () => {
+      ativo = false;
+    };
+  }, [alvo?.op.id, alvo?.op.contratoId]);
+
   if (!alvo) return null;
 
   const pend = pendenciasOperacionais(alvo.op);
-  const bloqueado = pend.compras > 0 || pend.producao > 0;
+  const temPendencias = pend.compras > 0 || pend.producao > 0;
+  const semRecebimento = !checandoGate && gate?.liberada === false;
+  const bloqueado = temPendencias || checandoGate || semRecebimento;
 
   const confirmar = async () => {
+    if (bloqueado) {
+      if (semRecebimento) toast.error(gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO);
+      return;
+    }
     setSalvando(true);
     try {
+      // A função operacional também valida as pendências. O gate é checado aqui
+      // imediatamente antes da confirmação para evitar avanço por tela antiga.
+      const { status } = await resolveOperacaoGate(alvo.op.contratoId);
+      if (!status.liberada) throw new Error(status.motivo);
+
       const atualizada = await confirmarKitPronto(alvo.op, alvo.origem);
       toast.success(`Kit Pronto confirmado — ${atualizada.numero}`);
       onAtualizado?.(atualizada);
@@ -74,13 +129,29 @@ export function ConfirmarKitDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {bloqueado ? (
+        {checandoGate ? (
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Conferindo recebimento do contrato...
+          </div>
+        ) : semRecebimento ? (
+          <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-800">
+            <p className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="h-4 w-4" /> Operação bloqueada — aguardando sinal
+            </p>
+            <p className="mt-1 text-xs">
+              {gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO}
+            </p>
+          </div>
+        ) : temPendencias ? (
           <p className="text-sm text-destructive">
             Ainda existem {pend.compras} compra(s) e {pend.producao} produção(ões) pendentes
             nesta Ordem de Produção. Conclua os itens antes de confirmar.
           </p>
         ) : (
           <div className="space-y-3 text-sm text-muted-foreground">
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800">
+              Recebimento confirmado · operação liberada.
+            </div>
             <p>
               Todos os itens desta festa foram concluídos:{" "}
               <strong className="text-foreground">{pend.totalCompras} compra(s)</strong> e{" "}
@@ -99,7 +170,7 @@ export function ConfirmarKitDialog({
             Ainda não
           </Button>
           <Button className="rounded-full" onClick={confirmar} disabled={salvando || bloqueado}>
-            {salvando ? "Confirmando…" : "Confirmar Kit Pronto"}
+            {salvando || checandoGate ? "Confirmando…" : "Confirmar Kit Pronto"}
           </Button>
         </DialogFooter>
       </DialogContent>
