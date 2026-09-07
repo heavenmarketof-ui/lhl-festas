@@ -20,8 +20,10 @@ export const Route = createFileRoute("/consultor")({
           "Atendimento guiado para escolher tema, kit e modalidade da sua festa em minutos.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://www.lhlfestas.com.br/consultor" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://www.lhlfestas.com.br/consultor" }],
   }),
 });
 
