@@ -83,19 +83,23 @@ function AgendaPage() {
     return map;
   }, [ordersLiberadas]);
 
-  const resumo = useMemo(() => {
-    const mes = cursor.getMonth();
-    const ano = cursor.getFullYear();
-    const noMes = (o: StoredOrder) => {
-      const iso = toDateISO(o.details?.dataEvento);
-      if (!iso || o.status === "Cancelado") return false;
-      const d = new Date(`${iso}T12:00:00`);
-      return d.getMonth() === mes && d.getFullYear() === ano;
-    };
+  const noMesAtual = (o: StoredOrder) => {
+    const iso = toDateISO(o.details?.dataEvento);
+    if (!iso || o.status === "Cancelado") return false;
+    const d = new Date(`${iso}T12:00:00`);
+    return d.getMonth() === cursor.getMonth() && d.getFullYear() === cursor.getFullYear();
+  };
 
-    const festasMes = orders.filter(noMes);
+  const aguardandoSinalList = useMemo(
+    () => orders
+      .filter((o) => noMesAtual(o) && !gateByOrder.get(o.id)?.liberada)
+      .sort((a, b) => (toDateISO(a.details?.dataEvento) || "9999-12-31").localeCompare(toDateISO(b.details?.dataEvento) || "9999-12-31")),
+    [orders, gateByOrder, cursor],
+  );
+
+  const resumo = useMemo(() => {
+    const festasMes = orders.filter(noMesAtual);
     const liberadasMes = festasMes.filter((o) => gateByOrder.get(o.id)?.liberada);
-    const aguardandoSinal = festasMes.filter((o) => !gateByOrder.get(o.id)?.liberada);
     const proximas7 = liberadasMes.filter((o) => {
       const iso = toDateISO(o.details?.dataEvento);
       return !!iso && iso >= todayISO && iso <= in7ISO;
@@ -104,10 +108,10 @@ function AgendaPage() {
     return {
       total: festasMes.length,
       liberadas: liberadasMes.length,
-      aguardandoSinal: aguardandoSinal.length,
+      aguardandoSinal: aguardandoSinalList.length,
       proximas7,
     };
-  }, [orders, cursor, todayISO, in7ISO, gateByOrder]);
+  }, [orders, cursor, todayISO, in7ISO, gateByOrder, aguardandoSinalList]);
 
   return (
     <AdminShell>
@@ -148,10 +152,30 @@ function AgendaPage() {
           </div>
         </div>
 
-        {resumo.aguardandoSinal > 0 && !loading && (
-          <div className="rounded-2xl border border-[#ecd9b8] bg-[#fff9ed] px-4 py-3 text-sm text-[#815f2d]">
-            {resumo.aguardandoSinal} contrato(s) deste mês ainda não aparecem no calendário operacional porque não possuem recebimento confirmado.
-          </div>
+        {aguardandoSinalList.length > 0 && !loading && (
+          <section className="rounded-3xl border border-[#ecd9b8] bg-[#fff9ed] p-4 sm:p-5">
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#815f2d]">
+              <WalletCards className="h-4 w-4" /> Aguardando confirmação de recebimento
+            </div>
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+              {aguardandoSinalList.map((order) => {
+                const data = toDateISO(order.details?.dataEvento);
+                const tema = String(order.details?.tema || "Tema não informado");
+                return (
+                  <button
+                    key={order.id}
+                    type="button"
+                    className="rounded-2xl border border-[#ead8b6] bg-white p-3 text-left transition hover:border-[#c89b58] hover:shadow-sm"
+                    onClick={() => navigate({ to: "/admin/$id", params: { id: order.id } })}
+                  >
+                    <div className="font-medium text-[#651421]">{order.nome || "Cliente não informado"}</div>
+                    <div className="mt-1 text-xs text-[#806e67]">{tema}</div>
+                    <div className="mt-2 text-xs font-medium text-[#9a7541]">Festa: {data ? data.split("-").reverse().join("/") : "sem data"}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
         )}
 
         {loading ? (
