@@ -1,0 +1,58 @@
+name: Fechamento operacional em lote
+on:
+  push:
+    branches: [home-nova]
+    paths: ['.github/workflows/oneoff-fechamento-operacional.yml']
+permissions:
+  contents: write
+jobs:
+  fechar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: home-nova }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Auditar e reforçar produção e contrato
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # Contrato contém PII: mantém sem cache e sem indexação (já protegido por response-security)
+          contract=Path('src/routes/contract.$id.tsx')
+          s=contract.read_text()
+          assert 'getOrderFromSheet' in s
+          # Evita links administrativos quando a página for aberta fora de uma sessão administrativa.
+          # O contrato continua cliente-facing por enquanto; não altera backend nem quebra links existentes.
+          s=s.replace('meta: [{ title: "Contrato — LHL Festas" }],','meta: [{ title: "Contrato — LHL Festas" }, { name: "robots", content: "noindex, nofollow" }],')
+          contract.write_text(s)
+
+          # Reserva deve permanecer fora do sitemap e protegida.
+          sec=Path('src/lib/response-security.ts').read_text()
+          sitemap=Path('src/routes/sitemap[.]xml.ts').read_text()
+          assert '"/reserva"' in sec
+          assert '{ path: "/reserva"' not in sitemap
+
+          # Produção: registra auditoria de usos diretos; falha se novas telas ignorarem a porta segura.
+          offenders=[]
+          for p in Path('src').rglob('*.ts*'):
+            if p.name in {'producao-api.ts','producao-operacional-safe.ts'}: continue
+            t=p.read_text(errors='ignore')
+            if 'updateItemProducaoStatus' in t or 'confirmarKitPronto(' in t:
+              offenders.append(str(p))
+          if offenders:
+            raise SystemExit('Chamadas de produção sem porta segura: '+', '.join(offenders))
+          PY
+          npm audit --omit=dev --audit-level=high
+          npm test
+          npm run build
+      - name: Commitar fechamento
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add 'src/routes/contract.$id.tsx'
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Reforça privacidade do contrato e homologa produção segura'
+          git push origin HEAD:home-nova
