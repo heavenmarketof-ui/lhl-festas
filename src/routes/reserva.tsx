@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   saveOrder,
-  computePricing,
   buildWhatsAppMessage,
   WHATSAPP_NUMBER,
   buildEnderecoCompleto,
@@ -26,16 +25,16 @@ export const Route = createFileRoute("/reserva")({
   component: Index,
   head: () => ({
     meta: [
-      { title: "LHL Festas – Peg & Monte | Prático, lindo e feito para você" },
-      { name: "description", content: "Envie seus dados e escolha o tema da sua festa com a LHL Festas Peg & Monte." },
+      { title: "Reserva | LHL Festas" },
+      { name: "description", content: "Envie seus dados para a equipe LHL Festas preparar sua reserva e contrato." },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { property: "og:title", content: "LHL Festas – Peg & Monte" },
+      { property: "og:title", content: "Reserva | LHL Festas" },
       { property: "og:description", content: "Sua festa, do seu jeito!" },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://lhl-festas.lovable.app/reserva" },
+      { property: "og:url", content: "https://www.lhlfestas.com.br/reserva" },
     ],
     links: [
-      { rel: "canonical", href: "https://lhl-festas.lovable.app/reserva" },
+      { rel: "canonical", href: "https://www.lhlfestas.com.br/reserva" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Dancing+Script:wght@500;600;700&family=Karla:wght@300;400;500;600&display=swap" },
@@ -65,15 +64,8 @@ function Index() {
   const [aceites, setAceites] = useState<boolean[]>(() => ACEITE_ITEMS.map(() => false));
   const navigate = useNavigate();
 
-  const set = (k: keyof typeof empty) => (v: string) =>
-    setForm((f) => ({ ...f, [k]: v }));
-
+  const set = (k: keyof typeof empty) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const allAceites = aceites.every(Boolean);
-
-  const pricing = useMemo(
-    () => computePricing(form.modalidade, form.plano, form.dataEvento),
-    [form.modalidade, form.plano, form.dataEvento],
-  );
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -103,10 +95,12 @@ function Index() {
       nomeAniversariante: form.nomeAniversariante,
       idadeAniversariante: form.idadeAniversariante,
       tipoFesta: form.tipoFesta,
-      valorTotal: String(pricing.total),
-      valorSinal: String(pricing.sinal),
-      valorRestante: String(pricing.restante),
-      valorCaucao: isMontagem ? "0" : String(pricing.caucao),
+      // Regra oficial: valores nunca são calculados automaticamente no site.
+      // A equipe informa total, sinal, restante e caução somente após negociação.
+      valorTotal: "",
+      valorSinal: "",
+      valorRestante: "",
+      valorCaucao: isMontagem ? "0" : "",
       kit: { ...emptyKit },
       balaoTipo: "",
       demaisPecas: "",
@@ -155,11 +149,7 @@ function Index() {
     };
 
     let saved;
-    try {
-      saved = saveOrder(orderInput);
-    } catch {
-      /* sem bloqueio */
-    }
+    try { saved = saveOrder(orderInput); } catch { /* sem bloqueio */ }
 
     if (saved) {
       postOrderToSheet({
@@ -180,10 +170,10 @@ function Index() {
         nomeAniversariante: form.nomeAniversariante,
         idadeAniversariante: form.idadeAniversariante,
         tipoFesta: form.tipoFesta,
-        valorTotal: pricing.total,
-        valorSinal: pricing.sinal,
-        valorRestante: pricing.restante,
-        caucao: pricing.caucao,
+        valorTotal: "",
+        valorSinal: "",
+        valorRestante: "",
+        caucao: isMontagem ? "0" : "",
         demaisPecas: "",
         observacoes: "",
         kitJson: JSON.stringify(details.kit),
@@ -225,192 +215,82 @@ function Index() {
   return (
     <div className="min-h-screen bg-background">
       <Toaster position="top-center" richColors />
-
       <header className="px-6 pt-10 pb-8 text-center">
-        <img src={logo} alt="LHL Festas Peg & Monte" className="mx-auto w-44 sm:w-56 drop-shadow-sm" />
+        <img src={logo} alt="LHL Festas" className="mx-auto w-44 sm:w-56 drop-shadow-sm" />
         <h1 className="mt-6 text-4xl sm:text-5xl text-primary tracking-wide">LHL Festas</h1>
-        <p className="font-script text-2xl sm:text-3xl text-gold mt-1">Peg &amp; Monte</p>
-        <p className="mt-4 text-sm sm:text-base uppercase tracking-[0.25em] text-muted-foreground">
-          Prático, lindo e feito para você
-        </p>
+        <p className="font-script text-2xl sm:text-3xl text-gold mt-1">Sua festa, do seu jeito</p>
+        <p className="mt-4 text-sm sm:text-base uppercase tracking-[0.25em] text-muted-foreground">Prático, lindo e feito para você</p>
         <div className="mx-auto mt-6 h-px w-24 bg-gradient-to-r from-transparent via-gold to-transparent" />
       </header>
 
       <main className="px-4 pb-16">
-        <form
-          onSubmit={onSubmit}
-          className="mx-auto max-w-2xl rounded-3xl bg-card border border-border/60 p-6 sm:p-10 shadow-[var(--shadow-soft)]"
-        >
-          {/* Seção 1 — Dados Pessoais */}
+        <form onSubmit={onSubmit} className="mx-auto max-w-2xl rounded-3xl bg-card border border-border/60 p-6 sm:p-10 shadow-[var(--shadow-soft)]">
           <SectionTitle number="01" title="Dados Pessoais" />
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
-            <Field label="Nome Completo" full>
-              <Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required placeholder="Nome completo" />
-            </Field>
-            <Field label="CPF">
-              <Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required placeholder="000.000.000-00" />
-            </Field>
-            <Field label="Telefone">
-              <Input type="tel" value={form.telefone} onChange={(e) => set("telefone")(e.target.value)} required placeholder="(00) 00000-0000" />
-            </Field>
-            <Field label="E-mail" full>
-              <Input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} required placeholder="voce@email.com" />
-            </Field>
+            <Field label="Nome Completo" full><Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required placeholder="Nome completo" /></Field>
+            <Field label="CPF"><Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required placeholder="000.000.000-00" /></Field>
+            <Field label="Telefone"><Input type="tel" value={form.telefone} onChange={(e) => set("telefone")(e.target.value)} required placeholder="(00) 00000-0000" /></Field>
+            <Field label="E-mail" full><Input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} required placeholder="voce@email.com" /></Field>
           </div>
 
           <Divider />
-
-          {/* Endereço */}
           <SectionTitle number="02" title="Endereço" />
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
-            <Field label="Rua" full>
-              <Input value={form.rua} onChange={(e) => set("rua")(e.target.value)} required placeholder="Nome da rua" />
-            </Field>
-            <Field label="Número">
-              <Input value={form.numero} onChange={(e) => set("numero")(e.target.value)} required placeholder="Nº" />
-            </Field>
-            <Field label="Bairro">
-              <Input value={form.bairro} onChange={(e) => set("bairro")(e.target.value)} required placeholder="Bairro" />
-            </Field>
-            <Field label="Cidade">
-              <Input value={form.cidade} onChange={(e) => set("cidade")(e.target.value)} required placeholder="Cidade" />
-            </Field>
-            <Field label="CEP">
-              <Input value={form.cep} onChange={(e) => set("cep")(e.target.value)} required placeholder="00000-000" />
-            </Field>
+            <Field label="Rua" full><Input value={form.rua} onChange={(e) => set("rua")(e.target.value)} required placeholder="Nome da rua" /></Field>
+            <Field label="Número"><Input value={form.numero} onChange={(e) => set("numero")(e.target.value)} required placeholder="Nº" /></Field>
+            <Field label="Bairro"><Input value={form.bairro} onChange={(e) => set("bairro")(e.target.value)} required placeholder="Bairro" /></Field>
+            <Field label="Cidade"><Input value={form.cidade} onChange={(e) => set("cidade")(e.target.value)} required placeholder="Cidade" /></Field>
+            <Field label="CEP"><Input value={form.cep} onChange={(e) => set("cep")(e.target.value)} required placeholder="00000-000" /></Field>
           </div>
 
           <Divider />
-
-          {/* Seção 3 — Festa */}
           <SectionTitle number="03" title="Escolha da Festa" />
           <div className="mt-6 space-y-7">
-            <Field label="Tema Escolhido" full>
-              <Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required placeholder="Ex: Jardim Encantado, Princesas, Safari..." />
-            </Field>
-
+            <Field label="Tema Escolhido" full><Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required placeholder="Ex: Jardim Encantado, Princesas, Safari..." /></Field>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Tipo da Festa">
-                <select
-                  value={form.tipoFesta}
-                  onChange={(e) => set("tipoFesta")(e.target.value)}
-                  required
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                >
-                  <option value="">Selecione...</option>
-                  {["Aniversário","Chá de Bebê","Chá Bar","Chá Revelação","Batizado","Casamento","Noivado","Corporativo","Outro"].map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Nome do Aniversariante (se houver)">
-                <Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} placeholder="Ex: Ana Beatriz" />
-              </Field>
-              <Field label="Idade do Aniversariante (se houver)" full>
-                <Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} placeholder="Ex: 9 anos" />
-              </Field>
+              <Field label="Tipo da Festa"><select value={form.tipoFesta} onChange={(e) => set("tipoFesta")(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Selecione...</option>{["Aniversário","Chá de Bebê","Chá Bar","Chá Revelação","Batizado","Casamento","Noivado","Corporativo","Outro"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+              <Field label="Nome do Aniversariante (se houver)"><Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} placeholder="Ex: Ana Beatriz" /></Field>
+              <Field label="Idade do Aniversariante (se houver)" full><Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} placeholder="Ex: 9 anos" /></Field>
             </div>
-
-            <KitPicker
-              modalidade={form.modalidade}
-              onModalidadeChange={(v) => setForm((f) => ({ ...f, modalidade: v, plano: "" }))}
-              kit={form.plano}
-              onKitChange={(v) => setForm((f) => ({ ...f, plano: v }))}
-            />
+            <KitPicker modalidade={form.modalidade} onModalidadeChange={(v) => setForm((f) => ({ ...f, modalidade: v, plano: "" }))} kit={form.plano} onKitChange={(v) => setForm((f) => ({ ...f, plano: v }))} />
           </div>
 
-
           <Divider />
-
-          {/* Seção 4 — Logística */}
           <SectionTitle number="04" title="Logística" />
           <div className="mt-6 space-y-3">
-            <Field label="Data do Evento" full>
-              <Input type="date" value={form.dataEvento} onChange={(e) => set("dataEvento")(e.target.value)} required />
-            </Field>
-            <p className="text-xs italic text-muted-foreground bg-accent/40 border border-border/50 rounded-xl px-4 py-3">
-              As retiradas e devoluções são realizadas de segunda a sábado, das 9h às 18h. Não realizamos retiradas ou devoluções aos domingos. O dia exato será alinhado com nossa equipe.
-            </p>
+            <Field label="Data do Evento" full><Input type="date" value={form.dataEvento} onChange={(e) => set("dataEvento")(e.target.value)} required /></Field>
+            <p className="text-xs italic text-muted-foreground bg-accent/40 border border-border/50 rounded-xl px-4 py-3">As retiradas e devoluções são alinhadas com nossa equipe conforme a modalidade contratada e a disponibilidade.</p>
           </div>
 
           <Divider />
-
           <div className="mt-6 rounded-2xl border border-border/60 bg-accent/20 p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-              Valores da locação
-            </p>
-            <p className="text-sm text-foreground leading-relaxed">
-              Esta é uma <strong>solicitação de reserva</strong>. Os valores finais (total, sinal
-              de <strong>50%</strong>, restante e caução) serão confirmados pela nossa equipe
-              conforme a data do evento e a disponibilidade dos itens.
-            </p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Valores da locação</p>
+            <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor de kit é calculado automaticamente. O valor total, o sinal de <strong>30%</strong>, o restante e a caução aplicável serão informados pela equipe após a negociação.</p>
           </div>
 
           <Divider />
-
           <SectionTitle number="05" title="Confirmação da Reserva" />
           <div className="mt-6 space-y-3 rounded-2xl border border-border/60 bg-accent/20 p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-              Marque todos os itens abaixo para prosseguir com o envio
-            </p>
-            {ACEITE_ITEMS.map((txt, i) => (
-              <label key={i} className="flex items-start gap-3 cursor-pointer text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={aceites[i]}
-                  onChange={(e) =>
-                    setAceites((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))
-                  }
-                  className="mt-1 h-4 w-4 accent-primary"
-                />
-                <span>{txt}</span>
-              </label>
-            ))}
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Marque todos os itens abaixo para prosseguir com o envio</p>
+            {ACEITE_ITEMS.map((txt, i) => <label key={i} className="flex items-start gap-3 cursor-pointer text-sm text-foreground"><input type="checkbox" checked={aceites[i]} onChange={(e) => setAceites((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))} className="mt-1 h-4 w-4 accent-primary" /><span>{txt}</span></label>)}
           </div>
 
-          <Button
-            type="submit"
-            disabled={!allAceites}
-            className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Enviar Dados pelo WhatsApp ♥
-          </Button>
+          <Button type="submit" disabled={!allAceites} className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed">Enviar Dados pelo WhatsApp ♥</Button>
         </form>
 
-        <p className="mt-8 text-center font-script text-2xl text-primary">
-          Sua festa, do seu jeito!
-        </p>
-
-        <div className="mt-6 text-center">
-          <Link to="/admin" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors">
-            <Lock className="h-3 w-3" /> Visão da Loja
-          </Link>
-        </div>
+        <p className="mt-8 text-center font-script text-2xl text-primary">Sua festa, do seu jeito!</p>
+        <div className="mt-6 text-center"><Link to="/admin" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"><Lock className="h-3 w-3" /> Visão da Loja</Link></div>
       </main>
     </div>
   );
 }
 
 function SectionTitle({ number, title }: { number: string; title: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <span className="font-serif text-gold text-lg">{number}</span>
-      <span className="h-px flex-1 bg-border" />
-      <h2 className="font-serif text-2xl text-primary">{title}</h2>
-      <span className="h-px flex-1 bg-border" />
-    </div>
-  );
+  return <div className="flex items-center gap-3"><span className="font-serif text-gold text-lg">{number}</span><span className="h-px flex-1 bg-border" /><h2 className="font-serif text-2xl text-primary">{title}</h2><span className="h-px flex-1 bg-border" /></div>;
 }
 
-function Divider() {
-  return <div className="my-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />;
-}
+function Divider() { return <div className="my-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />; }
 
 function Field({ label, full, children }: { label: string; full?: boolean; children: React.ReactNode }) {
-  return (
-    <div className={full ? "sm:col-span-2 space-y-2" : "space-y-2"}>
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
+  return <div className={full ? "sm:col-span-2 space-y-2" : "space-y-2"}><Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>{children}</div>;
 }
