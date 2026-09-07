@@ -1,13 +1,14 @@
-// FONTE OFICIAL DOS TEMAS DO CONSULTOR:
-//   https://catalogo-lhlfestas.lovable.app/catalog.json
-//   (carregado em runtime por src/lib/consultor/catalog-remote.ts)
+// FONTE DOS TEMAS DO CONSULTOR:
+// o navegador consome a fachada server-side `fetchCatalogoPublico`, do próprio
+// Sistema Oficial LHL. A origem temporária do catálogo fica isolada no servidor
+// e poderá ser substituída sem alterar o Consultor ou as páginas públicas.
 //
-// A lista `THEMES` abaixo é FALLBACK LOCAL — usada apenas quando o JSON
-// remoto está indisponível (rede, CORS, offline). Não é a fonte principal
-// e não precisa ser mantida em sincronia com o catálogo.
+// A lista `THEMES` abaixo é FALLBACK LOCAL — usada apenas quando a leitura do
+// catálogo oficial está indisponível. Não é a fonte principal e não precisa ser
+// mantida em sincronia perfeita com o catálogo.
 //
-// Os KITS, por outro lado, permanecem sendo definidos aqui: esta é a fonte
-// única e oficial dos kits, consumida por /orcamento e pelo Consultor.
+// Os KITS permanecem centralizados em src/data/kits.ts; este arquivo apenas
+// adapta os dados ao formato historicamente usado pelo Consultor.
 
 import { OFFICIAL_KITS } from "@/data/kits";
 import {
@@ -15,8 +16,6 @@ import {
   pegEMonteImages,
   inspireSeImages,
 } from "@/assets/lhl";
-
-// ---------- Tipos ----------
 
 export type Modality = "Festa na Mesa" | "Pegue e Monte";
 export type KitModality = Modality | "Ambos";
@@ -46,8 +45,6 @@ export type CatalogKit = {
   imageUrl: string;
 };
 
-// ---------- Utilitário ----------
-// Escolhe uma imagem determinística dentro de um pool a partir do id.
 function pickImage(pool: string[], seed: string): string {
   if (!pool.length) return "";
   let h = 0;
@@ -55,10 +52,6 @@ function pickImage(pool: string[], seed: string): string {
   return pool[h % pool.length];
 }
 
-// ---------- Temas oficiais ----------
-// A LHL trabalha com um catálogo externo de +1.000 temas. Esta lista
-// representa a base curada usada pelo Consultor para reconhecimento e
-// sugestão inteligente com imagens reais.
 const RAW_THEMES: Array<Omit<CatalogTheme, "imageUrl">> = [
   { id: "hello-kitty", name: "Hello Kitty", modality: "Festa na Mesa",
     aliases: ["hello kity", "helo kit", "kitty", "hello", "gatinha kitty"] },
@@ -106,11 +99,6 @@ export const THEMES: CatalogTheme[] = RAW_THEMES.map((t) => {
   return { ...t, imageUrl: pickImage(fallback, t.id) };
 });
 
-// ---------- Kits oficiais ----------
-// ATENÇÃO: a fonte única e oficial dos kits é `src/data/kits.ts`.
-// Este módulo apenas adapta aquela fonte ao formato `CatalogKit` usado
-// historicamente pelo site/Consultor. NÃO declarar kits aqui.
-
 export const KITS: CatalogKit[] = OFFICIAL_KITS.filter((k) => k.ativo)
   .sort((a, b) => a.modalidade.localeCompare(b.modalidade) || a.ordem - b.ordem)
   .map((k) => {
@@ -138,7 +126,6 @@ export function getKitById(id?: string): CatalogKit | undefined {
   if (!id) return undefined;
   return KITS.find((k) => k.id === id);
 }
-
 
 export function getThemeById(id?: string): CatalogTheme | undefined {
   if (!id) return undefined;
