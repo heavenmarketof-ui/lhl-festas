@@ -1,0 +1,75 @@
+name: Migrar imports de imagens antigas
+
+on:
+  push:
+    branches: [home-nova]
+    paths:
+      - .github/workflows/migrate-asset-imports.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.event.head_commit.message == 'Adiciona migração única de imports de imagens'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: home-nova
+
+      - name: Migrar imports asset.json para imagens físicas
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          changed = []
+          pattern = re.compile(r'import\s+([A-Za-z_$][\w$]*)\s+from\s+(["\'])(@/assets/[^"\']+?\.asset\.json)\2;')
+
+          for path in list(Path('src').rglob('*.ts')) + list(Path('src').rglob('*.tsx')):
+              text = path.read_text(encoding='utf-8')
+              variables = []
+
+              def repl(match):
+                  var = match.group(1)
+                  quote = match.group(2)
+                  old_path = match.group(3)
+                  variables.append(var)
+                  return f'import {var} from {quote}{old_path[:-11]}{quote};'
+
+              updated = pattern.sub(repl, text)
+              for var in variables:
+                  updated = re.sub(rf'\b{re.escape(var)}\.url\b', var, updated)
+
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+                  changed.append(str(path))
+
+          print('Arquivos migrados:')
+          for item in changed:
+              print('-', item)
+          PY
+
+      - name: Confirmar ausência de imports asset.json
+        shell: bash
+        run: |
+          if grep -R '\.asset\.json' src --include='*.ts' --include='*.tsx'; then
+            echo 'Ainda existem imports antigos .asset.json.'
+            exit 1
+          fi
+
+      - name: Commit da migração
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src
+          git commit -m 'Migra imports antigos de imagens para arquivos físicos'
+          git push origin home-nova
