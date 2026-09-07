@@ -22,7 +22,7 @@ export function contextoFestaDaSolicitacao(
 ): SolicitacaoContextoFesta {
   return {
     cliente: String(order?.nome || solicitacao.pedidoCliente || "—"),
-    tema: String(order?.details?.tema || "").trim() || "Tema não informado",
+    tema: String(order?.tema || "").trim() || "Tema não informado",
     modalidade: String(order?.modalidade || "").trim(),
     plano: String(order?.plano || "").trim(),
     retirada: toDateISO(order?.details?.dataRetirada) || "",
