@@ -1,4 +1,4 @@
-// Auto-authored index of real LHL Festas photos hosted on Lovable CDN.
+// Índice de fotos reais da LHL Festas armazenadas localmente no projeto.
 import extras01 from "./extras/extras-01.jpg";
 import extras02 from "./extras/extras-02.jpg";
 import extras03 from "./extras/extras-03.jpg";
@@ -58,10 +58,7 @@ import pm06 from "./peg-e-monte/peg-e-monte-06.jpg";
 import retirada01 from "./retirada/retirada-01.jpg";
 
 export const heroImages = [hero01, hero02, hero03, hero04];
-export const festaNaMesaImages = [
-  fm01, fm02, fm03, fm04, fm05, fm06, fm07, fm08, fm09, fm10, fm11,
-  fm12, fm13, fm14, fm15, fm16, fm17, fm18, fm19, fm20, fm21, fm22,
-];
+export const festaNaMesaImages = [fm01, fm02, fm03, fm04, fm05, fm06, fm07, fm08, fm09, fm10, fm11, fm12, fm13, fm14, fm15, fm16, fm17, fm18, fm19, fm20, fm21, fm22];
 export const pegEMonteImages = [pm01, pm02, pm03, pm04, pm05, pm06];
 export const inspireSeImages = [ins01, ins02, ins03, ins04];
 export const feedbackImages = [fb01, fb02, fb03, fb04, fb05, fb06];
