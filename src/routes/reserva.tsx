@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
-  saveOrder,
   buildWhatsAppMessage,
   WHATSAPP_NUMBER,
   buildEnderecoCompleto,
@@ -15,6 +14,7 @@ import {
   emptyKit,
 } from "@/lib/orders-storage";
 import { postOrderToSheet } from "@/lib/sheets-api";
+import { validateReserva } from "@/lib/reserva-validation";
 import KitPicker from "@/components/kits/KitPicker";
 import { modalidadeIdFromLabel } from "@/data/kits";
 
@@ -62,19 +62,19 @@ const ACEITE_ITEMS = [
 function Index() {
   const [form, setForm] = useState(empty);
   const [aceites, setAceites] = useState<boolean[]>(() => ACEITE_ITEMS.map(() => false));
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const set = (k: keyof typeof empty) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const allAceites = aceites.every(Boolean);
 
-  const onSubmit = (e: FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.modalidade || !form.plano) {
-      toast.error("Selecione a modalidade e o kit da sua festa.");
-      return;
-    }
-    if (!form.dataEvento) {
-      toast.error("Preencha a data do evento.");
+    if (submitting) return;
+
+    const validationError = validateReserva(form);
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
     if (!allAceites) {
@@ -95,8 +95,6 @@ function Index() {
       nomeAniversariante: form.nomeAniversariante,
       idadeAniversariante: form.idadeAniversariante,
       tipoFesta: form.tipoFesta,
-      // Regra oficial: valores nunca são calculados automaticamente no site.
-      // A equipe informa total, sinal, restante e caução somente após negociação.
       valorTotal: "",
       valorSinal: "",
       valorRestante: "",
@@ -134,41 +132,27 @@ function Index() {
       servicoMontagem: isMontagem ? "Sim" : "Não",
     };
 
-    const orderInput = {
-      nome: form.nome,
-      cpf: form.cpf,
-      rg: "",
-      telefone: form.telefone,
-      email: form.email,
-      endereco: enderecoCompleto,
-      cidadeUf: form.cidade,
-      tema: form.tema,
-      modalidade: form.modalidade,
-      plano: form.plano,
-      details,
-    };
+    const orderId = crypto.randomUUID();
+    setSubmitting(true);
 
-    let saved;
-    try { saved = saveOrder(orderInput); } catch { /* sem bloqueio */ }
-
-    if (saved) {
-      postOrderToSheet({
-        id: saved.id,
-        createdAt: saved.createdAt,
-        status: saved.status,
-        nomeCompleto: form.nome,
-        cpf: form.cpf,
+    try {
+      await postOrderToSheet({
+        id: orderId,
+        createdAt: nowIso,
+        status: "Pendente",
+        nomeCompleto: form.nome.trim(),
+        cpf: form.cpf.trim(),
         rg: "",
-        telefone: form.telefone,
-        email: form.email,
+        telefone: form.telefone.trim(),
+        email: form.email.trim(),
         endereco: enderecoCompleto,
-        cidadeUf: form.cidade,
-        tema: form.tema,
+        cidadeUf: form.cidade.trim(),
+        tema: form.tema.trim(),
         modalidade: form.modalidade,
         plano: form.plano,
         dataEvento: form.dataEvento,
-        nomeAniversariante: form.nomeAniversariante,
-        idadeAniversariante: form.idadeAniversariante,
+        nomeAniversariante: form.nomeAniversariante.trim(),
+        idadeAniversariante: form.idadeAniversariante.trim(),
         tipoFesta: form.tipoFesta,
         valorTotal: "",
         valorSinal: "",
@@ -179,12 +163,19 @@ function Index() {
         kitJson: JSON.stringify(details.kit),
         aceiteContrato: "Sim",
         dataHoraAceite: nowIso,
-        rua: form.rua,
-        numero: form.numero,
-        bairro: form.bairro,
-        cidade: form.cidade,
-        cep: form.cep,
-      }).catch(() => { /* não bloqueia o cliente */ });
+        rua: form.rua.trim(),
+        numero: form.numero.trim(),
+        bairro: form.bairro.trim(),
+        cidade: form.cidade.trim(),
+        cep: form.cep.trim(),
+        servicoMontagem: isMontagem ? "Sim" : "Não",
+      });
+    } catch {
+      setSubmitting(false);
+      toast.error("Não foi possível registrar sua solicitação.", {
+        description: "Seus dados continuam preenchidos. Tente novamente em alguns instantes.",
+      });
+      return;
     }
 
     const msg = buildWhatsAppMessage({
@@ -202,13 +193,15 @@ function Index() {
       tipoFesta: form.tipoFesta,
     });
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+    window.open(url, "_blank", "noopener,noreferrer");
 
-    toast.success("Seus dados foram preparados!", {
-      description: "Finalize o envio pelo WhatsApp para confirmar o atendimento.",
+    toast.success("Solicitação registrada com sucesso!", {
+      description: "Agora finalize o atendimento pelo WhatsApp.",
       duration: 4000,
     });
     setForm(empty);
+    setAceites(ACEITE_ITEMS.map(() => false));
+    setSubmitting(false);
     navigate({ to: "/obrigado" });
   };
 
@@ -227,30 +220,30 @@ function Index() {
         <form onSubmit={onSubmit} className="mx-auto max-w-2xl rounded-3xl bg-card border border-border/60 p-6 sm:p-10 shadow-[var(--shadow-soft)]">
           <SectionTitle number="01" title="Dados Pessoais" />
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
-            <Field label="Nome Completo" full><Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required placeholder="Nome completo" /></Field>
-            <Field label="CPF"><Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required placeholder="000.000.000-00" /></Field>
-            <Field label="Telefone"><Input type="tel" value={form.telefone} onChange={(e) => set("telefone")(e.target.value)} required placeholder="(00) 00000-0000" /></Field>
-            <Field label="E-mail" full><Input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} required placeholder="voce@email.com" /></Field>
+            <Field label="Nome Completo" full><Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required maxLength={120} autoComplete="name" placeholder="Nome completo" /></Field>
+            <Field label="CPF"><Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required inputMode="numeric" maxLength={18} autoComplete="off" placeholder="000.000.000-00" /></Field>
+            <Field label="Telefone"><Input type="tel" value={form.telefone} onChange={(e) => set("telefone")(e.target.value)} required maxLength={20} autoComplete="tel" placeholder="(00) 00000-0000" /></Field>
+            <Field label="E-mail" full><Input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} required maxLength={254} autoComplete="email" placeholder="voce@email.com" /></Field>
           </div>
 
           <Divider />
           <SectionTitle number="02" title="Endereço" />
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
-            <Field label="Rua" full><Input value={form.rua} onChange={(e) => set("rua")(e.target.value)} required placeholder="Nome da rua" /></Field>
-            <Field label="Número"><Input value={form.numero} onChange={(e) => set("numero")(e.target.value)} required placeholder="Nº" /></Field>
-            <Field label="Bairro"><Input value={form.bairro} onChange={(e) => set("bairro")(e.target.value)} required placeholder="Bairro" /></Field>
-            <Field label="Cidade"><Input value={form.cidade} onChange={(e) => set("cidade")(e.target.value)} required placeholder="Cidade" /></Field>
-            <Field label="CEP"><Input value={form.cep} onChange={(e) => set("cep")(e.target.value)} required placeholder="00000-000" /></Field>
+            <Field label="Rua" full><Input value={form.rua} onChange={(e) => set("rua")(e.target.value)} required maxLength={160} autoComplete="address-line1" placeholder="Nome da rua" /></Field>
+            <Field label="Número"><Input value={form.numero} onChange={(e) => set("numero")(e.target.value)} required maxLength={20} placeholder="Nº" /></Field>
+            <Field label="Bairro"><Input value={form.bairro} onChange={(e) => set("bairro")(e.target.value)} required maxLength={100} placeholder="Bairro" /></Field>
+            <Field label="Cidade"><Input value={form.cidade} onChange={(e) => set("cidade")(e.target.value)} required maxLength={100} autoComplete="address-level2" placeholder="Cidade" /></Field>
+            <Field label="CEP"><Input value={form.cep} onChange={(e) => set("cep")(e.target.value)} required inputMode="numeric" maxLength={10} autoComplete="postal-code" placeholder="00000-000" /></Field>
           </div>
 
           <Divider />
           <SectionTitle number="03" title="Escolha da Festa" />
           <div className="mt-6 space-y-7">
-            <Field label="Tema Escolhido" full><Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required placeholder="Ex: Jardim Encantado, Princesas, Safari..." /></Field>
+            <Field label="Tema Escolhido" full><Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required maxLength={120} placeholder="Ex: Jardim Encantado, Princesas, Safari..." /></Field>
             <div className="grid gap-5 sm:grid-cols-2">
               <Field label="Tipo da Festa"><select value={form.tipoFesta} onChange={(e) => set("tipoFesta")(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Selecione...</option>{["Aniversário","Chá de Bebê","Chá Bar","Chá Revelação","Batizado","Casamento","Noivado","Corporativo","Outro"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
-              <Field label="Nome do Aniversariante (se houver)"><Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} placeholder="Ex: Ana Beatriz" /></Field>
-              <Field label="Idade do Aniversariante (se houver)" full><Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} placeholder="Ex: 9 anos" /></Field>
+              <Field label="Nome do Aniversariante (se houver)"><Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} maxLength={120} placeholder="Ex: Ana Beatriz" /></Field>
+              <Field label="Idade do Aniversariante (se houver)" full><Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} maxLength={30} placeholder="Ex: 9 anos" /></Field>
             </div>
             <KitPicker modalidade={form.modalidade} onModalidadeChange={(v) => setForm((f) => ({ ...f, modalidade: v, plano: "" }))} kit={form.plano} onKitChange={(v) => setForm((f) => ({ ...f, plano: v }))} />
           </div>
@@ -275,7 +268,7 @@ function Index() {
             {ACEITE_ITEMS.map((txt, i) => <label key={i} className="flex items-start gap-3 cursor-pointer text-sm text-foreground"><input type="checkbox" checked={aceites[i]} onChange={(e) => setAceites((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))} className="mt-1 h-4 w-4 accent-primary" /><span>{txt}</span></label>)}
           </div>
 
-          <Button type="submit" disabled={!allAceites} className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed">Enviar Dados pelo WhatsApp ♥</Button>
+          <Button type="submit" disabled={!allAceites || submitting} className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? "Registrando sua solicitação..." : "Enviar Dados pelo WhatsApp ♥"}</Button>
         </form>
 
         <p className="mt-8 text-center font-script text-2xl text-primary">Sua festa, do seu jeito!</p>
