@@ -133,6 +133,25 @@ function Index() {
     };
 
     const orderId = crypto.randomUUID();
+    const msg = buildWhatsAppMessage({
+      nome: form.nome,
+      cpf: form.cpf,
+      telefone: form.telefone,
+      email: form.email,
+      endereco: enderecoCompleto,
+      tema: form.tema,
+      modalidade: form.modalidade,
+      plano: form.plano,
+      dataEvento: form.dataEvento,
+      nomeAniversariante: form.nomeAniversariante,
+      idadeAniversariante: form.idadeAniversariante,
+      tipoFesta: form.tipoFesta,
+    });
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+
+    // Abre a aba ainda dentro do gesto do usuário para evitar bloqueio de popup
+    // em navegadores móveis. Só navega para o WhatsApp após a gravação confirmar.
+    const whatsappWindow = window.open('', '_blank');
     setSubmitting(true);
 
     try {
@@ -171,6 +190,7 @@ function Index() {
         servicoMontagem: isMontagem ? "Sim" : "Não",
       });
     } catch {
+      whatsappWindow?.close();
       setSubmitting(false);
       toast.error("Não foi possível registrar sua solicitação.", {
         description: "Seus dados continuam preenchidos. Tente novamente em alguns instantes.",
@@ -178,22 +198,14 @@ function Index() {
       return;
     }
 
-    const msg = buildWhatsAppMessage({
-      nome: form.nome,
-      cpf: form.cpf,
-      telefone: form.telefone,
-      email: form.email,
-      endereco: enderecoCompleto,
-      tema: form.tema,
-      modalidade: form.modalidade,
-      plano: form.plano,
-      dataEvento: form.dataEvento,
-      nomeAniversariante: form.nomeAniversariante,
-      idadeAniversariante: form.idadeAniversariante,
-      tipoFesta: form.tipoFesta,
-    });
-    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (whatsappWindow) {
+      whatsappWindow.opener = null;
+      whatsappWindow.location.href = whatsappUrl;
+    } else {
+      // Se o navegador ainda bloquear a nova aba, mantém uma saída confiável.
+      window.location.href = whatsappUrl;
+      return;
+    }
 
     toast.success("Solicitação registrada com sucesso!", {
       description: "Agora finalize o atendimento pelo WhatsApp.",
@@ -260,6 +272,9 @@ function Index() {
             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Valores da locação</p>
             <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor de kit é calculado automaticamente. O valor total, o sinal de <strong>30%</strong>, o restante e a caução aplicável serão informados pela equipe após a negociação.</p>
           </div>
+
+          <Divider />
+          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">Ao enviar seus dados, eles serão usados para atendimento, elaboração da reserva e execução do serviço, conforme nossa <Link to="/privacidade" className="font-medium text-primary underline underline-offset-2">Política de Privacidade</Link>.</p>
 
           <Divider />
           <SectionTitle number="05" title="Confirmação da Reserva" />
