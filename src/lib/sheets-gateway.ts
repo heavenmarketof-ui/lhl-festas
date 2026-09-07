@@ -22,6 +22,20 @@ export function rowsOf(json: any): any[] {
   return Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
 }
 
+/**
+ * Em desenvolvimento (Codespaces/Vite), o Admin funciona em modo leitura por
+ * padrão. Assim podemos usar os dados REAIS do Apps Script para validar telas
+ * sem risco de alterar planilhas durante a construção do novo sistema.
+ *
+ * Para habilitar escritas intencionalmente em desenvolvimento no futuro:
+ * VITE_ADMIN_WRITES=true
+ *
+ * Em build de produção esta trava não é aplicada.
+ */
+function adminWriteBlockedInPreview() {
+  return import.meta.env.DEV && String(import.meta.env.VITE_ADMIN_WRITES || "").toLowerCase() !== "true";
+}
+
 /** GET administrativo (exige sessão + papel admin). `query` ex.: "action=opList". */
 export async function sheetGet(query = ""): Promise<any> {
   const { text } = await gasAdminGet({ data: { query } });
@@ -30,6 +44,9 @@ export async function sheetGet(query = ""): Promise<any> {
 
 /** POST administrativo (exige sessão + papel admin). */
 export async function sheetPost(body: Record<string, unknown>): Promise<any> {
+  if (adminWriteBlockedInPreview()) {
+    throw new Error("Modo de visualização ativo: alterações estão bloqueadas neste ambiente de desenvolvimento.");
+  }
   const { text } = await gasAdminPost({ data: { body } });
   return parse(text);
 }
