@@ -2,7 +2,7 @@
 // Endpoint do Google Apps Script — SOMENTE SERVIDOR.
 // Arquivos *.server.ts nunca entram no bundle do navegador.
 // A URL, o token compartilhado e o token administrativo de Leads ficam aqui
-// (ou, preferencialmente, em variáveis de ambiente/secrets do Lovable Cloud).
+// (ou, preferencialmente, em variáveis de ambiente/secrets do ambiente).
 // ============================================================================
 
 /** URL padrão (fallback) — sobrescrita por process.env.GAS_ENDPOINT_URL. */
@@ -19,7 +19,6 @@ export function gasSharedToken(): string {
   return (process.env.GAS_SHARED_TOKEN || "").trim();
 }
 
-
 /** Token administrativo legado do módulo de Leads (Script Properties: LEADS_ADMIN_TOKEN). */
 export function leadsAdminToken(): string {
   return process.env.GAS_LEADS_ADMIN_TOKEN || "lhl-leads-2026-admin";
@@ -31,14 +30,23 @@ type GasRequest = {
   query?: string;
   /** corpo JSON para POST */
   body?: Record<string, unknown>;
+  /** Limite explícito apenas quando um fluxo realmente precisar dele. */
   timeoutMs?: number;
 };
 
-/** Chama o Apps Script a partir do servidor e devolve o texto bruto da resposta. */
+/**
+ * Chama o Apps Script a partir do servidor e devolve o texto bruto da resposta.
+ *
+ * O Apps Script pode demorar em operações com planilha. O limite padrão é
+ * propositalmente amplo para não transformar lentidão normal em falso erro.
+ * GET pode ser repetido; POST nunca é repetido automaticamente porque a escrita
+ * pode ter sido aplicada antes de uma falha de transporte. Fluxos críticos
+ * devem verificar idempotentemente o resultado depois do POST.
+ */
 export async function callGas(req: GasRequest): Promise<string> {
   const token = gasSharedToken();
   const base = gasUrl();
-  const timeout = req.timeoutMs ?? 20000;
+  const timeout = req.timeoutMs ?? 90000;
   // Rótulo de log seguro: só a action/rota, nunca o token ou dados pessoais.
   const label =
     req.method === "GET"
@@ -93,4 +101,3 @@ export async function callGas(req: GasRequest): Promise<string> {
 
   throw lastErr instanceof Error ? lastErr : new Error("Falha ao consultar a planilha");
 }
-
