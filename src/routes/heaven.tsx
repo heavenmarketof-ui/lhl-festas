@@ -36,7 +36,7 @@ import financeiroCentralAsset from "@/assets/financeiro-central.png.asset.json";
 import painelOperacionalAsset from "@/assets/painel-operacional.png.asset.json";
 import loginAcessoAsset from "@/assets/login-acesso.png.asset.json";
 
-const CANONICAL = "https://lhl-festas.lovable.app/heaven";
+const CANONICAL = "https://www.lhlfestas.com.br/heaven";
 const TITLE = "Heaven Festas | Gestão para quem trabalha com festas";
 const DESCRIPTION =
   "Organize contratos, agenda, compras, produção, financeiro e toda a operação da sua empresa de festas em um só lugar.";

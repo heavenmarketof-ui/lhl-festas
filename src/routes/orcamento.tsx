@@ -77,10 +77,10 @@ export const Route = createFileRoute("/orcamento")({
       { property: "og:image", content: heroImages[0] },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:image", content: heroImages[0] },
-      { property: "og:url", content: "https://lhl-festas.lovable.app/orcamento" },
+      { property: "og:url", content: "https://www.lhlfestas.com.br/orcamento" },
     ],
     links: [
-      { rel: "canonical", href: "https://lhl-festas.lovable.app/orcamento" },
+      { rel: "canonical", href: "https://www.lhlfestas.com.br/orcamento" },
       { rel: "preload", as: "image", href: heroImages[0], fetchPriority: "high" } as never,
     ],
     scripts: [
@@ -99,7 +99,7 @@ export const Route = createFileRoute("/orcamento")({
             addressCountry: "BR",
           },
           areaServed: "Mauá, ABC e região",
-          url: "https://lhl-festas.lovable.app/orcamento",
+          url: "https://www.lhlfestas.com.br/orcamento",
         }),
       },
     ],
