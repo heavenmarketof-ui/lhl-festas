@@ -28,6 +28,12 @@ function adminWriteBlockedInPreview() {
   return import.meta.env.DEV && String(import.meta.env.VITE_ADMIN_WRITES || "").toLowerCase() !== "true";
 }
 
+// Algumas consultas legadas do Apps Script usam POST embora sejam 100% leitura.
+// Elas continuam liberadas no modo visualização; qualquer mutation permanece bloqueada.
+const READONLY_ADMIN_POST_ACTIONS = new Set([
+  "leadsList",
+]);
+
 function looksDenied(json: any) {
   return !!json && typeof json === "object" && !Array.isArray(json) && (json.ok === false || !!json.error);
 }
@@ -67,13 +73,20 @@ export async function sheetConnectionStatus() {
   return gasDevConnectionStatus();
 }
 
-/** POST administrativo. Bloqueado por padrão em desenvolvimento. */
+/**
+ * POST administrativo.
+ * Em preview, mutations ficam bloqueadas. Ações explicitamente classificadas
+ * como leitura podem passar para permitir validar o CRM com dados reais.
+ */
 export async function sheetPost(body: Record<string, unknown>): Promise<any> {
-  if (adminWriteBlockedInPreview()) {
+  const action = String(body.action || "");
+  const readonlyAction = READONLY_ADMIN_POST_ACTIONS.has(action);
+  if (adminWriteBlockedInPreview() && !readonlyAction) {
     throw new Error("Modo de visualização ativo: alterações estão bloqueadas neste ambiente de desenvolvimento.");
   }
   const { text } = await gasAdminPost({ data: { body } });
-  return parse(text);
+  const json = parse(text);
+  return readonlyAction ? validateReadJson(json) : json;
 }
 
 export async function sheetPublicPost(body: Record<string, unknown>): Promise<any> {
