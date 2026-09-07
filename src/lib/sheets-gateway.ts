@@ -32,17 +32,24 @@ function looksDenied(json: any) {
   return !!json && typeof json === "object" && !Array.isArray(json) && (json.ok === false || !!json.error);
 }
 
+function looksEmptyGatewayResponse(json: any) {
+  return !!json && typeof json === "object" && !Array.isArray(json) && Object.keys(json).length === 0;
+}
+
 /**
- * GET administrativo. Em desenvolvimento, se a leitura autenticada falhar,
- * tenta a rota SOMENTE-LEITURA do servidor. Nenhum POST é executado.
+ * GET administrativo. Em desenvolvimento, se a leitura autenticada falhar
+ * OU vier vazia pelo middleware/gateway, tenta a rota SOMENTE-LEITURA.
+ * Nenhum POST é executado por este fluxo.
  */
 export async function sheetGet(query = ""): Promise<any> {
   let firstError: unknown;
   try {
     const { text } = await gasAdminGet({ data: { query } });
     const json = parse(text);
-    if (!looksDenied(json)) return json;
-    firstError = new Error(String(json.error || "Apps Script recusou a leitura"));
+    if (!looksDenied(json) && !looksEmptyGatewayResponse(json)) return json;
+    firstError = looksDenied(json)
+      ? new Error(String(json.error || "Apps Script recusou a leitura"))
+      : new Error("Gateway administrativo respondeu vazio");
   } catch (err) {
     firstError = err;
   }
@@ -51,6 +58,7 @@ export async function sheetGet(query = ""): Promise<any> {
     const { text } = await gasDevReadonlyGet({ data: { query } });
     const json = parse(text);
     if (looksDenied(json)) throw new Error(String(json.error || "Apps Script recusou a leitura"));
+    if (looksEmptyGatewayResponse(json)) throw new Error("Apps Script respondeu sem dados legíveis");
     return json;
   }
 
