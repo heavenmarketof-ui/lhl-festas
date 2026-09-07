@@ -43,7 +43,6 @@ export const revogarAutorizacaoFn = createServerFn({ method: "POST" })
     return m.revogarAutorizacaoServer(data, ator);
   });
 
-
 /** Reconciliação de STATUS: compra realizada, sem lançamento financeiro. */
 export const marcarCompradaSemFinanceiroFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -54,16 +53,19 @@ export const marcarCompradaSemFinanceiroFn = createServerFn({ method: "POST" })
     return m.marcarCompradaSemFinanceiroServer(data, ator);
   });
 
-/** Pagamento: única porta que cria o lançamento no Fluxo de Caixa. */
+/**
+ * Pagamento: única porta que cria o lançamento no Fluxo de Caixa.
+ * A implementação segura só encerra a solicitação DEPOIS de confirmar a saída.
+ */
 export const registrarPagamentoSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: import("./solicitacoes.server").PagamentoInput) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
-    return m.registrarPagamentoServer(data, ator);
+    const safe = await import("./solicitacoes-pagamento-safe.server");
+    return safe.registrarPagamentoSeguroServer(data, ator);
   });
-
 
 export const recusarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
