@@ -34,6 +34,25 @@ jobs:
             exit 1
           fi
 
+      - name: Impedir credenciais e endpoints privados fixos no código
+        shell: bash
+        run: |
+          if grep -R -E 'AKfy[a-zA-Z0-9_-]{20,}|lhl-leads-[0-9]{4}-admin' src --include='*.ts' --include='*.tsx'; then
+            echo "Foi encontrado endpoint/token legado fixo no código."
+            exit 1
+          fi
+
+      - name: Auditar heranças do Lovable fora da ponte temporária do catálogo
+        shell: bash
+        run: |
+          matches="$(grep -R -n -i 'lovable' src --include='*.ts' --include='*.tsx' || true)"
+          unexpected="$(printf '%s\n' "$matches" | grep -v 'src/lib/catalogo-publico.functions.ts' || true)"
+          if [ -n "$unexpected" ]; then
+            printf '%s\n' "$unexpected"
+            echo "Foi encontrada dependência textual inesperada do Lovable."
+            exit 1
+          fi
+
       - name: Validar configuração do domínio oficial
         shell: bash
         run: |
