@@ -19,6 +19,7 @@ import {
   Database,
   Target,
   ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/lhl-logo.png";
@@ -52,6 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const secondary = [
     { label: "Solicitações", to: "/admin/solicitacoes", icon: ClipboardCheck, search: { status: "pendente", urgencia: "todas", q: "" } },
+    { label: "Auditoria", to: "/admin/auditoria", icon: ShieldAlert },
     { label: "Itens exclusivos", to: "/admin/itens-exclusivos", icon: Lock },
   ] as const;
 
