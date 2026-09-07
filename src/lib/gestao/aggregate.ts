@@ -211,6 +211,9 @@ function nucleo(snap: Snapshot, p: Periodo, fim: string | null): Nucleo {
       .reduce((s, o) => s + getContractPaymentStatus(o, idx).saldoReceber, 0),
   );
 
+  // Na Gestão, "Recebido" e "Saídas" medem exclusivamente o caixa dos
+  // contratos/festas. Despesas gerais da empresa continuam existindo e são
+  // analisadas no módulo Financeiro, sem contaminar o resultado operacional.
   let recebido = 0, saidas = 0, caucaoRecebida = 0, caucaoDevolvida = 0;
   for (const l of snap.lancamentos) {
     const d = String(l.data || "").slice(0, 10);
@@ -220,9 +223,10 @@ function nucleo(snap: Snapshot, p: Periodo, fim: string | null): Nucleo {
       if (l.tipo === "Entrada") caucaoRecebida += v; else caucaoDevolvida += v;
       continue; // caução nunca é receita/saída comercial
     }
+    const vinculadoContrato = Boolean(String(l.contratoId || "").trim());
     if (l.tipo === "Entrada") {
-      if (String(l.contratoId || "").trim()) recebido += v;
-    } else {
+      if (vinculadoContrato) recebido += v;
+    } else if (vinculadoContrato) {
       saidas += v;
     }
   }
@@ -444,7 +448,7 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
     kpi("Faturamento", at.faturamento, "moeda", ant.faturamento),
     kpi("Ticket médio", at.ticket, "moeda", ant.ticket),
     kpi("Recebido", at.recebido, "moeda", ant.recebido),
-    kpi("Saídas", at.saidas, "moeda", ant.saidas),
+    kpi("Saídas de contratos", at.saidas, "moeda", ant.saidas),
     kpi("A receber no período", at.aReceber, "moeda", ant.aReceber),
     ...(cursor.tipo === "anual"
       ? [kpi("Saldo total de clientes", at.saldoTotalClientes, "moeda")]
@@ -469,9 +473,10 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
     for (const l of snap.lancamentos) {
       const d = String(l.data || "").slice(0, 10);
       if (d < b.inicio || d > b.fim || !fimAtual || d > fimAtual || ehCaucaoLanc(l)) continue;
+      const vinculadoContrato = Boolean(String(l.contratoId || "").trim());
       if (l.tipo === "Entrada") {
-        if (String(l.contratoId || "").trim()) receb += parseValor(l.valor);
-      } else {
+        if (vinculadoContrato) receb += parseValor(l.valor);
+      } else if (vinculadoContrato) {
         sai += parseValor(l.valor);
       }
     }
