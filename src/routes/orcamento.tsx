@@ -56,7 +56,6 @@ import {
 const WA_MSG_DEFAULT = "Olá! Quero fazer uma festa com a LHL Festas.";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WA_MSG_DEFAULT)}`;
 const INSTAGRAM_URL = "https://www.instagram.com/lhl_festas";
-const ORCAMENTO_DRAFT_KEY = "lhl_orcamento_draft";
 
 export const Route = createFileRoute("/orcamento")({
   head: () => ({
@@ -174,14 +173,7 @@ function detectDevice(): "mobile" | "tablet" | "desktop" {
 }
 
 async function storeLead(lead: LeadPayload): Promise<{ id: string }> {
-  // Cache local para retomada offline (não substitui backend).
-  try {
-    const key = "lhl_leads";
-    const prev = JSON.parse(localStorage.getItem(key) || "[]");
-    prev.push(lead);
-    localStorage.setItem(key, JSON.stringify(prev));
-  } catch { /* noop */ }
-
+  // Dados pessoais seguem diretamente para o backend; não ficam persistidos no navegador.
   // Envio permanente ao backend (Google Sheets via Apps Script).
   const { createLeadOnSheet } = await import("@/lib/leads-api");
   const res = await createLeadOnSheet(lead);
@@ -363,19 +355,6 @@ function LeadForm() {
     setCatalog(cat);
     if (cat.tema) setTema(cat.tema);
 
-    // Restaurar rascunho, se existir.
-    try {
-      const raw = sessionStorage.getItem(ORCAMENTO_DRAFT_KEY);
-      if (raw) {
-        const d = JSON.parse(raw) as Partial<{ nome: string; whatsapp: string; dataFesta: string; tema: string; observacoes: string }>;
-        if (d.nome) setNome(d.nome);
-        if (d.whatsapp) setWhatsapp(d.whatsapp);
-        if (d.dataFesta) setDataFesta(d.dataFesta);
-        if (!cat.tema && d.tema) setTema(d.tema);
-        if (d.observacoes) setObservacoes(d.observacoes);
-      }
-    } catch { /* noop */ }
-
     // Se vier descrição do catálogo (tema personalizado), pré-preencher observações.
     if (cat.tipoSolicitacao === "tema-personalizado" && cat.descricao) {
       setObservacoes((prev) => prev || cat.descricao);
@@ -400,17 +379,7 @@ function LeadForm() {
     } catch { /* noop */ }
   }, []);
 
-  function saveDraft() {
-    try {
-      sessionStorage.setItem(
-        ORCAMENTO_DRAFT_KEY,
-        JSON.stringify({ nome, whatsapp, dataFesta, tema, observacoes }),
-      );
-    } catch { /* noop */ }
-  }
-
   function abrirCatalogo(origem: string) {
-    saveDraft();
     try {
       const w = window as unknown as { dataLayer?: unknown[] };
       w.dataLayer = w.dataLayer || [];
@@ -421,7 +390,6 @@ function LeadForm() {
   }
 
   function alterarEscolha() {
-    saveDraft();
     try {
       const w = window as unknown as { dataLayer?: unknown[] };
       w.dataLayer = w.dataLayer || [];
@@ -570,8 +538,7 @@ function LeadForm() {
       console.error("[Lead] Falha ao registrar", err);
       const { toast } = await import("sonner");
       toast.error("Não foi possível enviar agora. Tente novamente em instantes.");
-      saveDraft();
-      return;
+        return;
     }
     setSending(false);
 
@@ -583,7 +550,6 @@ function LeadForm() {
         "lhl_last_lead",
         JSON.stringify({ ...lead, observacoes, qualified, waUrl, waMessage, leadId: createdId }),
       );
-      sessionStorage.removeItem(ORCAMENTO_DRAFT_KEY);
     } catch { /* noop */ }
 
     // Evento de conversão — GTM centraliza envio para GA4 e Meta Pixel (Lead).

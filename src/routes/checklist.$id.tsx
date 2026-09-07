@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { kitLabels, type StoredOrder, type KitChecklist } from "@/lib/orders-storage";
-import { getOrderFromSheet } from "@/lib/orders-cache";
+import { fetchOrdersFromSheet } from "@/lib/sheets-api";
 import { fetchLancamentos, type Lancamento } from "@/lib/financeiro-api";
 import { getContractPaymentStatus } from "@/lib/pagamentos";
 import { formatDateBR, formatDateTimeBR } from "@/lib/date-utils";
@@ -58,7 +58,8 @@ function ChecklistPrint() {
 
   useEffect(() => {
     fetchLancamentos().then(setLancamentos).catch(() => { /* ignore */ });
-    getOrderFromSheet(id, { includeDeleted: true })
+    fetchOrdersFromSheet({ includeDeleted: true, force: true })
+      .then((orders) => orders.find((o) => o.id === id))
       .then((o) => { if (o && String(o.status) !== "Excluído") setOrder(o); })
       .finally(() => setLoaded(true));
   }, [id]);
