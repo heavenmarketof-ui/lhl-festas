@@ -1,53 +1,37 @@
 // ============================================================================
 // Endpoint do Google Apps Script — SOMENTE SERVIDOR.
-// Arquivos *.server.ts nunca entram no bundle do navegador.
-// A URL, o token compartilhado e o token administrativo de Leads ficam aqui
-// (ou, preferencialmente, em variáveis de ambiente/secrets do ambiente).
+// Nenhum endpoint ou token privado deve ficar fixo no código do projeto.
 // ============================================================================
 
-/** URL padrão (fallback) — sobrescrita por process.env.GAS_ENDPOINT_URL. */
-const DEFAULT_GAS_URL =
-  "https://script.google.com/macros/s/AKfycbyRqbCLoOJ7rm1RbntzTN1l0qgc1s16htI9wcd5zKQpZntslh0XYHkTNzz3qad5mubR/exec";
-
 export function gasUrl(): string {
-  return process.env.GAS_ENDPOINT_URL || DEFAULT_GAS_URL;
+  const value = (process.env.GAS_ENDPOINT_URL || "").trim();
+  if (!value) {
+    throw new Error("GAS_ENDPOINT_URL não configurado no ambiente do servidor.");
+  }
+  return value;
 }
 
 /** Segredo compartilhado servidor ↔ Apps Script (Script Properties: GAS_SHARED_TOKEN). */
 export function gasSharedToken(): string {
-  // .trim() evita falha silenciosa quando o valor foi colado com espaço/quebra de linha.
   return (process.env.GAS_SHARED_TOKEN || "").trim();
 }
 
-/** Token administrativo legado do módulo de Leads (Script Properties: LEADS_ADMIN_TOKEN). */
+/** Token administrativo do módulo de Leads. Nunca usar fallback fixo no código. */
 export function leadsAdminToken(): string {
-  return process.env.GAS_LEADS_ADMIN_TOKEN || "lhl-leads-2026-admin";
+  return (process.env.GAS_LEADS_ADMIN_TOKEN || "").trim();
 }
 
 type GasRequest = {
   method: "GET" | "POST";
-  /** query string para GET, ex.: "action=opList" */
   query?: string;
-  /** corpo JSON para POST */
   body?: Record<string, unknown>;
-  /** Limite explícito apenas quando um fluxo realmente precisar dele. */
   timeoutMs?: number;
 };
 
-/**
- * Chama o Apps Script a partir do servidor e devolve o texto bruto da resposta.
- *
- * O Apps Script pode demorar em operações com planilha. O limite padrão é
- * propositalmente amplo para não transformar lentidão normal em falso erro.
- * GET pode ser repetido; POST nunca é repetido automaticamente porque a escrita
- * pode ter sido aplicada antes de uma falha de transporte. Fluxos críticos
- * devem verificar idempotentemente o resultado depois do POST.
- */
 export async function callGas(req: GasRequest): Promise<string> {
   const token = gasSharedToken();
   const base = gasUrl();
   const timeout = req.timeoutMs ?? 90000;
-  // Rótulo de log seguro: só a action/rota, nunca o token ou dados pessoais.
   const label =
     req.method === "GET"
       ? `GET ${new URLSearchParams(req.query || "").get("action") || "orders"}`
@@ -71,8 +55,6 @@ export async function callGas(req: GasRequest): Promise<string> {
           signal: AbortSignal.timeout(timeout),
         });
       } else {
-        // O token vai no corpo JSON (body.gasToken) E na query string, porque o
-        // /exec do Apps Script pode redirecionar e perder o corpo da requisição.
         const payload = token ? { ...(req.body || {}), gasToken: token } : { ...(req.body || {}) };
         const postUrl = token ? `${base}?gasToken=${encodeURIComponent(token)}` : base;
         res = await fetch(postUrl, {
@@ -93,7 +75,6 @@ export async function callGas(req: GasRequest): Promise<string> {
         `[gas] ${label} falhou (tentativa ${i}/${attempts}) em ${Date.now() - started}ms:`,
         err instanceof Error ? err.message : "erro desconhecido",
       );
-      // Não repete escritas: um POST pode ter sido aplicado antes do timeout.
       if (req.method !== "GET" || i === attempts) break;
       await new Promise((r) => setTimeout(r, 500 * i));
     }
