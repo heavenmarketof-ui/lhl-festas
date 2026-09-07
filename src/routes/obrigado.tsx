@@ -16,7 +16,7 @@ export const Route = createFileRoute("/obrigado")({
       { name: "robots", content: "noindex" },
     ],
     links: [
-      { rel: "canonical", href: "https://lhl-festas.lovable.app/obrigado" },
+      { rel: "canonical", href: "https://www.lhlfestas.com.br/obrigado" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Dancing+Script:wght@500;600;700&family=Karla:wght@300;400;500;600&display=swap" },
@@ -52,7 +52,6 @@ function ThankYou() {
           Nossos atendentes vão preparar seu contrato e enviar tudo pelo WhatsApp em instantes.
         </p>
 
-        {/* Indicador de próximos passos */}
         <ol className="mt-8 grid grid-cols-3 gap-2 text-[11px] sm:text-xs">
           {steps.map((s, i) => (
             <li key={i} className="flex flex-col items-center gap-2">
@@ -97,4 +96,3 @@ function ThankYou() {
     </div>
   );
 }
-
