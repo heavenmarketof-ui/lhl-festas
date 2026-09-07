@@ -4,22 +4,20 @@
 // Um item de compra só avança por este arquivo. A Central de Produção e a
 // Ordem de Produção usam exatamente a mesma função — não existem dois fluxos.
 //
+// REGRA SOBERANA: pré-contrato não libera operação. Antes de qualquer avanço
+// de compra, o contrato precisa ter recebimento confirmado (caução não conta).
+//
 // Cadastrar item → Salvar item → Aguardando orçamento → Orçamento recebido →
 // Enviar para aprovação (nasce a Solicitação Financeira) → Aprovação →
 // Compra autorizada → Marcar compra realizada → Registrar pagamento →
 // Fluxo de Caixa.
-//
-// Regras de propriedade do dado (arquitetura oficial):
-//  · Contrato          → cliente, tema, kit, datas, valores, caução, pagamentos.
-//  · Ordem de Produção → compras, produção, separação, conferência, patrimônio.
-//  · Solicitações      → autorizar, recusar, cancelar, auditar.
-//  · Gestão Financeira → lançamentos do Fluxo de Caixa.
 // ============================================================================
 
 import type { StoredOrder } from "./orders-storage";
 import type { Solicitacao } from "./solicitacoes-types";
 import { criarSolicitacao, registrarPagamentoSolicitacao } from "./solicitacoes-api";
 import { createPatrimonioOnSheet, type PatrimonioItem } from "./patrimonio-api";
+import { assertOperacaoLiberada } from "./operacao-gate";
 import {
   applyCompraStatus,
   COMPRA_BLOQUEIO_MENSAGEM,
@@ -94,6 +92,11 @@ export async function mudarEtapaCompra(params: {
 }): Promise<AvancoResultado> {
   const { op: opRecebida, itemId, status, order, solicitacao, confirmacao } = params;
 
+  // BARREIRA ARQUITETURAL: nenhuma mutation operacional de compra passa sem
+  // recebimento real confirmado. A validação consulta contrato + financeiro
+  // atuais e exclui caução da decisão de liberação.
+  const orderAtual = await assertOperacaoLiberada(opRecebida.contratoId, order);
+
   // -------------------------------------------------------------------------
   // 1) A validação NUNCA usa uma versão antiga da OP. Buscamos a OP mais
   //    recente, localizamos o item pelo itemId e reconciliamos com a
@@ -123,14 +126,12 @@ export async function mudarEtapaCompra(params: {
     item = { ...item, statusCompra: "Compra autorizada" };
   }
 
-  // A OP em memória passa a refletir o item reconciliado.
   if (item !== itemBruto) {
     op = { ...op, compras: op.compras.map((c) => (c.id === itemId ? item : c)) };
   }
 
   validarEtapa(item, status, solicitacao);
 
-  // "Compra realizada" grava os dados finais confirmados pelo usuário.
   const aplicaConfirmacao = (c: ItemCompra): ItemCompra =>
     status === "Compra realizada" && confirmacao
       ? {
@@ -150,28 +151,25 @@ export async function mudarEtapaCompra(params: {
       c = item;
       const novoStatus = status;
       const atualStatus = compraStatusOf(c);
-      
-      // REGRA DE SOBERANIA: Não permite rebaixar o status
       const niveis = NIVEL_COMPRA;
 
       if (niveis[novoStatus] < niveis[atualStatus]) {
         console.warn(`[Soberania] Tentativa de rebaixar ${c.descricao}: ${atualStatus} -> ${novoStatus}. Ignorado.`);
         return c;
       }
-      
+
       return applyCompraStatus(aplicaConfirmacao(c), novoStatus);
     }),
   };
   atual = logAction(atual, `Compra "${descricaoCompra(item)}" → ${status}`);
-  
-  // MERGE ANTES DE SALVAR: Garante que não sobrescrevemos avanços de outros itens na mesma OP
+
   const opServidor = await fetchOrdens().then((list: OrdemProducao[]) => list.find((o: OrdemProducao) => o.id === op.id));
 
   if (opServidor) {
     const { mergeOrdens } = await import("./producao-api");
     atual = mergeOrdens(opServidor, atual);
   }
-  
+
   atual = await saveOrdem(atual);
 
   let solicitacaoCriada = false;
@@ -180,13 +178,12 @@ export async function mudarEtapaCompra(params: {
   const salvo = atual.compras.find((c) => c.id === itemId) ?? item;
   const valor = valorRealCompra(salvo) || valorPrevistoCompra(salvo);
 
-  // A Solicitação Financeira nasce ao ENVIAR PARA APROVAÇÃO — nunca depois.
   if (status === "Aguardando autorização" && !salvo.solicitacaoId) {
     const criada = (await criarSolicitacao({
       tipo: "compra_materiais",
       origem: "ordem_producao",
       pedidoId: op.contratoId,
-      pedidoCliente: order?.nome || "",
+      pedidoCliente: orderAtual.nome || "",
       ordemProducao: op.numero,
       origemItemId: salvo.id,
       itens: [
@@ -202,7 +199,7 @@ export async function mudarEtapaCompra(params: {
       conta: "Caixa",
       formaPagamento: salvo.formaPagamento || "PIX",
       valor,
-      descricao: `${salvo.descricao} — ${order?.nome || "Pedido"} (${op.numero})`,
+      descricao: `${salvo.descricao} — ${orderAtual.nome || "Pedido"} (${op.numero})`,
       observacoes: salvo.fornecedor ? `Fornecedor: ${salvo.fornecedor}` : "",
       dataPrevista: salvo.dataCompra || new Date().toISOString().slice(0, 10),
     })) as { id?: string } | undefined;
@@ -212,9 +209,7 @@ export async function mudarEtapaCompra(params: {
         {
           ...atual,
           compras: atual.compras.map((c) =>
-            c.id === itemId
-              ? { ...c, solicitacaoId: String(criada?.id || "") }
-              : c,
+            c.id === itemId ? { ...c, solicitacaoId: String(criada?.id || "") } : c,
           ),
         },
         `Solicitação Financeira criada para "${descricaoCompra(salvo)}"`,
@@ -222,7 +217,6 @@ export async function mudarEtapaCompra(params: {
     );
   }
 
-  // Compras de Patrimônio entram no acervo quando a compra é realizada.
   if ((status === "Compra realizada" || status === "Pago") && salvo.tipo === "Patrimônio" && !salvo.integrado) {
     const patrimonio: PatrimonioItem = {
       id: crypto.randomUUID(),
@@ -231,7 +225,7 @@ export async function mudarEtapaCompra(params: {
       quantidade: salvo.quantidade || 1,
       valorAquisicao: String(valor),
       dataCompra: salvo.dataCompra || new Date().toISOString().slice(0, 10),
-      observacoes: `Cadastrado pela ${op.numero}${order?.nome ? ` — ${order.nome}` : ""}`,
+      observacoes: `Cadastrado pela ${op.numero}${orderAtual.nome ? ` — ${orderAtual.nome}` : ""}`,
       status: "Ativo",
       createdAt: new Date().toISOString(),
       ativo: "Sim",
@@ -248,10 +242,7 @@ export async function mudarEtapaCompra(params: {
       ),
     );
   }
-  
-  // GARANTIA DE SINCRONIZAÇÃO (SOMENTE STATUS): se a compra foi realizada, a
-  // solicitação vinculada sai da fila ativa. Nenhum lançamento financeiro é
-  // criado aqui — "Agora não" significa compra realizada e caixa intocado.
+
   if (status === "Compra realizada" && salvo.solicitacaoId) {
     try {
       const { marcarCompradaSemFinanceiro } = await import("./solicitacoes-api");
@@ -266,19 +257,17 @@ export async function mudarEtapaCompra(params: {
     }
   }
 
-  // O lançamento no Fluxo de Caixa nasce SOMENTE no registro do pagamento.
-  // O servidor garante idempotência: nunca há dois lançamentos para o item.
   if (status === "Pago" && (solicitacao || confirmacao)) {
     const res = (await registrarPagamentoSolicitacao({
       id: solicitacao?.id || item.solicitacaoId || "",
-      valor: valor,
+      valor,
       fornecedor: confirmacao?.fornecedor || salvo.fornecedor || "",
       formaPagamento: confirmacao?.formaPagamento || salvo.formaPagamento || "PIX",
       conta: confirmacao?.conta || "Caixa",
       dataPagamento: salvo.dataCompra || new Date().toISOString().slice(0, 10),
       observacoes: confirmacao?.observacao || salvo.observacao || "",
     })) as { lancamentoId?: string } | undefined;
-    
+
     lancamentoId = res?.lancamentoId;
     atual = await saveOrdem(
       logAction(
@@ -323,7 +312,6 @@ function validarEtapa(item: ItemCompra, destino: CompraStatus, solicitacao?: Sol
     throw new Error(COMPRA_BLOQUEIO_MENSAGEM);
   }
   if (destino === "Compra realizada" && compraStatusOf(item) !== "Compra autorizada") {
-    // Exceção: permitir se já estiver como "Compra realizada" (edição de valor real)
     if (compraStatusOf(item) !== "Compra realizada") {
       throw new Error(COMPRA_BLOQUEIO_MENSAGEM);
     }
