@@ -63,7 +63,8 @@ jobs:
           ! grep -q 'saveOrder' src/routes/reserva.tsx
           ! grep -q 'localStorage' src/routes/reserva.tsx
           ! grep -q 'lhl_leads\|lhl_orcamento_draft\|saveDraft' src/routes/orcamento.tsx
-          ! grep -q 'getOrderFromSheet' 'src/routes/checklist/$id.tsx'
+          test -f 'src/routes/checklist.$id.tsx'
+          ! grep -q 'getOrderFromSheet' 'src/routes/checklist.$id.tsx'
           grep -q 'Política de Privacidade' src/routes/reserva.tsx
 
       - name: Validar configuração do domínio oficial
