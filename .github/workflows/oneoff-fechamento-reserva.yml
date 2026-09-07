@@ -1,0 +1,55 @@
+name: Fechamento temporário da reserva
+on:
+  push:
+    paths:
+      - '.github/workflows/oneoff-fechamento-reserva.yml'
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: home-nova
+      - name: Corrigir abertura do WhatsApp após gravação
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/routes/reserva.tsx')
+          s=p.read_text()
+          old='''    const orderId = crypto.randomUUID();\n    setSubmitting(true);\n\n    try {'''
+          new='''    const orderId = crypto.randomUUID();\n    const msg = buildWhatsAppMessage({\n      nome: form.nome,\n      cpf: form.cpf,\n      telefone: form.telefone,\n      email: form.email,\n      endereco: enderecoCompleto,\n      tema: form.tema,\n      modalidade: form.modalidade,\n      plano: form.plano,\n      dataEvento: form.dataEvento,\n      nomeAniversariante: form.nomeAniversariante,\n      idadeAniversariante: form.idadeAniversariante,\n      tipoFesta: form.tipoFesta,\n    });\n    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;\n\n    // Abre a aba ainda dentro do gesto do usuário para evitar bloqueio de popup\n    // em navegadores móveis. Só navega para o WhatsApp após a gravação confirmar.\n    const whatsappWindow = window.open('', '_blank');\n    setSubmitting(true);\n\n    try {'''
+          if old not in s: raise SystemExit('ponto inicial esperado não encontrado')
+          s=s.replace(old,new,1)
+          old2='''    } catch {\n      setSubmitting(false);\n      toast.error("Não foi possível registrar sua solicitação.", {\n        description: "Seus dados continuam preenchidos. Tente novamente em alguns instantes.",\n      });\n      return;\n    }\n\n    const msg = buildWhatsAppMessage({\n      nome: form.nome,\n      cpf: form.cpf,\n      telefone: form.telefone,\n      email: form.email,\n      endereco: enderecoCompleto,\n      tema: form.tema,\n      modalidade: form.modalidade,\n      plano: form.plano,\n      dataEvento: form.dataEvento,\n      nomeAniversariante: form.nomeAniversariante,\n      idadeAniversariante: form.idadeAniversariante,\n      tipoFesta: form.tipoFesta,\n    });\n    const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;\n    window.open(url, "_blank", "noopener,noreferrer");'''
+          new2='''    } catch {\n      whatsappWindow?.close();\n      setSubmitting(false);\n      toast.error("Não foi possível registrar sua solicitação.", {\n        description: "Seus dados continuam preenchidos. Tente novamente em alguns instantes.",\n      });\n      return;\n    }\n\n    if (whatsappWindow) {\n      whatsappWindow.opener = null;\n      whatsappWindow.location.href = whatsappUrl;\n    } else {\n      // Se o navegador ainda bloquear a nova aba, mantém uma saída confiável.\n      window.location.href = whatsappUrl;\n      return;\n    }'''
+          if old2 not in s: raise SystemExit('bloco antigo do WhatsApp não encontrado')
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          PY
+      - name: Garantir política de privacidade no formulário
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/routes/reserva.tsx')
+          s=p.read_text()
+          needle='''          <SectionTitle number="05" title="Confirmação da Reserva" />'''
+          repl='''          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">Ao enviar seus dados, eles serão usados para atendimento, elaboração da reserva e execução do serviço, conforme nossa <Link to="/privacidade" className="font-medium text-primary underline underline-offset-2">Política de Privacidade</Link>.</p>\n\n          <Divider />\n          <SectionTitle number="05" title="Confirmação da Reserva" />'''
+          if needle not in s: raise SystemExit('seção de confirmação não encontrada')
+          if 'Política de Privacidade</Link>' not in s:
+              s=s.replace(needle,repl,1)
+          p.write_text(s)
+          PY
+      - name: Validar alterações
+        run: |
+          grep -q "whatsappWindow" src/routes/reserva.tsx
+          grep -q "Política de Privacidade" src/routes/reserva.tsx
+          ! grep -q 'window.open(url, "_blank"' src/routes/reserva.tsx
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/routes/reserva.tsx
+          git commit -m "Torna envio da reserva robusto no celular e reforça privacidade"
+          git push origin home-nova
