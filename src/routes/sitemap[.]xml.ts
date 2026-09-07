@@ -22,6 +22,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/orcamento", changefreq: "weekly", priority: "0.9" },
           { path: "/consultor", changefreq: "monthly", priority: "0.7" },
           { path: "/reserva", changefreq: "monthly", priority: "0.6" },
+          { path: "/privacidade", changefreq: "yearly", priority: "0.3" },
         ];
 
         const urls = entries.map((e) =>
@@ -31,9 +32,7 @@ export const Route = createFileRoute("/sitemap.xml")({
             e.changefreq ? `    <changefreq>${e.changefreq}</changefreq>` : null,
             e.priority ? `    <priority>${e.priority}</priority>` : null,
             `  </url>`,
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          ].filter(Boolean).join("\n"),
         );
 
         const xml = [
@@ -43,12 +42,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           `</urlset>`,
         ].join("\n");
 
-        return new Response(xml, {
-          headers: {
-            "Content-Type": "application/xml",
-            "Cache-Control": "public, max-age=3600",
-          },
-        });
+        return new Response(xml, { headers: { "Content-Type": "application/xml", "Cache-Control": "public, max-age=3600" } });
       },
     },
   },
