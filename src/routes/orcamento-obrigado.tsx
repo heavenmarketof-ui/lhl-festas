@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, PartyPopper, AlertTriangle } from "lucide-react";
 import { logoImages } from "@/assets/lhl";
 import { WHATSAPP_NUMBER } from "@/lib/orders-storage";
-import { markLeadWaOpened } from "@/lib/leads-api";
+import { markLeadWhatsAppOpened } from "@/lib/leads-api";
 
 export const Route = createFileRoute("/orcamento-obrigado")({
   head: () => ({
@@ -104,7 +104,7 @@ function Obrigado() {
     if (openedKey) {
       try { sessionStorage.setItem(openedKey, new Date().toISOString()); } catch { /* noop */ }
     }
-    if (leadId) void markLeadWaOpened(leadId, method);
+    if (leadId) void markLeadWhatsAppOpened(leadId, method);
     try {
       const w = window as unknown as { dataLayer?: unknown[] };
       w.dataLayer = w.dataLayer || [];
