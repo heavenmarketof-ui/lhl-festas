@@ -17,6 +17,7 @@ import {
   Users,
   CalendarDays,
   Database,
+  Target,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/lhl-logo.png";
@@ -37,6 +38,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const nav = [
     { label: "Hoje", to: "/admin", icon: Home, exact: true, desc: "Operação do dia" },
+    { label: "CRM / Leads", to: "/admin/leads", icon: Target, desc: "Funil comercial e atendimentos" },
     { label: "Clientes", to: "/admin/clientes", icon: Users, desc: "Histórico por pessoa" },
     { label: "Festas", to: "/admin/festas", icon: FileText, desc: "Contratos e eventos" },
     { label: "Agenda", to: "/admin/agenda", icon: CalendarDays, desc: "Calendário de festas" },
