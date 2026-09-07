@@ -9,7 +9,7 @@ import type { NovaSolicitacaoInput } from "./solicitacoes.server";
 
 export const criarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: NovaSolicitacaoInput) => input || {})
+  .validator((input: NovaSolicitacaoInput) => input || {})
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -18,7 +18,7 @@ export const criarSolicitacaoFn = createServerFn({ method: "POST" })
 
 export const editarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: NovaSolicitacaoInput & { id: string }) => input)
+  .validator((input: NovaSolicitacaoInput & { id: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -27,7 +27,7 @@ export const editarSolicitacaoFn = createServerFn({ method: "POST" })
 
 export const autorizarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => input)
+  .validator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -36,7 +36,7 @@ export const autorizarSolicitacaoFn = createServerFn({ method: "POST" })
 
 export const revogarAutorizacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) => input)
+  .validator((input: { id: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -46,7 +46,7 @@ export const revogarAutorizacaoFn = createServerFn({ method: "POST" })
 /** Reconciliação de STATUS: compra realizada, sem lançamento financeiro. */
 export const marcarCompradaSemFinanceiroFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; valorReal?: number | string; fornecedor?: string; dataCompra?: string }) => input)
+  .validator((input: { id: string; valorReal?: number | string; fornecedor?: string; dataCompra?: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -59,7 +59,7 @@ export const marcarCompradaSemFinanceiroFn = createServerFn({ method: "POST" })
  */
 export const registrarPagamentoSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: import("./solicitacoes.server").PagamentoInput) => input)
+  .validator((input: import("./solicitacoes.server").PagamentoInput) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -69,7 +69,7 @@ export const registrarPagamentoSolicitacaoFn = createServerFn({ method: "POST" }
 
 export const recusarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; motivo: string }) => input)
+  .validator((input: { id: string; motivo: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
@@ -78,7 +78,7 @@ export const recusarSolicitacaoFn = createServerFn({ method: "POST" })
 
 export const cancelarSolicitacaoFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string; motivo?: string }) => input)
+  .validator((input: { id: string; motivo?: string }) => input)
   .handler(async ({ data, context }) => {
     const m = await import("./solicitacoes.server");
     const ator = await m.assertAdmin(context as any);
