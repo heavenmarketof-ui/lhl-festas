@@ -8,8 +8,24 @@ const NOINDEX_PREFIXES = [
   "/obrigado",
 ];
 
+const PRIVATE_CACHE_PREFIXES = [
+  "/admin",
+  "/auth",
+  "/login",
+  "/contract",
+  "/checklist",
+];
+
+function matchesPrefix(pathname: string, prefixes: string[]): boolean {
+  return prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
 export function shouldNoIndex(pathname: string): boolean {
-  return NOINDEX_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return matchesPrefix(pathname, NOINDEX_PREFIXES);
+}
+
+export function shouldDisableCache(pathname: string): boolean {
+  return matchesPrefix(pathname, PRIVATE_CACHE_PREFIXES);
 }
 
 export function applyResponseSecurityHeaders(request: Request, response: Response): Response {
@@ -27,6 +43,11 @@ export function applyResponseSecurityHeaders(request: Request, response: Respons
 
   if (shouldNoIndex(url.pathname)) {
     headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
+  if (shouldDisableCache(url.pathname)) {
+    headers.set("Cache-Control", "private, no-store, max-age=0");
+    headers.set("Pragma", "no-cache");
   }
 
   return new Response(response.body, {
