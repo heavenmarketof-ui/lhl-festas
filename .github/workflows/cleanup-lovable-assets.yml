@@ -1,0 +1,46 @@
+name: Limpar metadados antigos de assets
+
+on:
+  push:
+    branches: [home-nova]
+    paths:
+      - .github/workflows/cleanup-lovable-assets.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.event.head_commit.message == 'Adiciona limpeza única de metadados antigos de assets'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: home-nova
+
+      - name: Remover arquivos asset.json antigos
+        shell: bash
+        run: |
+          find src/assets -type f -name '*.asset.json' -print -delete
+
+      - name: Confirmar que não restaram metadados antigos
+        shell: bash
+        run: |
+          if find src/assets -type f -name '*.asset.json' | grep -q .; then
+            echo 'Ainda existem arquivos .asset.json.'
+            exit 1
+          fi
+
+      - name: Commit da limpeza
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma limpeza necessária.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A src/assets
+          git commit -m 'Remove metadados antigos de assets do Lovable'
+          git push origin home-nova
