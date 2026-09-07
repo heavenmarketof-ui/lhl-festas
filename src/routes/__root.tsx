@@ -13,6 +13,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import publicThemeCss from "../public-theme.css?url";
 import publicLayoutCss from "../public-layout.css?url";
+import orcamentoOficialCss from "../orcamento-oficial.css?url";
 
 function NotFoundComponent() {
   return (
@@ -98,18 +99,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:image", content: "https://www.lhlfestas.com.br/hero-principal.jpg" },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      {
-        rel: "stylesheet",
-        href: publicThemeCss,
-      },
-      {
-        rel: "stylesheet",
-        href: publicLayoutCss,
-      },
+      { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: publicThemeCss },
+      { rel: "stylesheet", href: publicLayoutCss },
+      { rel: "stylesheet", href: orcamentoOficialCss },
     ],
     scripts: [
       {
