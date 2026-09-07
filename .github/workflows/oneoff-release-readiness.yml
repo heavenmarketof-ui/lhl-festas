@@ -1,0 +1,35 @@
+name: Fechamento tecnico para publicacao
+on:
+  push:
+    branches: [home-nova]
+    paths: ['.github/workflows/oneoff-release-readiness.yml']
+permissions:
+  contents: write
+jobs:
+  ready:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: home-nova }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Preparar ferramentas de deploy e validar release
+        run: |
+          npm install --save-dev wrangler@latest
+          npm audit --omit=dev --audit-level=high
+          npm test
+          npm run build
+          grep -q '"name": "lhl-festas"' wrangler.jsonc
+          grep -q 'nodejs_compat' wrangler.jsonc
+          test -f .env.example
+          ! grep -R -E 'AKfy[a-zA-Z0-9_-]{20,}|lhl-leads-[0-9]{4}-admin' src --include='*.ts' --include='*.tsx'
+          ! grep -R 'https://lhl-festas.lovable.app' src/routes src/components/consultor src/lib/consultor --include='*.ts' --include='*.tsx'
+      - name: Commitar release readiness
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json package-lock.json
+          git commit -m 'Prepara ferramentas para deploy independente no Cloudflare'
+          git push origin HEAD:home-nova
