@@ -8,6 +8,8 @@ import {
   gasAdminPost,
   gasPublicPost,
   gasPublicOrderById,
+  gasDevReadonlyGet,
+  gasDevConnectionStatus,
 } from "./sheets-gateway.functions";
 
 function parse(text: string): any {
@@ -22,27 +24,45 @@ export function rowsOf(json: any): any[] {
   return Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
 }
 
-/**
- * Em desenvolvimento (Codespaces/Vite), o Admin funciona em modo leitura por
- * padrão. Assim podemos usar os dados REAIS do Apps Script para validar telas
- * sem risco de alterar planilhas durante a construção do novo sistema.
- *
- * Para habilitar escritas intencionalmente em desenvolvimento no futuro:
- * VITE_ADMIN_WRITES=true
- *
- * Em build de produção esta trava não é aplicada.
- */
 function adminWriteBlockedInPreview() {
   return import.meta.env.DEV && String(import.meta.env.VITE_ADMIN_WRITES || "").toLowerCase() !== "true";
 }
 
-/** GET administrativo (exige sessão + papel admin). `query` ex.: "action=opList". */
-export async function sheetGet(query = ""): Promise<any> {
-  const { text } = await gasAdminGet({ data: { query } });
-  return parse(text);
+function looksDenied(json: any) {
+  return !!json && typeof json === "object" && !Array.isArray(json) && (json.ok === false || !!json.error);
 }
 
-/** POST administrativo (exige sessão + papel admin). */
+/**
+ * GET administrativo. Em desenvolvimento, se a leitura autenticada falhar,
+ * tenta a rota SOMENTE-LEITURA do servidor. Nenhum POST é executado.
+ */
+export async function sheetGet(query = ""): Promise<any> {
+  let firstError: unknown;
+  try {
+    const { text } = await gasAdminGet({ data: { query } });
+    const json = parse(text);
+    if (!looksDenied(json)) return json;
+    firstError = new Error(String(json.error || "Apps Script recusou a leitura"));
+  } catch (err) {
+    firstError = err;
+  }
+
+  if (import.meta.env.DEV) {
+    const { text } = await gasDevReadonlyGet({ data: { query } });
+    const json = parse(text);
+    if (looksDenied(json)) throw new Error(String(json.error || "Apps Script recusou a leitura"));
+    return json;
+  }
+
+  throw firstError instanceof Error ? firstError : new Error("Falha ao consultar o Apps Script");
+}
+
+/** Retorna apenas informações de saúde da conexão, nunca URL ou token. */
+export async function sheetConnectionStatus() {
+  return gasDevConnectionStatus();
+}
+
+/** POST administrativo. Bloqueado por padrão em desenvolvimento. */
 export async function sheetPost(body: Record<string, unknown>): Promise<any> {
   if (adminWriteBlockedInPreview()) {
     throw new Error("Modo de visualização ativo: alterações estão bloqueadas neste ambiente de desenvolvimento.");
@@ -51,13 +71,11 @@ export async function sheetPost(body: Record<string, unknown>): Promise<any> {
   return parse(text);
 }
 
-/** POST público — apenas ações da lista branca no servidor. */
 export async function sheetPublicPost(body: Record<string, unknown>): Promise<any> {
   const { text } = await gasPublicPost({ data: { body } });
   return parse(text);
 }
 
-/** Busca pública de um único contrato pelo id (link do cliente). */
 export async function sheetPublicOrder(id: string): Promise<any | null> {
   const { row } = await gasPublicOrderById({ data: { id } });
   return row ?? null;
