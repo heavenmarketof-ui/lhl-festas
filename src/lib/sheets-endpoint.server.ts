@@ -3,8 +3,10 @@
 // Nenhum endpoint ou token privado deve ficar fixo no código do projeto.
 // ============================================================================
 
+import { getServerEnv } from "./runtime-env.server";
+
 export function gasUrl(): string {
-  const value = (process.env.GAS_ENDPOINT_URL || "").trim();
+  const value = getServerEnv("GAS_ENDPOINT_URL");
   if (!value) {
     throw new Error("GAS_ENDPOINT_URL não configurado no ambiente do servidor.");
   }
@@ -13,12 +15,12 @@ export function gasUrl(): string {
 
 /** Segredo compartilhado servidor ↔ Apps Script (Script Properties: GAS_SHARED_TOKEN). */
 export function gasSharedToken(): string {
-  return (process.env.GAS_SHARED_TOKEN || "").trim();
+  return getServerEnv("GAS_SHARED_TOKEN");
 }
 
 /** Token administrativo do módulo de Leads. Nunca usar fallback fixo no código. */
 export function leadsAdminToken(): string {
-  return (process.env.GAS_LEADS_ADMIN_TOKEN || "").trim();
+  return getServerEnv("GAS_LEADS_ADMIN_TOKEN");
 }
 
 type GasRequest = {
