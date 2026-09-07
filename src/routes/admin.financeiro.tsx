@@ -190,9 +190,6 @@ function FinanceiroPage() {
   );
 }
 
-// Sub-componentes do DashboardTab e outros...
-// [Migrated from gestao-financeira.tsx with month navigation logic]
-
 function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
   const { mes: mesBusca } = Route.useSearch();
   const navigate = useNavigate();
@@ -234,6 +231,8 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
   const stats = useMemo(() => {
     let entradasPeriodo = 0;
     let saidasPeriodo = 0;
+    let caucaoRecebidaPeriodo = 0;
+    let caucaoDevolvidaPeriodo = 0;
     let saldoEmConta = 0;
 
     const inRange = (dStr: string) => {
@@ -242,40 +241,44 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
       return d >= range.from && d <= range.to;
     };
 
-    const isCaucao = (cat: string) => {
-      const c = cat.toLowerCase();
-      return c.includes("caução") || c.includes("caucao");
-    };
-    const isSaldoInicial = (cat: string) => cat.toLowerCase().includes("saldo inicial");
+    const norm = (v: unknown) => String(v ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    const isCaucao = (l: Lancamento) => norm(l.categoria).includes("caucao") || norm(l.origem).includes("caucao");
+    const isSaldoInicial = (l: Lancamento) => norm(l.categoria).includes("saldo inicial");
 
-    // Saldo em conta é SEMPRE acumulado (posição atual)
+    // Saldo em conta representa caixa real e, por isso, inclui cauções.
+    // Já o resultado operacional exclui caução e saldo inicial: caução é
+    // obrigação temporária, não receita; saldo inicial não é movimento do mês.
     for (const l of lancamentos) {
       const v = parseValor(l.valor);
       if (l.tipo === "Entrada") saldoEmConta += v; else saldoEmConta -= v;
 
-      if (inRange(l.data)) {
-        if (l.tipo === "Entrada") entradasPeriodo += v; else saidasPeriodo += v;
+      if (!inRange(l.data)) continue;
+      if (isCaucao(l)) {
+        if (l.tipo === "Entrada") caucaoRecebidaPeriodo += v;
+        else caucaoDevolvidaPeriodo += v;
+        continue;
       }
+      if (isSaldoInicial(l)) continue;
+      if (l.tipo === "Entrada") entradasPeriodo += v; else saidasPeriodo += v;
     }
 
     const idx = indexRecebimentos(lancamentos);
     const validOrders = orders.filter((o: any) => o.status !== "Cancelado");
 
-    // A RECEBER NO MÊS: Saldo dos contratos cujo EVENTO pertence ao período
     const aReceberMes = validOrders
       .filter((o: any) => inRange(o.details?.dataEvento))
       .reduce((s: number, o: any) => s + getContractPaymentStatus(o, idx).saldoReceber, 0);
 
-    // A RECEBER TOTAL: Todo saldo real pendente (independentemente do mês)
     const aReceberTotal = validOrders
       .reduce((s: number, o: any) => s + getContractPaymentStatus(o, idx).saldoReceber, 0);
 
-    // A PAGAR NO MÊS: Contas cujo VENCIMENTO pertence ao período
     const aPagarMes = contas
       .filter((c: any) => c.pago !== "Sim" && inRange(c.vencimento))
       .reduce((s: number, c: any) => s + parseValor(c.valor), 0);
 
-    // A PAGAR TOTAL: Todas as obrigações pendentes
     const aPagarTotal = contas
       .filter((c: any) => c.pago !== "Sim")
       .reduce((s: number, c: any) => s + parseValor(c.valor), 0);
@@ -283,7 +286,9 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
     return {
       entradas: entradasPeriodo,
       saidas: saidasPeriodo,
-      lucro: entradasPeriodo - saidasPeriodo,
+      resultadoOperacional: entradasPeriodo - saidasPeriodo,
+      caucaoRecebida: caucaoRecebidaPeriodo,
+      caucaoDevolvida: caucaoDevolvidaPeriodo,
       aReceberMes,
       aReceberTotal,
       aPagarMes,
@@ -322,11 +327,11 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
 
       <div className="space-y-4">
         <section>
-          <h2 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Resultado do Período</h2>
+          <h2 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Resultado operacional do período</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <StatCard icon={<ArrowUpCircle className="h-4 w-4" />} label={`Entradas em ${mesCapitalized}`} value={fmtBRL(stats.entradas)} tone="ok" />
-            <StatCard icon={<ArrowDownCircle className="h-4 w-4" />} label={`Saídas em ${mesCapitalized}`} value={fmtBRL(stats.saidas)} tone="warn" />
-            <StatCard icon={<Coins className="h-4 w-4" />} label={`Saldo em ${mesCapitalized}`} value={fmtBRL(stats.lucro)} tone={stats.lucro >= 0 ? "ok" : "warn"} />
+            <StatCard icon={<ArrowUpCircle className="h-4 w-4" />} label={`Entradas operacionais em ${mesCapitalized}`} value={fmtBRL(stats.entradas)} tone="ok" />
+            <StatCard icon={<ArrowDownCircle className="h-4 w-4" />} label={`Saídas operacionais em ${mesCapitalized}`} value={fmtBRL(stats.saidas)} tone="warn" />
+            <StatCard icon={<Coins className="h-4 w-4" />} label={`Resultado operacional em ${mesCapitalized}`} value={fmtBRL(stats.resultadoOperacional)} tone={stats.resultadoOperacional >= 0 ? "ok" : "warn"} />
           </div>
         </section>
 
@@ -341,9 +346,11 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
         </section>
 
         <section>
-          <h2 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Caixa</h2>
-          <div className="grid grid-cols-1 gap-3">
+          <h2 className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3 px-1">Caixa e cauções</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <StatCard icon={<Wallet className="h-4 w-4" />} label="Saldo total acumulado em conta" value={fmtBRL(stats.saldoEmConta)} tone="info" />
+            <StatCard label={`Cauções recebidas em ${mesCapitalized}`} value={fmtBRL(stats.caucaoRecebida)} tone="info" />
+            <StatCard label={`Cauções devolvidas em ${mesCapitalized}`} value={fmtBRL(stats.caucaoDevolvida)} tone="info" />
           </div>
         </section>
       </div>
@@ -362,9 +369,6 @@ function StatCard({ icon, label, value, tone = "neutral" }: any) {
     </div>
   );
 }
-
-// --- Importação do restante de gestao-financeira.tsx (Tabs de Fluxo, Contas, Categorias) ---
-// [Simplified for brevity in the tool call, but would include the full logic in the final file]
 
 function ContasAReceberCard({ orders, lancamentos, range, mesLabel }: any) {
   const [showAll, setShowAll] = useState(false);
@@ -448,9 +452,6 @@ function ContasAReceberCard({ orders, lancamentos, range, mesLabel }: any) {
     </section>
   );
 }
-
-// Re-implementing simplified versions of FluxoTab, ContasTab, CategoriasTab...
-// [The final file will have the complete logic from gestao-financeira.tsx]
 
 function FluxoTab({
   lancamentos, categorias, orders, setLancamentos, onCreatedPatrimonio, highlightId,
@@ -796,6 +797,7 @@ function ContasTab({ contas, categorias, setContas, setLancamentos }: any) {
       id: crypto.randomUUID(), data: c.dataPagamento || todayISO(), tipo: "Saída",
       categoria: c.categoria || "Outros", descricao: `Pagamento — ${c.descricao}`,
       valor: parseValor(c.valor), conta: "PIX", createdAt: new Date().toISOString(), ativo: "Sim",
+      origem: "conta_pagar",
     };
     try {
       await createLancamento(l);
@@ -901,4 +903,3 @@ function CategoriasTab({ categorias, setCategorias }: any) {
     </div>
   );
 }
-
