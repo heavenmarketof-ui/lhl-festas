@@ -18,6 +18,7 @@ import {
   CalendarDays,
   Database,
   Target,
+  ShieldCheck,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/lhl-logo.png";
@@ -42,6 +43,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { label: "Clientes", to: "/admin/clientes", icon: Users, desc: "Histórico por pessoa" },
     { label: "Festas", to: "/admin/festas", icon: FileText, desc: "Contratos e eventos" },
     { label: "Agenda", to: "/admin/agenda", icon: CalendarDays, desc: "Calendário de festas" },
+    { label: "Operação", to: "/admin/operacao", icon: ShieldCheck, desc: "Liberados e aguardando sinal" },
     { label: "Produção", to: "/admin/producao", icon: Factory, desc: "Kits, compras e preparação", search: { filtro: "pendentes", etapa: "todas", q: "" } },
     { label: "Financeiro", to: "/admin/financeiro", icon: Wallet, desc: "Entradas e saídas", search: { tab: "dashboard" } },
     { label: "Gestão", to: "/admin/gestao", icon: BarChart3, desc: "Indicadores do negócio" },
