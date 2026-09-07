@@ -12,7 +12,7 @@ import { downloadElementPdf, printElement } from "@/lib/print-doc";
 export const Route = createFileRoute("/contract/$id")({
   component: ContractPrint,
   head: () => ({
-    meta: [{ title: "Contrato — LHL Festas" }],
+    meta: [{ title: "Contrato — LHL Festas" }, { name: "robots", content: "noindex, nofollow" }],
   }),
 });
 

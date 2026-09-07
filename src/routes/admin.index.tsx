@@ -359,8 +359,13 @@ function CentralPage() {
             onMarcarProduzido={async (item) => {
               if (item.opId && item.itemId) {
                 try {
-                  const { updateItemProducaoStatus } = await import("@/lib/producao-api");
-                  const opFinal = await updateItemProducaoStatus(item.opId, item.itemId, "Concluído");
+                  const opAtual = ordensProducao.find((x) => x.id === item.opId);
+
+                  if (!opAtual) throw new Error("Ordem de produção não encontrada.");
+
+                  const { atualizarStatusProducaoSeguro } = await import("@/lib/producao-operacional-safe");
+
+                  const opFinal = await atualizarStatusProducaoSeguro(opAtual, item.itemId, "Concluído");
                   setOrdensProducao(prev =>
                     prev.some(x => x.id === opFinal.id)
                       ? prev.map(x => (x.id === opFinal.id ? opFinal : x))
