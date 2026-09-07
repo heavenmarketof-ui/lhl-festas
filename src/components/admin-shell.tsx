@@ -1,5 +1,5 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { conferenciaCompleta, type OrdemProducao, pendenciasOperacionais, isAtrasada } from "@/lib/producao-api";
+import { type OrdemProducao, pendenciasOperacionais, isAtrasada } from "@/lib/producao-api";
 import { Button } from "@/components/ui/button";
 import {
   BarChart3,
@@ -14,9 +14,7 @@ import {
   ClipboardCheck,
   Menu,
   X,
-  CalendarDays,
   Users,
-  Settings,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "@/assets/lhl-logo.png";
@@ -36,6 +34,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const nav = [
     { label: "Hoje", to: "/admin", icon: Home, exact: true, desc: "Operação do dia" },
+    { label: "Clientes", to: "/admin/clientes", icon: Users, desc: "Histórico por pessoa" },
     { label: "Festas", to: "/admin/contratos", icon: FileText, desc: "Contratos e eventos" },
     { label: "Produção", to: "/admin/producao", icon: Factory, desc: "Kits, compras e preparação", search: { filtro: "pendentes", etapa: "todas", q: "" } },
     { label: "Financeiro", to: "/admin/financeiro", icon: Wallet, desc: "Entradas e saídas", search: { tab: "dashboard" } },
@@ -142,7 +141,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Cor/emoji de prioridade a partir da data do evento (uso em listas). */
 export function priorityLevel(dataEventoISO: string): "green" | "yellow" | "red" | null {
   if (!dataEventoISO) return null;
   const evt = new Date(`${dataEventoISO}T00:00:00`);
@@ -157,12 +155,7 @@ export function priorityLevel(dataEventoISO: string): "green" | "yellow" | "red"
 
 export type CalendarLevel = "green" | "red" | "yellow" | "orange" | "purple";
 
-export function orderCalendarLevel(
-  o: StoredOrder,
-  todayISO: string,
-  in7ISO: string,
-  opAtual?: OrdemProducao | null,
-): CalendarLevel {
+export function orderCalendarLevel(o: StoredOrder, todayISO: string, in7ISO: string, opAtual?: OrdemProducao | null): CalendarLevel {
   const d = o.details;
   if ((d?.caucaoDevolvida || "Não") === "Sim" || (d?.devolucaoConfirmada || "Não") === "Sim") return "green";
   if (opAtual) {
@@ -177,12 +170,8 @@ export function orderCalendarLevel(
   return "orange";
 }
 
-const DOT_CLASS: Record<CalendarLevel, string> = {
-  green: "bg-emerald-500", red: "bg-red-500", yellow: "bg-yellow-400", orange: "bg-orange-500", purple: "bg-purple-500",
-};
-const DOT_LABEL: Record<CalendarLevel, string> = {
-  green: "Cliente Finalizado (caução devolvida)", yellow: "Cliente com Itens Pendentes", red: "Cliente da Semana", orange: "Cliente em Aberto", purple: "Kit Pronto",
-};
+const DOT_CLASS: Record<CalendarLevel, string> = { green: "bg-emerald-500", red: "bg-red-500", yellow: "bg-yellow-400", orange: "bg-orange-500", purple: "bg-purple-500" };
+const DOT_LABEL: Record<CalendarLevel, string> = { green: "Cliente Finalizado (caução devolvida)", yellow: "Cliente com Itens Pendentes", red: "Cliente da Semana", orange: "Cliente em Aberto", purple: "Kit Pronto" };
 
 export function PriorityDot({ level }: { level: CalendarLevel | null }) {
   if (!level) return null;
@@ -197,9 +186,5 @@ export function CalendarLegend() {
     { level: "orange", label: "Cliente em Aberto" },
     { level: "purple", label: "Kit Pronto" },
   ];
-  return (
-    <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">
-      {items.map((it) => <span key={it.level} className="inline-flex items-center gap-1.5"><span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT_CLASS[it.level]}`} />{it.label}</span>)}
-    </div>
-  );
+  return <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted-foreground">{items.map((it) => <span key={it.level} className="inline-flex items-center gap-1.5"><span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT_CLASS[it.level]}`} />{it.label}</span>)}</div>;
 }
