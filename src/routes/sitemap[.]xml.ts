@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 
-const BASE_URL = "https://lhl-festas.lovable.app";
+const BASE_URL = "https://www.lhlfestas.com.br";
 
 interface SitemapEntry {
   path: string;
@@ -15,7 +15,12 @@ export const Route = createFileRoute("/sitemap.xml")({
       GET: async () => {
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
+          { path: "/catalogo", changefreq: "weekly", priority: "0.9" },
+          { path: "/festa-na-mesa", changefreq: "monthly", priority: "0.8" },
+          { path: "/peg-e-monte", changefreq: "monthly", priority: "0.8" },
+          { path: "/tema-personalizado", changefreq: "monthly", priority: "0.8" },
           { path: "/orcamento", changefreq: "weekly", priority: "0.9" },
+          { path: "/consultor", changefreq: "monthly", priority: "0.7" },
           { path: "/reserva", changefreq: "monthly", priority: "0.6" },
         ];
 
