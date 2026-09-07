@@ -24,12 +24,12 @@ import { WHATSAPP_NUMBER } from "@/lib/orders-storage";
 
 const ConsultorFAB = lazy(() => import("@/components/consultor/ConsultorFAB"));
 
-const driveImage = (id: string) => `https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+const driveImage = (id: string, width = 900) => `https://drive.google.com/thumbnail?id=${id}&sz=w${width}`;
 
-const HERO_IMAGE = driveImage("1FTVXnS_eFo_gZHo1EGhQgq1nauyGq5pc");
-const FESTA_NA_MESA_IMAGE = driveImage("1lPR3hKeeyibMSse1xzyK6ZfSz0zUV4ov");
-const PERSONALIZADO_IMAGE = driveImage("12OGmQ4DEVI3ADHVu7weFGLDreXw49IIi");
-const PEG_MONTE_IMAGE = driveImage("1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9");
+const HERO_IMAGE = driveImage("1FTVXnS_eFo_gZHo1EGhQgq1nauyGq5pc", 1600);
+const FESTA_NA_MESA_IMAGE = driveImage("1lPR3hKeeyibMSse1xzyK6ZfSz0zUV4ov", 900);
+const PERSONALIZADO_IMAGE = driveImage("12OGmQ4DEVI3ADHVu7weFGLDreXw49IIi", 900);
+const PEG_MONTE_IMAGE = driveImage("1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9", 900);
 
 const INSPIRACOES = [
   driveImage("1YJUA1G3Qn2uwfSWn__iAbTWKDd-eMjTu"),
@@ -94,7 +94,7 @@ function Header() {
     <header className="sticky top-0 z-50 text-white shadow-lg" style={{ background: `linear-gradient(90deg, ${vinhoEscuro}, ${vinho})` }}>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <img src={logoImages[0]} alt="LHL Festas" className="h-14 w-14 rounded-full border border-[#d8b06c]/60 object-cover shadow-md" />
+          <img src={logoImages[0]} alt="LHL Festas" loading="eager" decoding="async" className="h-14 w-14 rounded-full border border-[#d8b06c]/60 object-cover shadow-md" />
           <div className="hidden sm:block">
             <div className="font-serif text-xl text-[#f4d49b]">LHL Festas</div>
             <div className="text-[9px] uppercase tracking-[.24em] text-white/65">Peg & Monte</div>
@@ -173,7 +173,7 @@ function Hero() {
         </div>
 
         <div className="relative min-h-[500px] lg:min-h-full">
-          <img src={HERO_IMAGE} alt="Decoração Moranguinho da LHL Festas" className="absolute inset-0 h-full w-full object-cover object-center" fetchPriority="high" />
+          <img src={HERO_IMAGE} alt="Decoração Moranguinho da LHL Festas" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center" fetchPriority="high" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#651421] via-[#651421]/15 to-transparent" />
           <div className="absolute right-5 top-10 max-w-[180px] rounded-2xl bg-[#f6d9d3]/95 p-4 text-center text-xs leading-relaxed text-[#5d1720] shadow-xl">
             <Heart className="mx-auto mb-2 h-4 w-4 fill-current" />
@@ -216,7 +216,7 @@ function Modalidades() {
       <div className="mx-auto grid max-w-7xl gap-4 px-4 lg:grid-cols-3">
         {cards.map((card, i) => (
           <article id={i === 2 ? "personalizado" : undefined} key={card.title} className="grid min-h-[265px] grid-cols-[.95fr_1.05fr] items-center overflow-hidden rounded-2xl p-5 shadow-md" style={{ background: card.dark ? vinho : rosaClaro, color: card.dark ? "white" : vinho }}>
-            <img src={card.image} alt={card.title} className="aspect-square w-full rounded-full border-4 border-white/30 object-cover object-center shadow-lg" />
+            <img src={card.image} alt={card.title} loading="lazy" decoding="async" className="aspect-square w-full rounded-full border-4 border-white/30 object-cover object-center shadow-lg" />
             <div className="pl-5">
               <h2 className="font-serif text-3xl italic">{card.title}</h2>
               <p className={`mt-3 text-sm leading-relaxed ${card.dark ? 'text-white/80' : ''}`}>{card.text}</p>
