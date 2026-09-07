@@ -4,6 +4,7 @@ const NOINDEX_PREFIXES = [
   "/login",
   "/contract",
   "/checklist",
+  "/reserva",
   "/orcamento-obrigado",
   "/obrigado",
 ];
@@ -14,6 +15,7 @@ const PRIVATE_CACHE_PREFIXES = [
   "/login",
   "/contract",
   "/checklist",
+  "/reserva",
 ];
 
 function matchesPrefix(pathname: string, prefixes: string[]): boolean {
