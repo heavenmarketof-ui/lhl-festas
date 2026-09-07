@@ -1,5 +1,6 @@
 import "./lib/error-capture";
 
+import { env as cloudflareEnv } from "cloudflare:workers";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { applyResponseSecurityHeaders } from "./lib/response-security";
@@ -69,6 +70,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // O binding nativo é a fonte confiável no Cloudflare. O parâmetro env fica
+      // como fallback para compatibilidade com o entrypoint do TanStack.
+      setRuntimeBindings(cloudflareEnv);
       setRuntimeBindings(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
