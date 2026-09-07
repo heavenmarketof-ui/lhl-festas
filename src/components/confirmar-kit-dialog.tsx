@@ -22,13 +22,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Loader2, PackageCheck } from "lucide-react";
+import { pendenciasOperacionais, type OrdemProducao } from "@/lib/producao-api";
+import { confirmarKitProntoSeguro } from "@/lib/producao-operacional-safe";
 import {
-  confirmarKitPronto,
-  pendenciasOperacionais,
-  type OrdemProducao,
-} from "@/lib/producao-api";
-import {
-  assertOperacaoLiberada,
   OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
   resolveOperacaoGate,
   type OperacaoGateStatus,
@@ -101,12 +97,9 @@ export function ConfirmarKitDialog({
     }
     setSalvando(true);
     try {
-      // Barreira arquitetural executada imediatamente antes da mutation.
-      // Assim, mesmo uma tela antiga ou estado visual desatualizado não consegue
-      // confirmar Kit Pronto sem recebimento real vinculado ao contrato.
-      await assertOperacaoLiberada(alvo.op.contratoId);
-
-      const atualizada = await confirmarKitPronto(alvo.op, alvo.origem);
+      // A própria mutation protegida refaz a barreira financeira imediatamente
+      // antes de gravar. A UI também mostra o gate para orientar o operador.
+      const atualizada = await confirmarKitProntoSeguro(alvo.op, alvo.origem);
       toast.success(`Kit Pronto confirmado — ${atualizada.numero}`);
       onAtualizado?.(atualizada);
       onClose();
