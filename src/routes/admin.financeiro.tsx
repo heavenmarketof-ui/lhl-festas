@@ -35,6 +35,12 @@ import {
   parseValor, fmtBRL, toCSV, downloadCSV,
   type Lancamento, type ContaPagar, type CategoriaFinanceira, type LancamentoTipo,
 } from "@/lib/financeiro-api";
+import {
+  lancamentoDaConta,
+  podeDesfazerBaixaSemAjusteFinanceiro,
+  registrarContaPagaNoFluxo,
+  statusFinanceiroConta,
+} from "@/lib/contas-pagar-flow";
 import { getContractPaymentStatus, indexRecebimentos } from "@/lib/pagamentos";
 import { fetchOrdersFromSheet } from "@/lib/sheets-api";
 import { fetchPatrimonioFromSheet, createPatrimonioOnSheet, PATRIMONIO_CATEGORIAS, type PatrimonioItem } from "@/lib/patrimonio-api";
@@ -128,14 +134,16 @@ function FinanceiroPage() {
         setCategorias((p) => stale(p, cat));
         setOrders((p) => stale(p, ord));
       } else if (which === "contas") {
-        const [c, cat] = await Promise.all([
+        const [c, cat, l] = await Promise.all([
           safe("contasPagarList", () => fetchContasPagar({ force })),
           safe("categoriasList", () => fetchCategorias({ force })),
+          safe("fluxoList", () => fetchLancamentos({ force })),
         ]);
         if (seq !== requestSeq.current) return;
-        falhou = [c, cat].some((x) => x === null);
+        falhou = [c, cat, l].some((x) => x === null);
         setContas((p) => stale(p, c));
         setCategorias((p) => stale(p, cat));
+        setLancamentos((p) => stale(p, l));
       } else {
         const cat = await safe("categoriasList", () => fetchCategorias({ force }));
         if (seq !== requestSeq.current) return;
@@ -183,7 +191,7 @@ function FinanceiroPage() {
 
         {tab === "dashboard" && <DashboardTab lancamentos={lancamentos} contas={contas} orders={orders} patrimonio={patrimonio} />}
         {tab === "fluxo" && <FluxoTab highlightId={highlightLancamento} lancamentos={lancamentos} categorias={categorias} orders={orders} setLancamentos={setLancamentos} onCreatedPatrimonio={(p: PatrimonioItem) => setPatrimonio((prev: PatrimonioItem[]) => [...prev, p])} />}
-        {tab === "contas" && <ContasTab contas={contas} categorias={categorias} setContas={setContas} setLancamentos={setLancamentos} />}
+        {tab === "contas" && <ContasTab contas={contas} categorias={categorias} lancamentos={lancamentos} setContas={setContas} setLancamentos={setLancamentos} />}
         {tab === "categorias" && <CategoriasTab categorias={categorias} setCategorias={setCategorias} />}
       </main>
     </AdminShell>
@@ -248,9 +256,6 @@ function DashboardTab({ lancamentos, contas, orders, patrimonio }: any) {
     const isCaucao = (l: Lancamento) => norm(l.categoria).includes("caucao") || norm(l.origem).includes("caucao");
     const isSaldoInicial = (l: Lancamento) => norm(l.categoria).includes("saldo inicial");
 
-    // Saldo em conta representa caixa real e, por isso, inclui cauções.
-    // Já o resultado operacional exclui caução e saldo inicial: caução é
-    // obrigação temporária, não receita; saldo inicial não é movimento do mês.
     for (const l of lancamentos) {
       const v = parseValor(l.valor);
       if (l.tipo === "Entrada") saldoEmConta += v; else saldoEmConta -= v;
@@ -372,7 +377,6 @@ function StatCard({ icon, label, value, tone = "neutral" }: any) {
 
 function ContasAReceberCard({ orders, lancamentos, range, mesLabel }: any) {
   const [showAll, setShowAll] = useState(false);
-  const [filterType, setFilterType] = useState<"mes" | "todas">("mes");
 
   const rows = useMemo(() => {
     const idx = indexRecebimentos(lancamentos);
@@ -403,49 +407,24 @@ function ContasAReceberCard({ orders, lancamentos, range, mesLabel }: any) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <h2 className="text-sm font-medium text-primary">Contas a Receber ({rows.length})</h2>
         <div className="flex bg-muted p-1 rounded-full w-fit">
-          <button
-            onClick={() => setShowAll(false)}
-            className={`px-3 py-1 text-[10px] uppercase font-bold rounded-full transition-all ${!showAll ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-primary"}`}
-          >
-            Do Mês
-          </button>
-          <button
-            onClick={() => setShowAll(true)}
-            className={`px-3 py-1 text-[10px] uppercase font-bold rounded-full transition-all ${showAll ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-primary"}`}
-          >
-            Todas
-          </button>
+          <button onClick={() => setShowAll(false)} className={`px-3 py-1 text-[10px] uppercase font-bold rounded-full transition-all ${!showAll ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-primary"}`}>Do Mês</button>
+          <button onClick={() => setShowAll(true)} className={`px-3 py-1 text-[10px] uppercase font-bold rounded-full transition-all ${showAll ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-primary"}`}>Todas</button>
         </div>
       </div>
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-[10px] uppercase tracking-wider">Cliente</TableHead>
-              <TableHead className="text-[10px] uppercase tracking-wider">Data do Evento</TableHead>
-              <TableHead className="text-right text-[10px] uppercase tracking-wider">Saldo</TableHead>
-              <TableHead className="text-right text-[10px] uppercase tracking-wider">Ação</TableHead>
-            </TableRow>
-          </TableHeader>
+          <TableHeader><TableRow><TableHead className="text-[10px] uppercase tracking-wider">Cliente</TableHead><TableHead className="text-[10px] uppercase tracking-wider">Data do Evento</TableHead><TableHead className="text-right text-[10px] uppercase tracking-wider">Saldo</TableHead><TableHead className="text-right text-[10px] uppercase tracking-wider">Ação</TableHead></TableRow></TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">
-                  Nenhuma conta pendente {showAll ? "" : `em ${mesLabel}`}.
-                </TableCell>
+              <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground text-sm">Nenhuma conta pendente {showAll ? "" : `em ${mesLabel}`}.</TableCell></TableRow>
+            ) : rows.map((r: any) => (
+              <TableRow key={r.o.id} className="hover:bg-muted/50 transition-colors">
+                <TableCell className="font-medium text-sm py-3">{r.o.nome}</TableCell>
+                <TableCell className="text-sm py-3">{formatDateBR(r.evtISO)}</TableCell>
+                <TableCell className="text-right text-destructive font-bold text-sm py-3">{fmtBRL(r.saldo)}</TableCell>
+                <TableCell className="text-right py-3"><Button asChild size="sm" variant="ghost" className="rounded-full h-8 px-3 text-xs border hover:bg-white"><Link to="/admin/$id" params={{ id: r.o.id }}>Abrir</Link></Button></TableCell>
               </TableRow>
-            ) : (
-              rows.map((r: any) => (
-                <TableRow key={r.o.id} className="hover:bg-muted/50 transition-colors">
-                  <TableCell className="font-medium text-sm py-3">{r.o.nome}</TableCell>
-                  <TableCell className="text-sm py-3">{formatDateBR(r.evtISO)}</TableCell>
-                  <TableCell className="text-right text-destructive font-bold text-sm py-3">{fmtBRL(r.saldo)}</TableCell>
-                  <TableCell className="text-right py-3">
-                    <Button asChild size="sm" variant="ghost" className="rounded-full h-8 px-3 text-xs border hover:bg-white"><Link to="/admin/$id" params={{ id: r.o.id }}>Abrir</Link></Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
@@ -453,16 +432,7 @@ function ContasAReceberCard({ orders, lancamentos, range, mesLabel }: any) {
   );
 }
 
-function FluxoTab({
-  lancamentos, categorias, orders, setLancamentos, onCreatedPatrimonio, highlightId,
-}: {
-  lancamentos: Lancamento[];
-  categorias: CategoriaFinanceira[];
-  orders: StoredOrder[];
-  setLancamentos: React.Dispatch<React.SetStateAction<Lancamento[]>>;
-  onCreatedPatrimonio: (p: PatrimonioItem) => void;
-  highlightId?: string;
-}) {
+function FluxoTab({ lancamentos, categorias, orders, setLancamentos, onCreatedPatrimonio, highlightId }: { lancamentos: Lancamento[]; categorias: CategoriaFinanceira[]; orders: StoredOrder[]; setLancamentos: React.Dispatch<React.SetStateAction<Lancamento[]>>; onCreatedPatrimonio: (p: PatrimonioItem) => void; highlightId?: string; }) {
   const [editing, setEditing] = useState<Lancamento | null>(null);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Lancamento | null>(null);
@@ -474,15 +444,7 @@ function FluxoTab({
     const q = query.trim().toLowerCase();
     return [...lancamentos]
       .filter((l) => filterTipo === "todos" || l.tipo === filterTipo)
-      .filter((l) => {
-        if (!q) return true;
-        return (
-          l.descricao.toLowerCase().includes(q) ||
-          l.categoria.toLowerCase().includes(q) ||
-          (l.beneficiario || "").toLowerCase().includes(q) ||
-          l.conta.toLowerCase().includes(q)
-        );
-      })
+      .filter((l) => !q || l.descricao.toLowerCase().includes(q) || l.categoria.toLowerCase().includes(q) || (l.beneficiario || "").toLowerCase().includes(q) || l.conta.toLowerCase().includes(q))
       .sort((a, b) => b.data.localeCompare(a.data));
   }, [lancamentos, filterTipo, query]);
 
@@ -492,52 +454,27 @@ function FluxoTab({
     if (parseValor(editing.valor) <= 0) { toast.error("Valor deve ser maior que zero."); return; }
     const distribuicaoLucros = editing.categoria === "Distribuição de Lucros";
     const relacaoConfirmada = !!String(editing.contratoId || "").trim() || editing.origem === "manual_sem_contrato_confirmado";
-    if (!distribuicaoLucros && !relacaoConfirmada) {
-      toast.error("Informe se este lançamento está relacionado a algum contrato.");
-      return;
-    }
+    if (!distribuicaoLucros && !relacaoConfirmada) { toast.error("Informe se este lançamento está relacionado a algum contrato."); return; }
     setSaving(true);
     try {
       const exists = lancamentos.some((l) => l.id === editing.id);
       const payload: Lancamento = { ...editing, valor: parseValor(editing.valor) };
-      if (exists) {
-        await updateLancamento(payload);
-        setLancamentos((prev) => prev.map((l) => (l.id === payload.id ? payload : l)));
-        toast.success("Lançamento atualizado.");
-      } else {
-        await createLancamento(payload);
-        setLancamentos((prev) => [payload, ...prev]);
-        toast.success("Lançamento criado.");
-      }
+      if (exists) { await updateLancamento(payload); setLancamentos((prev) => prev.map((l) => (l.id === payload.id ? payload : l))); toast.success("Lançamento atualizado."); }
+      else { await createLancamento(payload); setLancamentos((prev) => [payload, ...prev]); toast.success("Lançamento criado."); }
       setEditing(null);
-      if (!exists && payload.tipo === "Saída" && payload.categoria === "Patrimônio") {
-        setAskPatrimonio(payload);
-      }
-    } catch {
-      toast.error("Falha ao salvar lançamento.");
-    } finally {
-      setSaving(false);
-    }
+      if (!exists && payload.tipo === "Saída" && payload.categoria === "Patrimônio") setAskPatrimonio(payload);
+    } catch { toast.error("Falha ao salvar lançamento."); } finally { setSaving(false); }
   }
 
   async function confirmDelete() {
     if (!toDelete) return;
-    try {
-      await deleteLancamento(toDelete.id);
-      setLancamentos((prev) => prev.filter((l) => l.id !== toDelete.id));
-      toast.success("Lançamento excluído.");
-      setToDelete(null);
-    } catch {
-      toast.error("Falha ao excluir.");
-    }
+    try { await deleteLancamento(toDelete.id); setLancamentos((prev) => prev.filter((l) => l.id !== toDelete.id)); toast.success("Lançamento excluído."); setToDelete(null); }
+    catch { toast.error("Falha ao excluir."); }
   }
 
   const totals = useMemo(() => {
     let e = 0, s = 0;
-    for (const r of rows) {
-      const v = parseValor(r.valor);
-      if (r.tipo === "Entrada") e += v; else s += v;
-    }
+    for (const r of rows) { const v = parseValor(r.valor); if (r.tipo === "Entrada") e += v; else s += v; }
     return { entradas: e, saidas: s, saldo: e - s };
   }, [rows]);
 
@@ -545,361 +482,137 @@ function FluxoTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2 items-center">
-          <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as any)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
-              <SelectItem value="Entrada">Entradas</SelectItem>
-              <SelectItem value="Saída">Saídas</SelectItem>
-            </SelectContent>
-          </Select>
+          <Select value={filterTipo} onValueChange={(v) => setFilterTipo(v as any)}><SelectTrigger className="w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todos</SelectItem><SelectItem value="Entrada">Entradas</SelectItem><SelectItem value="Saída">Saídas</SelectItem></SelectContent></Select>
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar..." className="w-64" />
         </div>
-        <Button className="rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0" onClick={() => setEditing(emptyLancamento())}>
-          <Plus className="h-4 w-4 mr-2" /> Novo Lançamento
-        </Button>
+        <Button className="rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0" onClick={() => setEditing(emptyLancamento())}><Plus className="h-4 w-4 mr-2" /> Novo Lançamento</Button>
       </div>
-
-      <div className="grid grid-cols-3 gap-3">
-        <StatCard icon={<ArrowUpCircle className="h-4 w-4" />} label="Entradas" value={fmtBRL(totals.entradas)} tone="ok" />
-        <StatCard icon={<ArrowDownCircle className="h-4 w-4" />} label="Saídas" value={fmtBRL(totals.saidas)} tone="warn" />
-        <StatCard icon={<Wallet className="h-4 w-4" />} label="Saldo" value={fmtBRL(totals.saldo)} tone={totals.saldo >= 0 ? "ok" : "warn"} />
-      </div>
-
-      <section className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((l) => {
-                const solId = solicitacaoIdDeLancamento(l.origem);
-                return (
-                  <TableRow key={l.id} className={highlightId && l.id === highlightId ? "bg-gold/10" : undefined}>
-                    <TableCell>{formatDateBR(l.data)}</TableCell>
-                    <TableCell>
-                      <Badge className={`rounded-full font-normal ${l.tipo === "Entrada" ? "bg-emerald-500/15 text-emerald-700" : "bg-red-500/15 text-red-700"}`}>{l.tipo}</Badge>
-                    </TableCell>
-                    <TableCell>{l.categoria}</TableCell>
-                    <TableCell className="max-w-[220px] truncate" title={l.descricao}>
-                      {l.descricao}
-                      {solId && <Link to="/admin/solicitacoes/$id" params={{ id: solId }} className="ml-2 text-xs text-primary underline">ver solicitação</Link>}
-                    </TableCell>
-                    <TableCell className={`text-right font-medium ${l.tipo === "Entrada" ? "text-emerald-700" : "text-destructive"}`}>
-                      {l.tipo === "Entrada" ? "+" : "-"} {fmtBRL(parseValor(l.valor))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="inline-flex gap-2">
-                        <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditing({ ...l, valor: parseValor(l.valor) })}><Pencil className="h-3.5 w-3.5" /></Button>
-                        <Button size="sm" variant="outline" className="rounded-full text-destructive" onClick={() => setToDelete(l)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </section>
-
+      <div className="grid grid-cols-3 gap-3"><StatCard icon={<ArrowUpCircle className="h-4 w-4" />} label="Entradas" value={fmtBRL(totals.entradas)} tone="ok" /><StatCard icon={<ArrowDownCircle className="h-4 w-4" />} label="Saídas" value={fmtBRL(totals.saidas)} tone="warn" /><StatCard icon={<Wallet className="h-4 w-4" />} label="Saldo" value={fmtBRL(totals.saldo)} tone={totals.saldo >= 0 ? "ok" : "warn"} /></div>
+      <section className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Data</TableHead><TableHead>Tipo</TableHead><TableHead>Categoria</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader><TableBody>{rows.map((l) => { const solId = solicitacaoIdDeLancamento(l.origem); return <TableRow key={l.id} className={highlightId && l.id === highlightId ? "bg-gold/10" : undefined}><TableCell>{formatDateBR(l.data)}</TableCell><TableCell><Badge className={`rounded-full font-normal ${l.tipo === "Entrada" ? "bg-emerald-500/15 text-emerald-700" : "bg-red-500/15 text-red-700"}`}>{l.tipo}</Badge></TableCell><TableCell>{l.categoria}</TableCell><TableCell className="max-w-[220px] truncate" title={l.descricao}>{l.descricao}{solId && <Link to="/admin/solicitacoes/$id" params={{ id: solId }} className="ml-2 text-xs text-primary underline">ver solicitação</Link>}</TableCell><TableCell className={`text-right font-medium ${l.tipo === "Entrada" ? "text-emerald-700" : "text-destructive"}`}>{l.tipo === "Entrada" ? "+" : "-"} {fmtBRL(parseValor(l.valor))}</TableCell><TableCell className="text-right"><div className="inline-flex gap-2"><Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditing({ ...l, valor: parseValor(l.valor) })}><Pencil className="h-3.5 w-3.5" /></Button><Button size="sm" variant="outline" className="rounded-full text-destructive" onClick={() => setToDelete(l)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>; })}</TableBody></Table></div></section>
       <LancamentoDialog editing={editing} setEditing={setEditing} onSave={handleSave} saving={saving} categorias={categorias} orders={orders} isEdit={editing ? lancamentos.some((l) => l.id === editing.id) : false} />
-      
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir lançamento</AlertDialogTitle>
-            <AlertDialogDescription>Deseja excluir "{toDelete?.descricao}"?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white">Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Excluir lançamento</AlertDialogTitle><AlertDialogDescription>Deseja excluir "{toDelete?.descricao}"?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmDelete} className="bg-destructive text-white">Excluir</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
       <PatrimonioFromLancamentoDialog lancamento={askPatrimonio} onClose={() => setAskPatrimonio(null)} onCreated={(p: PatrimonioItem) => { onCreatedPatrimonio(p); setAskPatrimonio(null); }} />
     </div>
   );
 }
 
-function emptyLancamento(): Lancamento {
-  return {
-    id: crypto.randomUUID(),
-    data: todayISO(),
-    tipo: "Entrada",
-    categoria: "Outros",
-    descricao: "",
-    valor: "",
-    formaPagamento: "PIX",
-    conta: "PIX",
-    createdAt: new Date().toISOString(),
-    ativo: "Sim",
-  };
-}
+function emptyLancamento(): Lancamento { return { id: crypto.randomUUID(), data: todayISO(), tipo: "Entrada", categoria: "Outros", descricao: "", valor: "", formaPagamento: "PIX", conta: "PIX", createdAt: new Date().toISOString(), ativo: "Sim" }; }
 
 function LancamentoDialog({ editing, setEditing, onSave, saving, categorias, orders, isEdit }: any) {
   const catsBase = editing?.tipo === "Entrada" ? CATEGORIAS_RECEITA_PADRAO : CATEGORIAS_DESPESA_PADRAO;
   const catsExtra = categorias.filter((c: any) => c.tipo === (editing?.tipo === "Entrada" ? "Receita" : "Despesa")).map((c: any) => c.nome);
   const cats = Array.from(new Set([...catsBase, ...catsExtra]));
-
-  return (
-    <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>{isEdit ? "Editar Lançamento" : "Novo Lançamento"}</DialogTitle></DialogHeader>
-        {editing && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div><label className="text-xs uppercase text-muted-foreground">Data</label><Input type="date" value={editing.data} onChange={(e) => setEditing({ ...editing, data: e.target.value })} /></div>
-            <div><label className="text-xs uppercase text-muted-foreground">Tipo</label>
-              <Select value={editing.tipo} onValueChange={(v) => setEditing({ ...editing, tipo: v as any, categoria: "Outros" })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Entrada">Entrada</SelectItem><SelectItem value="Saída">Saída</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <div><label className="text-xs uppercase text-muted-foreground">Categoria</label>
-              <Select value={editing.categoria} onValueChange={(v) => setEditing({ ...editing, categoria: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{cats.map((c: any) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            <div><label className="text-xs uppercase text-muted-foreground">Valor (R$)</label><Input type="number" step="0.01" value={editing.valor} onChange={(e) => setEditing({ ...editing, valor: e.target.value })} /></div>
-            <div className="sm:col-span-2"><label className="text-xs uppercase text-muted-foreground">Descrição</label><Input value={editing.descricao} onChange={(e) => setEditing({ ...editing, descricao: e.target.value })} /></div>
-            {editing.categoria !== "Distribuição de Lucros" && (
-              <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/5 p-3">
-                <label className="text-xs font-semibold uppercase tracking-wide text-primary">Este lançamento está relacionado a algum contrato?</label>
-                <p className="mb-2 mt-1 text-[11px] text-muted-foreground">Isso ajuda a calcular o lucro de cada festa corretamente. Se for um gasto ou receita geral da empresa, escolha “Não relacionado a contrato”.</p>
-                <Select
-                  value={String(editing.contratoId || "").trim() ? editing.contratoId : (editing.origem === "manual_sem_contrato_confirmado" ? "__GERAL__" : "__PENDENTE__")}
-                  onValueChange={(v) => {
-                    if (v === "__GERAL__") {
-                      setEditing({ ...editing, contratoId: "", origem: "manual_sem_contrato_confirmado" });
-                    } else if (v !== "__PENDENTE__") {
-                      setEditing({ ...editing, contratoId: v, origem: editing.origem === "manual_sem_contrato_confirmado" ? "manual" : (editing.origem || "manual") });
-                    }
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Escolha uma opção" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__PENDENTE__" disabled>Escolha uma opção</SelectItem>
-                    <SelectItem value="__GERAL__">Não relacionado a contrato</SelectItem>
-                    {orders
-                      .filter((o: StoredOrder) => o.status !== "Cancelado")
-                      .sort((a: StoredOrder, b: StoredOrder) => String(b.details?.dataEvento || "").localeCompare(String(a.details?.dataEvento || "")))
-                      .map((o: StoredOrder) => (
-                        <SelectItem key={o.id} value={o.id}>
-                          {o.nome} — {o.tema || "Sem tema"}{o.details?.dataEvento ? ` — ${formatDateBR(String(o.details.dataEvento))}` : ""}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            <div><label className="text-xs uppercase text-muted-foreground">Conta</label>
-              <Select value={editing.conta} onValueChange={(v) => setEditing({ ...editing, conta: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{CONTAS_PADRAO.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-          <Button onClick={onSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  return <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}><DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{isEdit ? "Editar Lançamento" : "Novo Lançamento"}</DialogTitle></DialogHeader>{editing && <div className="grid gap-4 sm:grid-cols-2"><div><label className="text-xs uppercase text-muted-foreground">Data</label><Input type="date" value={editing.data} onChange={(e) => setEditing({ ...editing, data: e.target.value })} /></div><div><label className="text-xs uppercase text-muted-foreground">Tipo</label><Select value={editing.tipo} onValueChange={(v) => setEditing({ ...editing, tipo: v as any, categoria: "Outros" })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Entrada">Entrada</SelectItem><SelectItem value="Saída">Saída</SelectItem></SelectContent></Select></div><div><label className="text-xs uppercase text-muted-foreground">Categoria</label><Select value={editing.categoria} onValueChange={(v) => setEditing({ ...editing, categoria: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{cats.map((c: any) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div><div><label className="text-xs uppercase text-muted-foreground">Valor (R$)</label><Input type="number" step="0.01" value={editing.valor} onChange={(e) => setEditing({ ...editing, valor: e.target.value })} /></div><div className="sm:col-span-2"><label className="text-xs uppercase text-muted-foreground">Descrição</label><Input value={editing.descricao} onChange={(e) => setEditing({ ...editing, descricao: e.target.value })} /></div>{editing.categoria !== "Distribuição de Lucros" && <div className="sm:col-span-2 rounded-xl border border-primary/20 bg-primary/5 p-3"><label className="text-xs font-semibold uppercase tracking-wide text-primary">Este lançamento está relacionado a algum contrato?</label><p className="mb-2 mt-1 text-[11px] text-muted-foreground">Isso ajuda a calcular o lucro de cada festa corretamente. Se for um gasto ou receita geral da empresa, escolha “Não relacionado a contrato”.</p><Select value={String(editing.contratoId || "").trim() ? editing.contratoId : (editing.origem === "manual_sem_contrato_confirmado" ? "__GERAL__" : "__PENDENTE__")} onValueChange={(v) => { if (v === "__GERAL__") setEditing({ ...editing, contratoId: "", origem: "manual_sem_contrato_confirmado" }); else if (v !== "__PENDENTE__") setEditing({ ...editing, contratoId: v, origem: editing.origem === "manual_sem_contrato_confirmado" ? "manual" : (editing.origem || "manual") }); }}><SelectTrigger><SelectValue placeholder="Escolha uma opção" /></SelectTrigger><SelectContent><SelectItem value="__PENDENTE__" disabled>Escolha uma opção</SelectItem><SelectItem value="__GERAL__">Não relacionado a contrato</SelectItem>{orders.filter((o: StoredOrder) => o.status !== "Cancelado").sort((a: StoredOrder, b: StoredOrder) => String(b.details?.dataEvento || "").localeCompare(String(a.details?.dataEvento || ""))).map((o: StoredOrder) => <SelectItem key={o.id} value={o.id}>{o.nome} — {o.tema || "Sem tema"}{o.details?.dataEvento ? ` — ${formatDateBR(String(o.details.dataEvento))}` : ""}</SelectItem>)}</SelectContent></Select></div>}<div><label className="text-xs uppercase text-muted-foreground">Conta</label><Select value={editing.conta} onValueChange={(v) => setEditing({ ...editing, conta: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CONTAS_PADRAO.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div></div>}<DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button><Button onClick={onSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>;
 }
 
 function PatrimonioFromLancamentoDialog({ lancamento, onClose, onCreated }: any) {
-  const [nome, setNome] = useState("");
-  const [categoria, setCategoria] = useState("Outros");
-  const [saving, setSaving] = useState(false);
-
+  const [nome, setNome] = useState(""); const [categoria, setCategoria] = useState("Outros"); const [saving, setSaving] = useState(false);
   useEffect(() => { if (lancamento) setNome(lancamento.descricao); }, [lancamento]);
   if (!lancamento) return null;
-
-  async function salvar() {
-    setSaving(true);
-    try {
-      const p: PatrimonioItem = {
-        id: crypto.randomUUID(), nome, categoria, quantidade: 1,
-        valorAquisicao: String(parseValor(lancamento.valor)),
-        dataCompra: lancamento.data, status: "Ativo", createdAt: new Date().toISOString(), ativo: "Sim",
-      };
-      await createPatrimonioOnSheet(p);
-      onCreated(p);
-      toast.success("Cadastrado no Patrimônio.");
-    } catch { toast.error("Erro ao cadastrar patrimônio."); }
-    finally { setSaving(false); }
-  }
-
-  return (
-    <Dialog open={!!lancamento} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Cadastrar no Patrimônio?</DialogTitle></DialogHeader>
-        <p className="text-sm text-muted-foreground">Deseja registrar esta saída no acervo?</p>
-        <div className="grid gap-3">
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} />
-          <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{PATRIMONIO_CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Agora não</Button>
-          <Button onClick={salvar} disabled={saving}>Cadastrar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+  async function salvar() { setSaving(true); try { const p: PatrimonioItem = { id: crypto.randomUUID(), nome, categoria, quantidade: 1, valorAquisicao: String(parseValor(lancamento.valor)), dataCompra: lancamento.data, status: "Ativo", createdAt: new Date().toISOString(), ativo: "Sim" }; await createPatrimonioOnSheet(p); onCreated(p); toast.success("Cadastrado no Patrimônio."); } catch { toast.error("Erro ao cadastrar patrimônio."); } finally { setSaving(false); } }
+  return <Dialog open={!!lancamento} onOpenChange={(o) => !o && onClose()}><DialogContent><DialogHeader><DialogTitle>Cadastrar no Patrimônio?</DialogTitle></DialogHeader><p className="text-sm text-muted-foreground">Deseja registrar esta saída no acervo?</p><div className="grid gap-3"><Input value={nome} onChange={(e) => setNome(e.target.value)} /><Select value={categoria} onValueChange={setCategoria}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{PATRIMONIO_CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div><DialogFooter><Button variant="outline" onClick={onClose}>Agora não</Button><Button onClick={salvar} disabled={saving}>Cadastrar</Button></DialogFooter></DialogContent></Dialog>;
 }
 
-function ContasTab({ contas, categorias, setContas, setLancamentos }: any) {
+function ContasTab({ contas, categorias, lancamentos, setContas, setLancamentos }: { contas: ContaPagar[]; categorias: CategoriaFinanceira[]; lancamentos: Lancamento[]; setContas: React.Dispatch<React.SetStateAction<ContaPagar[]>>; setLancamentos: React.Dispatch<React.SetStateAction<Lancamento[]>>; }) {
   const [editing, setEditing] = useState<ContaPagar | null>(null);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<ContaPagar | null>(null);
   const [askLancamento, setAskLancamento] = useState<ContaPagar | null>(null);
+  const [busyContaId, setBusyContaId] = useState("");
 
-  const rows = useMemo(() => [...contas].sort((a, b) => (a.pago === b.pago ? a.vencimento.localeCompare(b.vencimento) : a.pago === "Não" ? -1 : 1)), [contas]);
+  const rows = useMemo(() => {
+    const rank = { pendente: 0, paga_sem_lancamento: 1, paga_lancada: 2 } as const;
+    return [...contas].sort((a, b) => {
+      const sa = statusFinanceiroConta(a, lancamentos);
+      const sb = statusFinanceiroConta(b, lancamentos);
+      return rank[sa] - rank[sb] || a.vencimento.localeCompare(b.vencimento);
+    });
+  }, [contas, lancamentos]);
 
   async function handleSave() {
     if (!editing) return;
     setSaving(true);
     try {
-      const exists = contas.some((c: any) => c.id === editing.id);
-      const wasPaid = exists ? contas.find((c: any) => c.id === editing.id)?.pago === "Sim" : false;
+      const anterior = contas.find((c) => c.id === editing.id);
+      const exists = !!anterior;
+      if (anterior?.pago === "Sim" && editing.pago !== "Sim" && !podeDesfazerBaixaSemAjusteFinanceiro(anterior, lancamentos)) {
+        toast.error("Esta conta já possui saída lançada no Fluxo. Ajuste o lançamento financeiro antes de desfazer a baixa.");
+        return;
+      }
+      const wasPaid = anterior?.pago === "Sim";
       const payload: ContaPagar = { ...editing, valor: parseValor(editing.valor) };
       if (payload.pago === "Sim" && !payload.dataPagamento) payload.dataPagamento = todayISO();
-      if (exists) {
-        await updateContaPagar(payload);
-        setContas((prev: any) => prev.map((c: any) => (c.id === payload.id ? payload : c)));
-      } else {
-        await createContaPagar(payload);
-        setContas((prev: any) => [payload, ...prev]);
-      }
+      if (exists) { await updateContaPagar(payload); setContas((prev) => prev.map((c) => (c.id === payload.id ? payload : c))); }
+      else { await createContaPagar(payload); setContas((prev) => [payload, ...prev]); }
       setEditing(null);
-      if (payload.pago === "Sim" && !wasPaid) setAskLancamento(payload);
+      if (payload.pago === "Sim" && !wasPaid && !lancamentoDaConta(payload, lancamentos)) setAskLancamento(payload);
       toast.success("Conta salva.");
-    } catch { toast.error("Erro ao salvar conta."); }
-    finally { setSaving(false); }
+    } catch { toast.error("Erro ao salvar conta."); } finally { setSaving(false); }
   }
 
   async function registrarSaida(c: ContaPagar) {
-    const l: Lancamento = {
-      id: crypto.randomUUID(), data: c.dataPagamento || todayISO(), tipo: "Saída",
-      categoria: c.categoria || "Outros", descricao: `Pagamento — ${c.descricao}`,
-      valor: parseValor(c.valor), conta: "PIX", createdAt: new Date().toISOString(), ativo: "Sim",
-      origem: "conta_pagar",
-    };
+    setBusyContaId(c.id);
     try {
-      await createLancamento(l);
-      setLancamentos((prev: any) => [l, ...prev]);
-      toast.success("Lançamento criado no fluxo.");
-    } catch { toast.error("Erro ao criar lançamento."); }
-    finally { setAskLancamento(null); }
+      const res = await registrarContaPagaNoFluxo(c, { lancamentos });
+      setLancamentos((prev) => {
+        const semMesmo = prev.filter((l) => l.id !== res.lancamento.id && l.origem !== res.lancamento.origem);
+        return [res.lancamento, ...semMesmo];
+      });
+      toast.success(res.criado ? "Saída registrada no Fluxo de Caixa." : "Esta conta já estava lançada no Fluxo de Caixa.");
+      setAskLancamento(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao registrar saída no Fluxo de Caixa.");
+    } finally { setBusyContaId(""); }
   }
+
+  async function confirmarExclusao() {
+    if (!toDelete) return;
+    if (!podeDesfazerBaixaSemAjusteFinanceiro(toDelete, lancamentos)) {
+      toast.error("Não é possível excluir uma conta que já possui saída lançada. Ajuste o Fluxo de Caixa primeiro.");
+      setToDelete(null);
+      return;
+    }
+    try { await deleteContaPagar(toDelete.id); setContas((prev) => prev.filter((c) => c.id !== toDelete.id)); toast.success("Conta removida."); }
+    catch { toast.error("Erro ao remover conta."); }
+    finally { setToDelete(null); }
+  }
+
+  const badgeStatus = (c: ContaPagar) => {
+    const st = statusFinanceiroConta(c, lancamentos);
+    if (st === "pendente") return <Badge className="rounded-full bg-amber-500/15 text-amber-700 font-normal">Pendente</Badge>;
+    if (st === "paga_sem_lancamento") return <Badge className="rounded-full bg-blue-500/15 text-blue-700 font-normal">Paga · falta lançar</Badge>;
+    return <Badge className="rounded-full bg-emerald-500/15 text-emerald-700 font-normal">Paga · lançada</Badge>;
+  };
 
   return (
     <div className="space-y-4">
+      <div className="rounded-2xl border border-border/60 bg-card p-4 text-sm text-muted-foreground"><strong className="text-primary">Fluxo seguro:</strong> cadastrar a obrigação, marcar como paga e registrar a saída são etapas diferentes. Uma conta paga sem lançamento continua visível até a baixa no Fluxo de Caixa.</div>
       <div className="flex justify-end"><Button className="rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0" onClick={() => setEditing(emptyConta())}><Plus className="h-4 w-4 mr-2" /> Nova Conta</Button></div>
       <section className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5">
         <Table>
-          <TableHeader><TableRow><TableHead>Vencimento</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Vencimento</TableHead><TableHead>Descrição</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Status financeiro</TableHead><TableHead className="text-right">Ações</TableHead></TableRow></TableHeader>
           <TableBody>
-            {rows.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell>{formatDateBR(c.vencimento)}</TableCell>
-                <TableCell className="font-medium">{c.descricao}</TableCell>
-                <TableCell className="text-right">{fmtBRL(parseValor(c.valor))}</TableCell>
-                <TableCell><Badge className={`rounded-full font-normal ${c.pago === "Sim" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}>{c.pago === "Sim" ? "Pago" : "Pendente"}</Badge></TableCell>
-                <TableCell className="text-right">
-                  <div className="inline-flex gap-2">
-                    <Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditing({ ...c, valor: parseValor(c.valor) })}><Pencil className="h-3.5 w-3.5" /></Button>
-                    <Button size="sm" variant="outline" className="rounded-full text-destructive" onClick={() => setToDelete(c)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {rows.map((c) => {
+              const st = statusFinanceiroConta(c, lancamentos);
+              return <TableRow key={c.id}><TableCell>{formatDateBR(c.vencimento)}</TableCell><TableCell className="font-medium">{c.descricao}</TableCell><TableCell className="text-right">{fmtBRL(parseValor(c.valor))}</TableCell><TableCell>{badgeStatus(c)}</TableCell><TableCell className="text-right"><div className="inline-flex flex-wrap justify-end gap-2">{st === "paga_sem_lancamento" && <Button size="sm" className="rounded-full" disabled={busyContaId === c.id} onClick={() => registrarSaida(c)}>{busyContaId === c.id ? "Lançando..." : "Lançar no fluxo"}</Button>}<Button size="sm" variant="outline" className="rounded-full" onClick={() => setEditing({ ...c, valor: parseValor(c.valor) })}><Pencil className="h-3.5 w-3.5" /></Button><Button size="sm" variant="outline" className="rounded-full text-destructive" onClick={() => setToDelete(c)}><Trash2 className="h-3.5 w-3.5" /></Button></div></TableCell></TableRow>;
+            })}
           </TableBody>
         </Table>
       </section>
 
-      {editing && (
-        <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Editar Conta</DialogTitle></DialogHeader>
-            <div className="grid gap-4">
-              <Input placeholder="Descrição" value={editing.descricao} onChange={(e) => setEditing({ ...editing, descricao: e.target.value })} />
-              <Input type="number" placeholder="Valor" value={editing.valor} onChange={(e) => setEditing({ ...editing, valor: e.target.value })} />
-              <Input type="date" value={editing.vencimento} onChange={(e) => setEditing({ ...editing, vencimento: e.target.value })} />
-              <Select value={editing.pago} onValueChange={(v) => setEditing({ ...editing, pago: v as any })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Não">Pendente</SelectItem><SelectItem value="Sim">Pago</SelectItem></SelectContent>
-              </Select>
-            </div>
-            <DialogFooter><Button onClick={handleSave} disabled={saving}>Salvar</Button></DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+      {editing && <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}><DialogContent><DialogHeader><DialogTitle>{contas.some((c) => c.id === editing.id) ? "Editar Conta" : "Nova Conta"}</DialogTitle></DialogHeader><div className="grid gap-4"><Input placeholder="Descrição" value={editing.descricao} onChange={(e) => setEditing({ ...editing, descricao: e.target.value })} /><Input type="number" placeholder="Valor" value={editing.valor} onChange={(e) => setEditing({ ...editing, valor: e.target.value })} /><Input type="date" value={editing.vencimento} onChange={(e) => setEditing({ ...editing, vencimento: e.target.value })} /><Select value={editing.pago} onValueChange={(v) => setEditing({ ...editing, pago: v as any })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Não">Pendente</SelectItem><SelectItem value="Sim">Pago</SelectItem></SelectContent></Select></div><DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button><Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button></DialogFooter></DialogContent></Dialog>}
 
-      <AlertDialog open={!!askLancamento} onOpenChange={(o) => !o && setAskLancamento(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Lançar no Fluxo?</AlertDialogTitle></AlertDialogHeader>
-          <AlertDialogFooter><Button variant="outline" onClick={() => setAskLancamento(null)}>Não</Button><Button onClick={() => registrarSaida(askLancamento!)}>Sim, Lançar</Button></AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertDialog open={!!askLancamento} onOpenChange={(o) => !o && setAskLancamento(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Registrar saída no Fluxo?</AlertDialogTitle><AlertDialogDescription>A conta foi marcada como paga. O pagamento ainda não entrou no Fluxo de Caixa. Deseja registrar a saída agora?</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Agora não</AlertDialogCancel><AlertDialogAction disabled={!!askLancamento && busyContaId === askLancamento.id} onClick={() => askLancamento && registrarSaida(askLancamento)}>{askLancamento && busyContaId === askLancamento.id ? "Registrando..." : "Registrar saída"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Remover conta a pagar?</AlertDialogTitle><AlertDialogDescription>{toDelete && lancamentoDaConta(toDelete, lancamentos) ? "Esta conta possui uma saída financeira vinculada e não pode ser removida diretamente." : `Deseja remover “${toDelete?.descricao || "esta conta"}”?`}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmarExclusao} className="bg-destructive text-white">Remover</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 }
 
-function emptyConta(): ContaPagar {
-  return { id: crypto.randomUUID(), descricao: "", categoria: "Outros", valor: "", vencimento: todayISO(), pago: "Não", createdAt: new Date().toISOString(), ativo: "Sim" };
-}
+function emptyConta(): ContaPagar { return { id: crypto.randomUUID(), descricao: "", categoria: "Outros", valor: "", vencimento: todayISO(), pago: "Não", createdAt: new Date().toISOString(), ativo: "Sim" }; }
 
 function CategoriasTab({ categorias, setCategorias }: any) {
-  const [nome, setNome] = useState("");
-  const [tipo, setTipo] = useState<"Receita" | "Despesa">("Despesa");
-
-  async function adicionar() {
-    if (!nome.trim()) return;
-    const c: CategoriaFinanceira = { id: crypto.randomUUID(), tipo, nome: nome.trim(), createdAt: new Date().toISOString(), ativo: "Sim" };
-    try {
-      await createCategoria(c);
-      setCategorias((prev: any) => [c, ...prev]);
-      setNome("");
-      toast.success("Categoria adicionada.");
-    } catch { toast.error("Erro ao adicionar categoria."); }
-  }
-
-  return (
-    <div className="grid gap-6 lg:grid-cols-2">
-      <section className="bg-card p-5 rounded-2xl border">
-        <h2 className="text-xl font-serif mb-4">Nova Categoria</h2>
-        <div className="flex gap-2">
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome da categoria" />
-          <Select value={tipo} onValueChange={(v) => setTipo(v as any)}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="Receita">Receita</SelectItem><SelectItem value="Despesa">Despesa</SelectItem></SelectContent>
-          </Select>
-          <Button onClick={adicionar} className="rounded-full">Add</Button>
-        </div>
-      </section>
-      <section className="bg-card p-5 rounded-2xl border">
-        <h2 className="text-xl font-serif mb-4">Lista</h2>
-        <div className="flex flex-wrap gap-2">
-          {categorias.map((c: any) => (
-            <Badge key={c.id} variant="outline" className="rounded-full px-3 py-1">{c.nome} ({c.tipo})</Badge>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
+  const [nome, setNome] = useState(""); const [tipo, setTipo] = useState<"Receita" | "Despesa">("Despesa");
+  async function adicionar() { if (!nome.trim()) return; const c: CategoriaFinanceira = { id: crypto.randomUUID(), tipo, nome: nome.trim(), createdAt: new Date().toISOString(), ativo: "Sim" }; try { await createCategoria(c); setCategorias((prev: any) => [c, ...prev]); setNome(""); toast.success("Categoria adicionada."); } catch { toast.error("Erro ao adicionar categoria."); } }
+  return <div className="grid gap-6 lg:grid-cols-2"><section className="bg-card p-5 rounded-2xl border"><h2 className="text-xl font-serif mb-4">Nova Categoria</h2><div className="flex gap-2"><Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome da categoria" /><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger className="w-32"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Receita">Receita</SelectItem><SelectItem value="Despesa">Despesa</SelectItem></SelectContent></Select><Button onClick={adicionar} className="rounded-full">Add</Button></div></section><section className="bg-card p-5 rounded-2xl border"><h2 className="text-xl font-serif mb-4">Lista</h2><div className="flex flex-wrap gap-2">{categorias.map((c: any) => <Badge key={c.id} variant="outline" className="rounded-full px-3 py-1">{c.nome} ({c.tipo})</Badge>)}</div></section></div>;
 }
