@@ -1,10 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Users, CalendarDays, Phone, ArrowRight, Loader2 } from "lucide-react";
+import { Search, Users, CalendarDays, Phone, ArrowRight, Loader2, Wallet, Repeat2 } from "lucide-react";
 import { AdminShell } from "@/components/admin-shell";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { fetchOrdersFromSheet } from "@/lib/sheets-api";
+import { fetchLancamentos, fmtBRL, type Lancamento } from "@/lib/financeiro-api";
+import { indexRecebimentos } from "@/lib/pagamentos";
+import { resumoFinanceiroContrato } from "@/lib/contrato-financeiro-view";
 import { formatDateBR, toDateISO } from "@/lib/date-utils";
 import type { StoredOrder } from "@/lib/orders-storage";
 
@@ -21,6 +24,9 @@ type ClienteResumo = {
   festas: StoredOrder[];
   proximaData: string;
   ultimaData: string;
+  contratado: number;
+  recebido: number;
+  saldo: number;
 };
 
 function norm(v: string) {
@@ -29,12 +35,19 @@ function norm(v: string) {
 
 function ClientesPage() {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
+  const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
-    fetchOrdersFromSheet().then(setOrders).finally(() => setLoading(false));
+    Promise.all([fetchOrdersFromSheet(), fetchLancamentos({ force: true })])
+      .then(([os, ls]) => { setOrders(os); setLancamentos(ls); })
+      .catch((e) => setErro(e instanceof Error ? e.message : "Não foi possível carregar os clientes."))
+      .finally(() => setLoading(false));
   }, []);
+
+  const idx = useMemo(() => indexRecebimentos(lancamentos), [lancamentos]);
 
   const clientes = useMemo(() => {
     const map = new Map<string, ClienteResumo>();
@@ -43,13 +56,17 @@ function ClientesPage() {
     for (const o of orders) {
       if (o.status === "Cancelado") continue;
       const d = o.details;
-      const nome = (d?.nomeCompleto || "Cliente sem nome").trim();
-      const telefone = (d?.telefone || "").trim();
-      const email = (d?.email || "").trim();
+      const nome = (d?.nomeCompleto || o.nome || "Cliente sem nome").trim();
+      const telefone = (d?.telefone || o.telefone || "").trim();
+      const email = (d?.email || o.email || "").trim();
       const chave = telefone.replace(/\D/g, "") || norm(email) || norm(nome);
       const data = toDateISO(d?.dataEvento) || "";
-      const atual = map.get(chave) || { chave, nome, telefone, email, festas: [], proximaData: "", ultimaData: "" };
+      const fin = resumoFinanceiroContrato(o, idx);
+      const atual = map.get(chave) || { chave, nome, telefone, email, festas: [], proximaData: "", ultimaData: "", contratado: 0, recebido: 0, saldo: 0 };
       atual.festas.push(o);
+      atual.contratado += fin.valorTotal;
+      atual.recebido += fin.recebido;
+      atual.saldo += fin.saldo;
       if (data) {
         if (data >= hoje && (!atual.proximaData || data < atual.proximaData)) atual.proximaData = data;
         if (!atual.ultimaData || data > atual.ultimaData) atual.ultimaData = data;
@@ -63,13 +80,20 @@ function ClientesPage() {
       if (b.proximaData) return 1;
       return a.nome.localeCompare(b.nome, "pt-BR");
     });
-  }, [orders]);
+  }, [orders, idx]);
 
   const filtrados = useMemo(() => {
     const query = norm(q);
     if (!query) return clientes;
     return clientes.filter((c) => norm(`${c.nome} ${c.telefone} ${c.email}`).includes(query));
   }, [clientes, q]);
+
+  const totais = useMemo(() => clientes.reduce((a, c) => ({
+    contratado: a.contratado + c.contratado,
+    recebido: a.recebido + c.recebido,
+    saldo: a.saldo + c.saldo,
+    recorrentes: a.recorrentes + (c.festas.length > 1 ? 1 : 0),
+  }), { contratado: 0, recebido: 0, saldo: 0, recorrentes: 0 }), [clientes]);
 
   return (
     <AdminShell>
@@ -78,13 +102,17 @@ function ClientesPage() {
           <div>
             <div className="text-xs font-semibold uppercase tracking-[.18em] text-[#b27b4e]">Relacionamento</div>
             <h1 className="mt-2 font-serif text-4xl text-[#651421] sm:text-5xl">Clientes</h1>
-            <p className="mt-2 max-w-2xl text-sm text-[#7b676a]">Uma pessoa pode ter várias festas. Aqui começa o histórico único de cada cliente da LHL.</p>
-          </div>
-          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-3 text-sm shadow-sm">
-            <span className="text-[#8a7779]">Clientes identificados</span>
-            <strong className="ml-3 text-xl text-[#651421]">{clientes.length}</strong>
+            <p className="mt-2 max-w-2xl text-sm text-[#7b676a]">Uma pessoa pode ter várias festas. O histórico reúne eventos e posição financeira sem confundir caução com pagamento do serviço.</p>
           </div>
         </header>
+
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-4 shadow-sm"><Users className="h-4 w-4 text-[#d87982]" /><div className="mt-3 text-2xl font-serif text-[#651421]">{clientes.length}</div><div className="text-xs text-[#8a7779]">Clientes identificados</div></div>
+          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-4 shadow-sm"><Repeat2 className="h-4 w-4 text-[#d87982]" /><div className="mt-3 text-2xl font-serif text-[#651421]">{totais.recorrentes}</div><div className="text-xs text-[#8a7779]">Clientes recorrentes</div></div>
+          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-4 shadow-sm"><Wallet className="h-4 w-4 text-[#d87982]" /><div className="mt-3 text-xl font-serif text-[#651421]">{fmtBRL(totais.contratado)}</div><div className="text-xs text-[#8a7779]">Total contratado</div></div>
+          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-4 shadow-sm"><Wallet className="h-4 w-4 text-emerald-600" /><div className="mt-3 text-xl font-serif text-emerald-700">{fmtBRL(totais.recebido)}</div><div className="text-xs text-[#8a7779]">Total recebido</div></div>
+          <div className="rounded-2xl border border-[#eaded8] bg-white px-5 py-4 shadow-sm"><Wallet className="h-4 w-4 text-rose-600" /><div className="mt-3 text-xl font-serif text-rose-700">{fmtBRL(totais.saldo)}</div><div className="text-xs text-[#8a7779]">Saldo de clientes</div></div>
+        </div>
 
         <div className="relative max-w-2xl">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9a8588]" />
@@ -93,6 +121,8 @@ function ClientesPage() {
 
         {loading ? (
           <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-[#7b676a]"><Loader2 className="h-4 w-4 animate-spin" /> Carregando clientes...</div>
+        ) : erro ? (
+          <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-800">{erro}</div>
         ) : filtrados.length === 0 ? (
           <div className="rounded-3xl border border-[#e6d8d2] bg-white p-10 text-center shadow-sm">
             <Users className="mx-auto h-8 w-8 text-[#d87982]" />
@@ -112,7 +142,7 @@ function ClientesPage() {
                         <span>{c.festas.length} {c.festas.length === 1 ? "festa" : "festas"}</span>
                       </div>
                     </div>
-                    <span className="rounded-full bg-[#f7e2df] px-3 py-1 text-[11px] font-semibold text-[#651421]">{c.proximaData ? "Com festa futura" : "Histórico"}</span>
+                    <span className="rounded-full bg-[#f7e2df] px-3 py-1 text-[11px] font-semibold text-[#651421]">{c.festas.length > 1 ? "Cliente recorrente" : c.proximaData ? "Com festa futura" : "Histórico"}</span>
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -121,9 +151,15 @@ function ClientesPage() {
                       <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#5b3037]"><CalendarDays className="h-4 w-4 text-[#d87982]" />{c.proximaData ? formatDateBR(c.proximaData) : "Sem próxima festa"}</div>
                     </div>
                     <div className="rounded-2xl bg-[#fbf6f2] p-4">
-                      <div className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#a18479]">Tema mais recente</div>
-                      <div className="mt-2 truncate text-sm font-semibold text-[#5b3037]">{proxima?.details?.tema || "—"}</div>
+                      <div className="text-[10px] font-semibold uppercase tracking-[.14em] text-[#a18479]">Tema da próxima/última</div>
+                      <div className="mt-2 truncate text-sm font-semibold text-[#5b3037]">{proxima?.tema || "—"}</div>
                     </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <div className="rounded-2xl border border-[#eaded8] p-3"><div className="text-[9px] uppercase tracking-wide text-[#9a8588]">Contratado</div><div className="mt-1 text-sm font-semibold text-[#5b3037]">{fmtBRL(c.contratado)}</div></div>
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3"><div className="text-[9px] uppercase tracking-wide text-emerald-700/70">Recebido</div><div className="mt-1 text-sm font-semibold text-emerald-800">{fmtBRL(c.recebido)}</div></div>
+                    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-3"><div className="text-[9px] uppercase tracking-wide text-rose-700/70">Saldo</div><div className="mt-1 text-sm font-semibold text-rose-800">{fmtBRL(c.saldo)}</div></div>
                   </div>
 
                   <div className="mt-4 flex justify-end">
