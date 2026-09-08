@@ -39,27 +39,40 @@ async function assertAdmin(context: { userId: string; accessToken: string }) {
     throw new Error("Não foi possível validar a permissão administrativa.");
   }
 
-  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
-    method: "POST",
-    headers: {
-      apikey: publishableKey,
-      Authorization: `Bearer ${context.accessToken}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ _user_id: context.userId, _role: "admin" }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
+      method: "POST",
+      headers: {
+        apikey: publishableKey,
+        Authorization: `Bearer ${context.accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ _user_id: context.userId, _role: "admin" }),
+    });
+  } catch (error) {
+    adminRoleCache.delete(context.userId);
+    const detail = error instanceof Error ? error.message : "falha de rede";
+    throw new Error(`Falha ao consultar permissão administrativa no Supabase: ${detail}`);
+  }
 
+  const raw = await response.text();
   let data: unknown = false;
   try {
-    data = await response.json();
+    data = raw ? JSON.parse(raw) : false;
   } catch {
-    data = false;
+    data = raw;
   }
 
   if (!response.ok || data !== true) {
     adminRoleCache.delete(context.userId);
-    throw new Error("Forbidden: acesso restrito a administradores");
+    const safeDetail = String(raw || data || "sem resposta")
+      .replace(/eyJ[A-Za-z0-9._-]+/g, "[token]")
+      .slice(0, 280);
+    throw new Error(
+      `Forbidden: acesso restrito a administradores [Supabase ${response.status}; retorno: ${safeDetail}]`,
+    );
   }
 
   adminRoleCache.set(context.userId, now + ADMIN_ROLE_TTL_MS);
