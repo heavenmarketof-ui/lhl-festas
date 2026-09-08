@@ -14,6 +14,7 @@ import appCss from "../styles.css?url";
 import publicThemeCss from "../public-theme.css?url";
 import publicLayoutCss from "../public-layout.css?url";
 import orcamentoOficialCss from "../orcamento-oficial.css?url";
+import orcamentoFixCss from "../orcamento-fix.css?url";
 import adminOficialCss from "../admin-oficial.css?url";
 import { hasAnalyticsConsent, PrivacyConsent } from "../components/privacy-consent";
 
@@ -69,6 +70,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: publicThemeCss },
       { rel: "stylesheet", href: publicLayoutCss },
       { rel: "stylesheet", href: orcamentoOficialCss },
+      { rel: "stylesheet", href: orcamentoFixCss },
       { rel: "stylesheet", href: adminOficialCss },
     ],
   }),
