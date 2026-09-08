@@ -10,6 +10,8 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
+type RuntimeEnv = Record<string, unknown>;
+
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
@@ -36,48 +38,65 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
     return false;
   }
 
-  if (!payload || Array.isArray(payload) || typeof payload !== "object") {
-    return false;
-  }
-
+  if (!payload || Array.isArray(payload) || typeof payload !== "object") return false;
   const fields = payload as Record<string, unknown>;
   const expectedKeys = new Set(["message", "status", "unhandled"]);
-  if (!Object.keys(fields).every((key) => expectedKeys.has(key))) {
-    return false;
-  }
-
-  return (
-    fields.unhandled === true &&
-    fields.message === "HTTPError" &&
-    (fields.status === undefined || fields.status === responseStatus)
-  );
+  if (!Object.keys(fields).every((key) => expectedKeys.has(key))) return false;
+  return fields.unhandled === true && fields.message === "HTTPError" && (fields.status === undefined || fields.status === responseStatus);
 }
 
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
-
   const body = await response.clone().text();
-  if (!isCatastrophicSsrErrorBody(body, response.status)) {
-    return response;
-  }
-
+  if (!isCatastrophicSsrErrorBody(body, response.status)) return response;
   console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
   return brandedErrorResponse();
+}
+
+function firstString(envs: RuntimeEnv[], names: string[]): string {
+  for (const env of envs) {
+    for (const name of names) {
+      const value = env?.[name];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  }
+  return "";
+}
+
+async function injectPublicRuntimeEnv(response: Response, env: unknown): Promise<Response> {
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) return response;
+
+  const nativeEnv = (cloudflareEnv && typeof cloudflareEnv === "object" ? cloudflareEnv : {}) as RuntimeEnv;
+  const passedEnv = (env && typeof env === "object" ? env : {}) as RuntimeEnv;
+  const sources = [nativeEnv, passedEnv];
+  const publicEnv = {
+    SUPABASE_URL: firstString(sources, ["SUPABASE_URL", "VITE_SUPABASE_URL"]),
+    SUPABASE_PUBLISHABLE_KEY: firstString(sources, ["SUPABASE_PUBLISHABLE_KEY", "VITE_SUPABASE_PUBLISHABLE_KEY"]),
+  };
+
+  if (!publicEnv.SUPABASE_URL || !publicEnv.SUPABASE_PUBLISHABLE_KEY) return response;
+
+  const script = `<script>window.__LHL_PUBLIC_ENV__=${JSON.stringify(publicEnv).replace(/</g, "\\u003c")};</script>`;
+  const html = await response.text();
+  const body = html.includes("</head>") ? html.replace("</head>", `${script}</head>`) : `${script}${html}`;
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  return new Response(body, { status: response.status, statusText: response.statusText, headers });
 }
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
-      // O binding nativo é a fonte confiável no Cloudflare. O parâmetro env fica
-      // como fallback para compatibilidade com o entrypoint do TanStack.
       setRuntimeBindings(cloudflareEnv);
       setRuntimeBindings(env);
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
-      return applyResponseSecurityHeaders(request, normalized);
+      const withRuntimeEnv = await injectPublicRuntimeEnv(normalized, env);
+      return applyResponseSecurityHeaders(request, withRuntimeEnv);
     } catch (error) {
       console.error(error);
       return applyResponseSecurityHeaders(request, brandedErrorResponse());
