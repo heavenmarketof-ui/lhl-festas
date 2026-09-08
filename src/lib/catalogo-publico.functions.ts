@@ -13,14 +13,68 @@ let cache: { expiresAt: number; payload: CatalogPayload } | null = null;
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
+
+function driveFileId(value: string) {
+  if (!value) return "";
+  const decoded = (() => { try { return decodeURIComponent(value); } catch { return value; } })();
+  const patterns = [
+    /\/file\/d\/([a-zA-Z0-9_-]{10,})/,
+    /\/d\/([a-zA-Z0-9_-]{10,})/,
+    /[?&]id=([a-zA-Z0-9_-]{10,})/,
+  ];
+  for (const pattern of patterns) {
+    const match = decoded.match(pattern);
+    if (match?.[1]) return match[1];
+  }
+  return "";
+}
+
+function normalizeImageUrl(value: unknown) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/drive\.google\.com|googleusercontent\.com/i.test(raw)) {
+    const id = driveFileId(raw);
+    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+  }
+  return raw;
+}
+
 function normalizePayload(raw: any): CatalogPayload {
   const themes = Array.isArray(raw?.themes) ? raw.themes : [];
-  return { version: Number(raw?.version || 1), updatedAt: String(raw?.updatedAt || ""), totalThemes: Number(raw?.totalThemes || themes.length), themes: themes.map((theme: any) => ({ id: String(theme?.id || ""), name: String(theme?.name || "Tema"), slug: String(theme?.slug || ""), aliases: Array.isArray(theme?.aliases) ? theme.aliases.map(String) : [], modalities: Array.isArray(theme?.modalities) ? theme.modalities.map(String) : [], images: (Array.isArray(theme?.images) ? theme.images : []).filter((image: any) => image?.url || image?.thumbnailUrl).map((image: any) => ({ url: String(image?.url || image?.thumbnailUrl || ""), thumbnailUrl: String(image?.thumbnailUrl || image?.url || ""), modality: String(image?.modality || "") })) })) };
+  return {
+    version: Number(raw?.version || 1),
+    updatedAt: String(raw?.updatedAt || ""),
+    totalThemes: Number(raw?.totalThemes || themes.length),
+    themes: themes.map((theme: any) => ({
+      id: String(theme?.id || ""),
+      name: String(theme?.name || "Tema"),
+      slug: String(theme?.slug || ""),
+      aliases: Array.isArray(theme?.aliases) ? theme.aliases.map(String) : [],
+      modalities: Array.isArray(theme?.modalities) ? theme.modalities.map(String) : [],
+      images: (Array.isArray(theme?.images) ? theme.images : [])
+        .filter((image: any) => image?.url || image?.thumbnailUrl)
+        .map((image: any) => {
+          const url = normalizeImageUrl(image?.url || image?.thumbnailUrl);
+          const thumbnailUrl = normalizeImageUrl(image?.thumbnailUrl || image?.url);
+          return { url, thumbnailUrl, modality: String(image?.modality || "") };
+        })
+        .filter((image: CatalogImage) => Boolean(image.url || image.thumbnailUrl)),
+    })),
+  };
 }
+
 function localFallbackPayload(): CatalogPayload {
-  const themes: CatalogTheme[] = LOCAL_THEMES.map((theme) => ({ id: theme.id, name: theme.name, slug: slugify(theme.name), aliases: theme.aliases, modalities: [theme.modality], images: theme.imageUrl ? [{ url: theme.imageUrl, thumbnailUrl: theme.imageUrl, modality: theme.modality }] : [] }));
+  const themes: CatalogTheme[] = LOCAL_THEMES.map((theme) => ({
+    id: theme.id,
+    name: theme.name,
+    slug: slugify(theme.name),
+    aliases: theme.aliases,
+    modalities: [theme.modality],
+    images: theme.imageUrl ? [{ url: theme.imageUrl, thumbnailUrl: theme.imageUrl, modality: theme.modality }] : [],
+  }));
   return { version: 1, updatedAt: "", totalThemes: themes.length, themes };
 }
+
 async function trySource(source: string): Promise<CatalogPayload> {
   const response = await fetch(source, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
   if (!response.ok) throw new Error(`${response.status}`);
