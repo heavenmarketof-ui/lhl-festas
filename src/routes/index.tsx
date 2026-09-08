@@ -16,8 +16,8 @@ const P = {
     "1lPR3hKeeyibMSse1xzyK6ZfSz0zUV4ov",
     "1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9",
     "1JctWsVWkfUZ8pHNdfT4szvCyKwbiU5Vf",
-    "1sPR9r8RFE32InQjk1puq0L1v1Dw4gE3_",
-    "15zwnq9Ejv-JYvqGfE3K69Rn7DgXthDCq",
+    "1U6PvbuxKOGNEJKFktWuzZmdWiNXlQp6m",
+    "1gHPUNzUDwzgfH0K5F0KIXaE0OkYSfhQ7",
   ].map(x=>d(x,1500)),
 };
 const WA=`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Olá! Quero solicitar um orçamento com a LHL Festas.")}`;
@@ -49,9 +49,9 @@ function Header(){
 function Hero(){
   const benefits=[[Heart,"Decorações incríveis"],[CalendarDays,"Todos os temas"],[Truck,"Retire, monte ou deixe com a gente"],[Star,"Mais de 300 festas realizadas"]] as const;
   return <section id="inicio" className="bg-[#f8ebe6]">
-    <div className="relative mx-auto min-h-[620px] max-w-[1600px] overflow-hidden bg-[#f8ebe6] lg:min-h-[650px]">
-      <img src={P.hero} alt="Decoração Moranguinho LHL Festas" fetchPriority="high" className="absolute right-0 top-0 hidden h-full w-auto max-w-none object-contain lg:block"/>
-      <div className="absolute inset-0 hidden bg-[linear-gradient(90deg,#fff9f5_0%,#fff9f5_27%,rgba(255,249,245,.98)_34%,rgba(255,249,245,.82)_41%,rgba(255,249,245,.38)_48%,rgba(255,249,245,.08)_55%,transparent_62%)] lg:block"/>
+    <div className="relative mx-auto min-h-[620px] max-w-[1600px] overflow-hidden bg-[#fff9f5] lg:min-h-[650px]">
+      <img src={P.hero} alt="Decoração Moranguinho LHL Festas" fetchPriority="high" className="absolute right-0 top-0 hidden h-full w-auto max-w-none object-contain object-right lg:block"/>
+      <div className="pointer-events-none absolute inset-0 z-[1] hidden bg-[linear-gradient(90deg,#fff9f5_0%,#fff9f5_38%,rgba(255,249,245,1)_42%,rgba(255,249,245,.96)_45%,rgba(255,249,245,.82)_48%,rgba(255,249,245,.62)_51%,rgba(255,249,245,.38)_54%,rgba(255,249,245,.18)_57%,rgba(255,249,245,.06)_60%,transparent_64%)] lg:block"/>
       <div className="relative z-10 hidden min-h-[650px] w-[48%] max-w-[660px] flex-col justify-center px-[clamp(38px,5vw,82px)] lg:flex">
         <p className="mb-4 text-[12px] font-semibold uppercase tracking-[.28em] text-[#ce6475]">Mais que decorações</p>
         <h1 className="max-w-[9.5ch] font-serif text-[clamp(4rem,5vw,5.8rem)] leading-[.88] tracking-[-.045em] text-[#171313]">Criamos cenários para <span className="text-[#cf6675]">grandes histórias.</span></h1>
