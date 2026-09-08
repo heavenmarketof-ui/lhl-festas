@@ -1,5 +1,5 @@
 import type { StoredOrder } from "./orders-storage";
-import { fetchOrderByIdPublic } from "./sheets-api";
+import { fetchOrderByIdAdmin } from "./sheets-api";
 
 /**
  * Compatibilidade com chamadas antigas do admin.
@@ -14,7 +14,7 @@ export function getCachedSheetOrders(): StoredOrder[] {
   return [];
 }
 
-/** Busca somente o contrato solicitado, sem manter uma cópia persistente no browser. */
+/** Busca somente o pedido solicitado atrás da sessão administrativa. */
 export async function getOrderFromSheet(
   id: string,
   opts?: { includeDeleted?: boolean },
@@ -22,7 +22,7 @@ export async function getOrderFromSheet(
   const normalizedId = String(id || "").trim();
   if (!/^[A-Za-z0-9_-]{8,100}$/.test(normalizedId)) return undefined;
 
-  const found = await fetchOrderByIdPublic(normalizedId);
+  const found = await fetchOrderByIdAdmin(normalizedId);
   if (!found) return undefined;
   if (!opts?.includeDeleted && String(found.status) === "Excluído") return undefined;
   return found;
