@@ -87,11 +87,53 @@ async function injectPublicRuntimeEnv(response: Response, env: unknown): Promise
   return new Response(body, { status: response.status, statusText: response.statusText, headers });
 }
 
+function validDriveId(value: string) {
+  return /^[a-zA-Z0-9_-]{10,}$/.test(value);
+}
+
+async function proxyCatalogImage(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/catalog-image") return null;
+  const id = (url.searchParams.get("id") || "").trim();
+  if (!validDriveId(id)) return new Response("Imagem inválida", { status: 400 });
+
+  const candidates = [
+    `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1600`,
+    `https://lh3.googleusercontent.com/d/${encodeURIComponent(id)}=w1600`,
+    `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`,
+  ];
+
+  for (const source of candidates) {
+    try {
+      const upstream = await fetch(source, {
+        headers: { "User-Agent": "Mozilla/5.0", Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8" },
+        redirect: "follow",
+        signal: AbortSignal.timeout(12_000),
+      });
+      const contentType = upstream.headers.get("content-type") || "";
+      if (!upstream.ok || !contentType.startsWith("image/")) continue;
+      const headers = new Headers();
+      headers.set("content-type", contentType);
+      headers.set("cache-control", "public, max-age=86400, s-maxage=604800");
+      headers.set("access-control-allow-origin", "*");
+      return new Response(upstream.body, { status: 200, headers });
+    } catch {
+      // tenta a próxima origem
+    }
+  }
+
+  return new Response("Imagem indisponível", { status: 404, headers: { "cache-control": "public, max-age=300" } });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       setRuntimeBindings(cloudflareEnv);
       setRuntimeBindings(env);
+
+      const catalogImage = await proxyCatalogImage(request);
+      if (catalogImage) return catalogImage;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       const normalized = await normalizeCatastrophicSsrResponse(response);
