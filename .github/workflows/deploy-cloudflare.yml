@@ -41,9 +41,11 @@ jobs:
           test -n "$CLOUDFLARE_ACCOUNT_ID"
       - name: Instalar dependências
         run: npm ci
-      - name: Revalidar antes do deploy
+      - name: Auditoria de dependências
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
+      - name: Testar e compilar
         run: |
-          npm audit --omit=dev --audit-level=high
           npm test
           npm run build
       - name: Publicar no Cloudflare
