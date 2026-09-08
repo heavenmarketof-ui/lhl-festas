@@ -1,3 +1,5 @@
+import { modalidadeIdFromLabel } from "@/data/kits";
+
 export type ReservaValidationInput = {
   nome: string;
   cpf: string;
@@ -66,7 +68,13 @@ export function validateReserva(input: ReservaValidationInput): string | null {
   if (!isValidCep(input.cep)) return "Informe um CEP válido.";
   if (input.tema.trim().length < 2) return "Informe o tema da festa.";
   if (!input.tipoFesta) return "Selecione o tipo da festa.";
-  if (!input.modalidade || !input.plano) return "Selecione a modalidade e o kit da sua festa.";
+  if (!input.modalidade) return "Selecione a modalidade da sua festa.";
+
+  const modalidadeId = modalidadeIdFromLabel(input.modalidade);
+  if (modalidadeId !== "festa-com-montagem" && !input.plano) {
+    return "Selecione o kit da sua festa.";
+  }
+
   if (!isFutureOrTodayIsoDate(input.dataEvento)) return "Informe uma data de evento válida, de hoje em diante.";
   return null;
 }
