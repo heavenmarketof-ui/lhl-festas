@@ -34,7 +34,7 @@ function normalizeImageUrl(value: unknown) {
   if (!raw) return "";
   if (/drive\.google\.com|googleusercontent\.com/i.test(raw)) {
     const id = driveFileId(raw);
-    if (id) return `https://drive.google.com/thumbnail?id=${id}&sz=w1200`;
+    if (id) return `/catalog-image?id=${encodeURIComponent(id)}`;
   }
   return raw;
 }
