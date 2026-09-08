@@ -2,6 +2,7 @@
 // FONTE ÚNICA: src/data/kits.ts. Usado na Home, no Orçamento, na Reserva e
 // em qualquer formulário. Nunca declarar kits localmente.
 
+import { useEffect } from "react";
 import { Check } from "lucide-react";
 import {
   MODALIDADES,
@@ -15,10 +16,10 @@ import {
 } from "@/data/kits";
 
 type Props = {
-  /** Rótulo da modalidade ("Festa na Mesa" | "Peg & Monte"). */
+  /** Rótulo da modalidade ("Festa na Mesa" | "Peg & Monte" | "Festa com Montagem"). */
   modalidade: string;
   onModalidadeChange: (label: string) => void;
-  /** Nome do kit ("Kit Premium"). */
+  /** Nome do kit selecionado. */
   kit: string;
   onKitChange: (nome: string) => void;
   /** Mostra o preço nos cards de kit. Uso interno/administrativo apenas — páginas públicas nunca exibem valores. */
@@ -35,6 +36,15 @@ export default function KitPicker({
   const modId = modalidadeIdFromLabel(modalidade);
   const kits = getKitsByModalidade(modId);
 
+  // Modalidades com uma única opção (hoje: Festa com Montagem) não devem
+  // exigir um segundo clique do cliente. Mantém o valor oficial gravado no
+  // pedido/contrato e evita a validação "selecione modalidade e kit".
+  useEffect(() => {
+    if (modId && kits.length === 1 && kit !== kits[0].nome) {
+      onKitChange(kits[0].nome);
+    }
+  }, [modId, kits, kit, onKitChange]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -49,8 +59,9 @@ export default function KitPicker({
                 key={m.id}
                 type="button"
                 onClick={() => {
+                  const nextKits = getKitsByModalidade(m.id);
                   onModalidadeChange(MODALIDADE_LABELS[m.id as ModalidadeId]);
-                  onKitChange("");
+                  onKitChange(nextKits.length === 1 ? nextKits[0].nome : "");
                 }}
                 className={[
                   "flex h-full flex-col rounded-2xl border p-5 text-left transition-all",
@@ -81,7 +92,7 @@ export default function KitPicker({
         </div>
       </div>
 
-      {modId ? (
+      {modId && kits.length > 1 ? (
         <div>
           <p className="mb-3 text-sm font-medium text-foreground">
             2. Escolha o kit de {MODALIDADE_LABELS[modId]}
@@ -127,6 +138,11 @@ export default function KitPicker({
               );
             })}
           </div>
+        </div>
+      ) : modId && kits.length === 1 ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+          <span className="font-medium text-foreground">{kits[0].nome}</span>
+          <span className="ml-2">— {kits[0].descricao}</span>
         </div>
       ) : null}
     </div>
