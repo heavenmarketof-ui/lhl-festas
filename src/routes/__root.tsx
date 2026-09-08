@@ -17,6 +17,7 @@ import orcamentoOficialCss from "../orcamento-oficial.css?url";
 import orcamentoFixCss from "../orcamento-fix.css?url";
 import adminOficialCss from "../admin-oficial.css?url";
 import { hasAnalyticsConsent, PrivacyConsent } from "../components/privacy-consent";
+import { RemoveContractControl } from "../components/admin/remove-contract-control";
 
 function NotFoundComponent() {
   return (
@@ -106,6 +107,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <RemoveContractControl />
       <PrivacyConsent />
     </QueryClientProvider>
   );
