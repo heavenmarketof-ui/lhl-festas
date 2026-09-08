@@ -50,8 +50,12 @@ export function applyResponseSecurityHeaders(request: Request, response: Respons
   const contentType = headers.get("content-type") || "";
   const isHtml = contentType.includes("text/html");
   const isDynamicPublicPage = url.pathname === "/orcamento" || url.pathname.startsWith("/orcamento/");
+  const isPrivatePage = shouldDisableCache(url.pathname);
 
-  if (shouldDisableCache(url.pathname) || isDynamicPublicPage || isHtml) {
+  if (isPrivatePage) {
+    headers.set("Cache-Control", "private, no-store, max-age=0");
+    headers.set("Pragma", "no-cache");
+  } else if (isDynamicPublicPage || isHtml) {
     headers.set("Cache-Control", "no-store, max-age=0");
     headers.set("Pragma", "no-cache");
   }
