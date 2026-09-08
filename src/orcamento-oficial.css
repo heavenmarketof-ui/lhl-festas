@@ -1,52 +1,53 @@
 /* Orçamento LHL — redesign editorial alinhado à nova Home */
-body:has(#orcamento){--orc-rose:#d76578;--orc-rose-dark:#b95063;--orc-burgundy:#651421;--orc-ink:#2c2224;--orc-muted:#725e62;--orc-cream:#fffaf6;--orc-blush:#f8ebe6;--orc-line:#eadbd5;background:var(--orc-cream);color:var(--orc-ink)}
-body:has(#orcamento)>div,body:has(#orcamento) #root{background:var(--orc-cream)}
-body:has(#orcamento) header{background:rgba(255,250,246,.96)!important;border-color:var(--orc-line)!important;color:#40272a!important;box-shadow:none!important;backdrop-filter:blur(14px)}
-body:has(#orcamento) header>div{width:min(100%,1500px)!important;max-width:none!important;padding-inline:clamp(18px,4vw,64px)!important;min-height:76px}
-body:has(#orcamento) header span{color:#40272a!important;font-size:1rem!important}
-body:has(#orcamento) header img{width:auto!important;height:54px!important;border:0!important}
-body:has(#orcamento) header a[href="#orcamento"] button{border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;border:0!important;font-weight:700!important;padding-inline:1.5rem!important}
+body.page-orcamento{--orc-rose:#d76578;--orc-rose-dark:#b95063;--orc-burgundy:#651421;--orc-ink:#2c2224;--orc-muted:#725e62;--orc-cream:#fffaf6;--orc-blush:#f8ebe6;--orc-line:#eadbd5;background:var(--orc-cream);color:var(--orc-ink)}
+body.page-orcamento>div,body.page-orcamento #root{background:var(--orc-cream)}
+body.page-orcamento header{background:rgba(255,250,246,.96)!important;border-color:var(--orc-line)!important;color:#40272a!important;box-shadow:none!important;backdrop-filter:blur(14px)}
+body.page-orcamento header>div{width:min(100%,1500px)!important;max-width:none!important;padding-inline:clamp(18px,4vw,64px)!important;min-height:76px}
+body.page-orcamento header span{color:#40272a!important;font-size:1rem!important}
+body.page-orcamento header img{width:auto!important;height:54px!important;border:0!important}
+body.page-orcamento header a[href="#orcamento"] button{border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;border:0!important;font-weight:700!important;padding-inline:1.5rem!important}
+body.page-orcamento button[aria-label="Abrir Consultor de Festas LHL"]{display:none!important}
 
 /* Hero claro, editorial e fotográfico */
-body:has(#orcamento) header+section{position:relative;overflow:hidden;background:linear-gradient(110deg,#fff9f5 0%,#fff9f5 45%,#f8ebe6 100%)!important;color:var(--orc-ink)!important;padding-bottom:clamp(5rem,8vw,8rem)}
-body:has(#orcamento) header+section:before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;left:-260px;top:-180px;background:rgba(215,101,120,.08);filter:blur(4px)}
-body:has(#orcamento) header+section>div:first-child{position:relative;z-index:1;width:min(100%,1500px)!important;max-width:none!important;grid-template-columns:minmax(0,.9fr) minmax(400px,1.1fr)!important;gap:clamp(2rem,6vw,7rem)!important;padding:clamp(3.5rem,6vw,6.5rem) clamp(18px,5vw,72px) clamp(3rem,5vw,5rem)!important}
-body:has(#orcamento) header+section>div:first-child>div:first-child{align-self:center;max-width:650px}
-body:has(#orcamento) header+section h1{color:#171313!important;font-size:clamp(3.5rem,5.5vw,6.5rem)!important;line-height:.9!important;letter-spacing:-.045em!important;max-width:760px!important;font-weight:500!important}
-body:has(#orcamento) header+section h1 span{color:var(--orc-rose)!important}
-body:has(#orcamento) header+section>div:first-child p,body:has(#orcamento) header+section>div:first-child li{color:#5d4c4f!important}
-body:has(#orcamento) header+section>div:first-child>div:first-child>p{max-width:540px!important;font-size:clamp(1rem,1.2vw,1.2rem)!important;line-height:1.7!important}
-body:has(#orcamento) header+section a[href="#orcamento"] button{min-height:54px!important;border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;border:0!important;font-size:.95rem!important;font-weight:700!important;padding-inline:1.8rem!important;box-shadow:0 14px 30px rgba(185,80,99,.18)!important}
-body:has(#orcamento) header+section>div:first-child>div:last-child{width:100%;max-width:720px;justify-self:end}
-body:has(#orcamento) header+section>div:first-child>div:last-child>div:last-child{border:0!important;border-radius:38px!important;background:#fff!important;box-shadow:0 28px 70px rgba(73,34,41,.12)!important;overflow:hidden}
-body:has(#orcamento) header+section>div:first-child>div:last-child img{width:100%;height:auto;max-height:680px;object-fit:cover}
+body.page-orcamento header+section{position:relative;overflow:hidden;background:linear-gradient(110deg,#fff9f5 0%,#fff9f5 45%,#f8ebe6 100%)!important;color:var(--orc-ink)!important;padding-bottom:clamp(5rem,8vw,8rem)}
+body.page-orcamento header+section:before{content:"";position:absolute;width:520px;height:520px;border-radius:50%;left:-260px;top:-180px;background:rgba(215,101,120,.08);filter:blur(4px)}
+body.page-orcamento header+section>div:first-child{position:relative;z-index:1;width:min(100%,1500px)!important;max-width:none!important;grid-template-columns:minmax(0,.9fr) minmax(400px,1.1fr)!important;gap:clamp(2rem,6vw,7rem)!important;padding:clamp(3.5rem,6vw,6.5rem) clamp(18px,5vw,72px) clamp(3rem,5vw,5rem)!important}
+body.page-orcamento header+section>div:first-child>div:first-child{align-self:center;max-width:650px}
+body.page-orcamento header+section h1{color:#171313!important;font-size:clamp(3.5rem,5.5vw,6.5rem)!important;line-height:.9!important;letter-spacing:-.045em!important;max-width:760px!important;font-weight:500!important}
+body.page-orcamento header+section h1 span{color:var(--orc-rose)!important}
+body.page-orcamento header+section>div:first-child p,body.page-orcamento header+section>div:first-child li{color:#5d4c4f!important}
+body.page-orcamento header+section>div:first-child>div:first-child>p{max-width:540px!important;font-size:clamp(1rem,1.2vw,1.2rem)!important;line-height:1.7!important}
+body.page-orcamento header+section a[href="#orcamento"] button{min-height:54px!important;border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;border:0!important;font-size:.95rem!important;font-weight:700!important;padding-inline:1.8rem!important;box-shadow:0 14px 30px rgba(185,80,99,.18)!important}
+body.page-orcamento header+section>div:first-child>div:last-child{width:100%;max-width:720px;justify-self:end}
+body.page-orcamento header+section>div:first-child>div:last-child>div:last-child{border:0!important;border-radius:38px!important;background:#fff!important;box-shadow:0 28px 70px rgba(73,34,41,.12)!important;overflow:hidden}
+body.page-orcamento header+section>div:first-child>div:last-child img{width:100%;height:auto;max-height:680px;object-fit:cover}
 
 /* Formulário — protagonista da página */
-body:has(#orcamento) #orcamento{position:relative;z-index:5;width:min(calc(100% - 2rem),900px)!important;max-width:900px!important;margin-top:clamp(-5rem,-6vw,-3rem)!important;margin-bottom:4rem!important;padding:clamp(1.6rem,4vw,3.5rem)!important;border-radius:36px!important;border:1px solid var(--orc-line)!important;background:rgba(255,255,255,.98)!important;color:var(--orc-ink)!important;box-shadow:0 28px 75px rgba(73,34,41,.12)!important}
-body:has(#orcamento) #orcamento h2,body:has(#orcamento) #orcamento h3,body:has(#orcamento) #orcamento .text-foreground{color:#241b1c!important}
-body:has(#orcamento) #orcamento h2{font-size:clamp(2.4rem,4vw,4rem)!important;line-height:.95!important;letter-spacing:-.025em!important}
-body:has(#orcamento) #orcamento p,body:has(#orcamento) #orcamento li,body:has(#orcamento) #orcamento label,body:has(#orcamento) #orcamento .text-muted-foreground,body:has(#orcamento) #orcamento .text-foreground\/80,body:has(#orcamento) #orcamento .text-foreground\/85{color:#665457!important;opacity:1!important}
-body:has(#orcamento) #orcamento label{color:#4b363a!important;font-weight:650!important}
-body:has(#orcamento) #orcamento>div:first-child>div:first-child{color:var(--orc-rose-dark)!important;letter-spacing:.24em!important}
-body:has(#orcamento) #orcamento input:not([type="file"]),body:has(#orcamento) #orcamento select,body:has(#orcamento) #orcamento textarea{min-height:54px!important;border-radius:16px!important;border:1px solid #e3d2cc!important;background:#fffaf8!important;font-size:1rem!important;color:#36282b!important;box-shadow:none!important}
-body:has(#orcamento) #orcamento input:focus,body:has(#orcamento) #orcamento select:focus,body:has(#orcamento) #orcamento textarea:focus{border-color:var(--orc-rose)!important;box-shadow:0 0 0 3px rgba(215,101,120,.10)!important}
-body:has(#orcamento) #orcamento input::placeholder,body:has(#orcamento) #orcamento textarea::placeholder{color:#9a8286!important;opacity:1!important}
-body:has(#orcamento) #orcamento select:disabled{color:#9a8286!important;background:#f8f0ed!important;opacity:1!important}
-body:has(#orcamento) #orcamento textarea{min-height:130px!important}
-body:has(#orcamento) #orcamento input[type="file"]{color:#5e3a3f!important;background:#fffaf8!important;border-radius:16px!important}
-body:has(#orcamento) #orcamento button:not([type="submit"]){color:var(--orc-rose-dark)}
-body:has(#orcamento) #orcamento button[type="submit"]{min-height:58px!important;border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;font-size:1.05rem!important;font-weight:750!important;box-shadow:0 14px 32px rgba(185,80,99,.2)!important}
+body.page-orcamento #orcamento{position:relative;z-index:5;width:min(calc(100% - 2rem),900px)!important;max-width:900px!important;margin-top:clamp(-5rem,-6vw,-3rem)!important;margin-bottom:4rem!important;padding:clamp(1.6rem,4vw,3.5rem)!important;border-radius:36px!important;border:1px solid var(--orc-line)!important;background:rgba(255,255,255,.98)!important;color:var(--orc-ink)!important;box-shadow:0 28px 75px rgba(73,34,41,.12)!important}
+body.page-orcamento #orcamento h2,body.page-orcamento #orcamento h3,body.page-orcamento #orcamento .text-foreground{color:#241b1c!important}
+body.page-orcamento #orcamento h2{font-size:clamp(2.4rem,4vw,4rem)!important;line-height:.95!important;letter-spacing:-.025em!important}
+body.page-orcamento #orcamento p,body.page-orcamento #orcamento li,body.page-orcamento #orcamento label,body.page-orcamento #orcamento .text-muted-foreground,body.page-orcamento #orcamento .text-foreground\/80,body.page-orcamento #orcamento .text-foreground\/85{color:#665457!important;opacity:1!important}
+body.page-orcamento #orcamento label{color:#4b363a!important;font-weight:650!important}
+body.page-orcamento #orcamento>div:first-child>div:first-child{color:var(--orc-rose-dark)!important;letter-spacing:.24em!important}
+body.page-orcamento #orcamento input:not([type="file"]),body.page-orcamento #orcamento select,body.page-orcamento #orcamento textarea{min-height:54px!important;border-radius:16px!important;border:1px solid #e3d2cc!important;background:#fffaf8!important;font-size:1rem!important;color:#36282b!important;box-shadow:none!important}
+body.page-orcamento #orcamento input:focus,body.page-orcamento #orcamento select:focus,body.page-orcamento #orcamento textarea:focus{border-color:var(--orc-rose)!important;box-shadow:0 0 0 3px rgba(215,101,120,.10)!important}
+body.page-orcamento #orcamento input::placeholder,body.page-orcamento #orcamento textarea::placeholder{color:#9a8286!important;opacity:1!important}
+body.page-orcamento #orcamento select:disabled{color:#9a8286!important;background:#f8f0ed!important;opacity:1!important}
+body.page-orcamento #orcamento textarea{min-height:130px!important}
+body.page-orcamento #orcamento input[type="file"]{color:#5e3a3f!important;background:#fffaf8!important;border-radius:16px!important}
+body.page-orcamento #orcamento button:not([type="submit"]){color:var(--orc-rose-dark)}
+body.page-orcamento #orcamento button[type="submit"]{min-height:58px!important;border-radius:999px!important;background:var(--orc-rose)!important;color:#fff!important;font-size:1.05rem!important;font-weight:750!important;box-shadow:0 14px 32px rgba(185,80,99,.2)!important}
 
 /* Conteúdo complementar mais leve, sem aparência de ERP */
-body:has(#orcamento) main~section,body:has(#orcamento) section:not(:first-of-type){scroll-margin-top:90px}
-body:has(#orcamento) section>div{width:min(100%,1400px);max-width:none!important;padding-inline:clamp(18px,4vw,60px)!important}
-body:has(#orcamento) section h2{color:#241b1c;font-size:clamp(2.5rem,4vw,4.5rem)!important;line-height:.95!important;letter-spacing:-.025em!important}
-body:has(#orcamento) section[class*="bg-muted"]{background:#fae9e5!important}
-body:has(#orcamento) section [class*="rounded-2xl"],body:has(#orcamento) section [class*="rounded-xl"]{border-color:var(--orc-line)!important;box-shadow:0 8px 24px rgba(73,34,41,.045)}
-body:has(#orcamento) section button.bg-primary,body:has(#orcamento) section a button.bg-primary{background:var(--orc-rose)!important;border-radius:999px!important}
-body:has(#orcamento) footer{background:#fffaf6!important;color:#735f63!important;border-color:var(--orc-line)!important}
-body:has(#orcamento) footer>div{width:min(100%,1400px)!important;max-width:none!important;padding-inline:clamp(18px,4vw,60px)!important}
-body:has(#orcamento) footer a{color:#735f63!important}
+body.page-orcamento main~section,body.page-orcamento section:not(:first-of-type){scroll-margin-top:90px}
+body.page-orcamento section>div{width:min(100%,1400px);max-width:none!important;padding-inline:clamp(18px,4vw,60px)!important}
+body.page-orcamento section h2{color:#241b1c;font-size:clamp(2.5rem,4vw,4.5rem)!important;line-height:.95!important;letter-spacing:-.025em!important}
+body.page-orcamento section[class*="bg-muted"]{background:#fae9e5!important}
+body.page-orcamento section [class*="rounded-2xl"],body.page-orcamento section [class*="rounded-xl"]{border-color:var(--orc-line)!important;box-shadow:0 8px 24px rgba(73,34,41,.045)}
+body.page-orcamento section button.bg-primary,body.page-orcamento section a button.bg-primary{background:var(--orc-rose)!important;border-radius:999px!important}
+body.page-orcamento footer{background:#fffaf6!important;color:#735f63!important;border-color:var(--orc-line)!important}
+body.page-orcamento footer>div{width:min(100%,1400px)!important;max-width:none!important;padding-inline:clamp(18px,4vw,60px)!important}
+body.page-orcamento footer a{color:#735f63!important}
 
-@media(max-width:1023px){body:has(#orcamento) header+section>div:first-child{grid-template-columns:1fr!important;gap:2.5rem!important}body:has(#orcamento) header+section>div:first-child>div:last-child{max-width:720px;justify-self:center}body:has(#orcamento) header+section h1{max-width:760px!important}}
-@media(max-width:640px){body:has(#orcamento) header>div{min-height:64px;padding-inline:1rem!important}body:has(#orcamento) header img{height:46px!important}body:has(#orcamento) header+section>div:first-child{padding:2.7rem 1rem 5.5rem!important}body:has(#orcamento) header+section h1{font-size:clamp(2.9rem,13vw,4.2rem)!important}body:has(#orcamento) #orcamento{width:calc(100% - 1rem)!important;padding:1.3rem!important;border-radius:26px!important}body:has(#orcamento) section>div{padding-inline:1rem!important}}
+@media(max-width:1023px){body.page-orcamento header+section>div:first-child{grid-template-columns:1fr!important;gap:2.5rem!important}body.page-orcamento header+section>div:first-child>div:last-child{max-width:720px;justify-self:center}body.page-orcamento header+section h1{max-width:760px!important}}
+@media(max-width:640px){body.page-orcamento header>div{min-height:64px;padding-inline:1rem!important}body.page-orcamento header img{height:46px!important}body.page-orcamento header+section>div:first-child{padding:2.7rem 1rem 5.5rem!important}body.page-orcamento header+section h1{font-size:clamp(2.9rem,13vw,4.2rem)!important}body.page-orcamento #orcamento{width:calc(100% - 1rem)!important;padding:1.3rem!important;border-radius:26px!important}body.page-orcamento section>div{padding-inline:1rem!important}}
