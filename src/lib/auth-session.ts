@@ -22,32 +22,46 @@ const INITIAL: AdminSessionState = {
   userId: "",
 };
 
+const SIGNED_OUT: AdminSessionState = {
+  loading: false,
+  authenticated: false,
+  isAdmin: false,
+  email: "",
+  userId: "",
+};
+
 async function resolveState(): Promise<AdminSessionState> {
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user) return { ...INITIAL, loading: false };
-
-  let isAdmin = false;
   try {
-    const { data: ok } = await supabase.rpc("has_role", {
-      _user_id: user.id,
-      _role: "admin",
-    });
-    isAdmin = ok === true;
-  } catch {
-    isAdmin = false;
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return SIGNED_OUT;
+    const user = data.user;
+    if (!user) return SIGNED_OUT;
+
+    let isAdmin = false;
+    try {
+      const { data: ok, error: roleError } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      isAdmin = !roleError && ok === true;
+    } catch {
+      isAdmin = false;
+    }
+
+    const nome = user.email?.split("@")[0] || "Equipe LHL";
+    try { localStorage.setItem("lhl_user_name", nome); } catch { /* noop */ }
+
+    return {
+      loading: false,
+      authenticated: true,
+      isAdmin,
+      email: user.email ?? "",
+      userId: user.id,
+    };
+  } catch (error) {
+    console.error("[admin-session] falha ao validar sessão", error);
+    return SIGNED_OUT;
   }
-
-  const nome = user.email?.split("@")[0] || "Equipe LHL";
-  try { localStorage.setItem("lhl_user_name", nome); } catch { /* noop */ }
-
-  return {
-    loading: false,
-    authenticated: true,
-    isAdmin,
-    email: user.email ?? "",
-    userId: user.id,
-  };
 }
 
 export function useAdminSession(): AdminSessionState {
@@ -57,15 +71,21 @@ export function useAdminSession(): AdminSessionState {
     let alive = true;
     resolveState().then((s) => { if (alive) setState(s); });
 
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      setTimeout(() => {
-        resolveState().then((s) => { if (alive) setState(s); });
-      }, 0);
-    });
+    let unsubscribe = () => {};
+    try {
+      const { data: sub } = supabase.auth.onAuthStateChange(() => {
+        setTimeout(() => {
+          resolveState().then((s) => { if (alive) setState(s); });
+        }, 0);
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
+    } catch (error) {
+      console.error("[admin-session] falha ao observar sessão", error);
+    }
 
     return () => {
       alive = false;
-      sub.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
@@ -73,10 +93,18 @@ export function useAdminSession(): AdminSessionState {
 }
 
 export async function signOutAdmin() {
-  await supabase.auth.signOut();
+  try {
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error("[admin-session] falha ao encerrar sessão", error);
+  }
 }
 
 export async function currentUserName(): Promise<string> {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.email?.split("@")[0] || "Equipe LHL";
+  try {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.email?.split("@")[0] || "Equipe LHL";
+  } catch {
+    return "Equipe LHL";
+  }
 }
