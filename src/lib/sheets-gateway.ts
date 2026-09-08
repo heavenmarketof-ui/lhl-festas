@@ -7,7 +7,6 @@ import {
   gasAdminGet,
   gasAdminPost,
   gasPublicPost,
-  gasPublicOrderById,
   gasDevReadonlyGet,
   gasDevConnectionStatus,
 } from "./sheets-gateway.functions";
@@ -80,9 +79,4 @@ export async function sheetPost(body: Record<string, unknown>): Promise<any> {
 export async function sheetPublicPost(body: Record<string, unknown>): Promise<any> {
   const { text } = await gasPublicPost({ data: { body } });
   return validateWriteJson(parse(text));
-}
-
-export async function sheetPublicOrder(id: string): Promise<any | null> {
-  const { row } = await gasPublicOrderById({ data: { id } });
-  return row ?? null;
 }
