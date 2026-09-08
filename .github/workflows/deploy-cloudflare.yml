@@ -17,7 +17,7 @@ jobs:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
       GAS_ENDPOINT_URL: ${{ secrets.GAS_ENDPOINT_URL }}
       GAS_SHARED_TOKEN: ${{ secrets.GAS_SHARED_TOKEN }}
       GAS_LEADS_ADMIN_TOKEN: ${{ secrets.GAS_LEADS_ADMIN_TOKEN }}
@@ -35,18 +35,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Validar secrets mínimos
+      - name: Validar credenciais de publicação
         shell: bash
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$VITE_SUPABASE_URL"
-          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY"
-          test -n "$SUPABASE_URL"
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-          test -n "$GAS_ENDPOINT_URL"
-          test -n "$GAS_SHARED_TOKEN"
-          test -n "$GAS_LEADS_ADMIN_TOKEN"
 
       - name: Instalar dependências
         run: npm ci
