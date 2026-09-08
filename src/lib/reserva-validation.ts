@@ -71,8 +71,9 @@ export function validateReserva(input: ReservaValidationInput): string | null {
   if (!input.modalidade) return "Selecione a modalidade da sua festa.";
 
   const modalidadeId = modalidadeIdFromLabel(input.modalidade);
-  if (modalidadeId !== "festa-com-montagem" && !input.plano) {
-    return "Selecione o kit da sua festa.";
+  const isMontagem = modalidadeId === "festa-com-montagem" || input.modalidade.toLowerCase().includes("montagem");
+  if (!isMontagem && !input.plano) {
+    return "Selecione o kit para Festa na Mesa ou Peg & Monte.";
   }
 
   if (!isFutureOrTodayIsoDate(input.dataEvento)) return "Informe uma data de evento válida, de hoje em diante.";
