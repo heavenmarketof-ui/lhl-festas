@@ -87,6 +87,12 @@ function RootComponent() {
   const location = useRouterState({ select: (s) => s.location });
 
   useEffect(() => {
+    const isOrcamento = location.pathname === "/orcamento" || location.pathname.startsWith("/orcamento/");
+    document.body.classList.toggle("page-orcamento", isOrcamento);
+    return () => document.body.classList.remove("page-orcamento");
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!hasAnalyticsConsent()) return;
     try {
       const w = window as unknown as { dataLayer?: unknown[] };
