@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getServerEnv } from "./runtime-env.server";
+import { THEMES as LOCAL_THEMES } from "./catalog-source";
 
 export type CatalogImage = {
   url: string;
@@ -27,6 +28,15 @@ const FALLBACK_CATALOG_SOURCE = "https://catalogo-lhlfestas.lovable.app/api/publ
 const CACHE_MS = 5 * 60 * 1000;
 let cache: { expiresAt: number; payload: CatalogPayload } | null = null;
 
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function normalizePayload(raw: any): CatalogPayload {
   const themes = Array.isArray(raw?.themes) ? raw.themes : [];
   return {
@@ -50,23 +60,50 @@ function normalizePayload(raw: any): CatalogPayload {
   };
 }
 
+function localFallbackPayload(): CatalogPayload {
+  const themes: CatalogTheme[] = LOCAL_THEMES.map((theme) => ({
+    id: theme.id,
+    name: theme.name,
+    slug: slugify(theme.name),
+    aliases: theme.aliases,
+    modalities: [theme.modality],
+    images: theme.imageUrl
+      ? [{ url: theme.imageUrl, thumbnailUrl: theme.imageUrl, modality: theme.modality }]
+      : [],
+  }));
+  return {
+    version: 1,
+    updatedAt: "",
+    totalThemes: themes.length,
+    themes,
+  };
+}
+
 /**
  * Fachada pública do catálogo.
- * O navegador fala apenas com o site oficial; a origem temporária do catálogo
- * fica isolada no servidor e pode ser trocada por CATALOGO_PUBLIC_URL sem
- * alterar a página pública.
+ * O navegador fala apenas com o site oficial. Enquanto a fonte completa ainda
+ * não foi migrada, tentamos a origem configurada no servidor; se ela falhar,
+ * o site continua operando com a curadoria local em vez de quebrar a jornada.
  */
 export const fetchCatalogoPublico = createServerFn({ method: "GET" }).handler(async () => {
   if (cache && cache.expiresAt > Date.now()) return cache.payload;
 
   const source = getServerEnv("CATALOGO_PUBLIC_URL") || FALLBACK_CATALOG_SOURCE;
-  const response = await fetch(source, {
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!response.ok) throw new Error(`Catálogo temporariamente indisponível (${response.status}).`);
+  try {
+    const response = await fetch(source, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!response.ok) throw new Error(`Catálogo remoto respondeu ${response.status}.`);
 
-  const payload = normalizePayload(await response.json());
-  cache = { payload, expiresAt: Date.now() + CACHE_MS };
-  return payload;
+    const payload = normalizePayload(await response.json());
+    if (!payload.themes.length) throw new Error("Catálogo remoto sem temas.");
+    cache = { payload, expiresAt: Date.now() + CACHE_MS };
+    return payload;
+  } catch (error) {
+    console.warn("[catalogo] fonte completa indisponível; usando curadoria local", error instanceof Error ? error.message : error);
+    const payload = localFallbackPayload();
+    cache = { payload, expiresAt: Date.now() + Math.min(CACHE_MS, 60_000) };
+    return payload;
+  }
 });
