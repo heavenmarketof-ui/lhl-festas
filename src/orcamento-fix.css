@@ -1,0 +1,34 @@
+/* Correção de prioridade visual do orçamento.
+   public-theme.css possui regras legadas com alta especificidade; estas regras
+   são carregadas depois e usam seletor ainda mais específico para garantir o
+   redesign editorial claro aprovado. */
+body.page-orcamento:has(#orcamento){background:#fffaf6!important;color:#2c2224!important}
+body.page-orcamento:has(#orcamento) header{background:rgba(255,250,246,.97)!important;color:#40272a!important;border-color:#eadbd5!important;box-shadow:none!important}
+body.page-orcamento:has(#orcamento) header span{color:#40272a!important}
+body.page-orcamento:has(#orcamento) header a[href="/catalogo"] button{background:#fff!important;color:#651421!important;border:1px solid #e3cfc8!important}
+body.page-orcamento:has(#orcamento) header a[href="#orcamento"] button{background:#d76578!important;color:#fff!important;border:0!important}
+body.page-orcamento:has(#orcamento)>div>section:first-of-type,
+body.page-orcamento:has(#orcamento) header+section{background:linear-gradient(112deg,#fffaf6 0%,#fffaf6 48%,#f7e9e4 100%)!important;color:#2c2224!important}
+body.page-orcamento:has(#orcamento)>div>section:first-of-type h1,
+body.page-orcamento:has(#orcamento) header+section h1{color:#221a1c!important;font-weight:500!important;letter-spacing:-.045em!important}
+body.page-orcamento:has(#orcamento)>div>section:first-of-type h1 span,
+body.page-orcamento:has(#orcamento) header+section h1 span{color:#d76578!important}
+body.page-orcamento:has(#orcamento)>div>section:first-of-type p,
+body.page-orcamento:has(#orcamento)>div>section:first-of-type li,
+body.page-orcamento:has(#orcamento) header+section p,
+body.page-orcamento:has(#orcamento) header+section li{color:#655257!important}
+body.page-orcamento:has(#orcamento) header+section a[href="#orcamento"] button{background:#d76578!important;color:#fff!important;border-radius:999px!important}
+body.page-orcamento:has(#orcamento) #orcamento{background:#fff!important;color:#2c2224!important;border-color:#eadbd5!important;box-shadow:0 28px 75px rgba(73,34,41,.12)!important}
+body.page-orcamento:has(#orcamento) #orcamento h2{color:#241b1c!important}
+body.page-orcamento:has(#orcamento) #orcamento input,
+body.page-orcamento:has(#orcamento) #orcamento select,
+body.page-orcamento:has(#orcamento) #orcamento textarea{background:#fffaf8!important;color:#36282b!important;border-color:#e3d2cc!important}
+body.page-orcamento:has(#orcamento) #orcamento button[type="submit"]{background:#d76578!important;color:#fff!important;border-radius:999px!important}
+body.page-orcamento:has(#orcamento) section[class*="bg-muted"]{background:#fae9e5!important}
+body.page-orcamento:has(#orcamento) footer{background:#fffaf6!important;color:#735f63!important;border-color:#eadbd5!important}
+body.page-orcamento:has(#orcamento) footer a{color:#735f63!important}
+
+@media(max-width:640px){
+  body.page-orcamento:has(#orcamento) header+section>div:first-child{padding-top:2.5rem!important}
+  body.page-orcamento:has(#orcamento) header+section h1{font-size:clamp(2.9rem,13vw,4.1rem)!important;line-height:.93!important}
+}
