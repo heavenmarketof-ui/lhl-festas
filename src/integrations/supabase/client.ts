@@ -1,9 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+type PublicRuntimeEnv = {
+  SUPABASE_URL?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
+};
+
+declare global {
+  interface Window {
+    __LHL_PUBLIC_ENV__?: PublicRuntimeEnv;
+  }
+}
+
+function publicRuntimeEnv(): PublicRuntimeEnv {
+  if (typeof window !== 'undefined') return window.__LHL_PUBLIC_ENV__ || {};
+  return {};
+}
+
 function createSupabaseClient() {
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+  const runtime = publicRuntimeEnv();
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || runtime.SUPABASE_URL || process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || runtime.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     const missing = [
