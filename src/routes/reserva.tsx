@@ -17,8 +17,6 @@ import { postOrderToSheet } from "@/lib/sheets-api";
 import { validateReserva } from "@/lib/reserva-validation";
 import KitPicker from "@/components/kits/KitPicker";
 import { modalidadeIdFromLabel } from "@/data/kits";
-
-import { Lock } from "lucide-react";
 import logo from "@/assets/lhl-logo.png";
 
 export const Route = createFileRoute("/reserva")({
@@ -52,11 +50,12 @@ const empty = {
 };
 
 const ACEITE_ITEMS = [
-  "Estou ciente das condições da reserva.",
-  "Estou ciente das regras de sinal e caução.",
-  "Comprometo-me a cuidar dos itens locados durante o período da locação.",
-  "Estou ciente dos prazos combinados para retirada e devolução.",
-  "Li e concordo com os termos da locação.",
+  "Estou ciente das condições desta solicitação de reserva.",
+  "Estou ciente de que a confirmação da data ocorre mediante sinal de 50% do valor acordado.",
+  "Estou ciente de que o saldo restante e a caução, quando aplicável, serão informados pela equipe conforme a modalidade contratada.",
+  "Nas modalidades com retirada, comprometo-me a cuidar dos itens enquanto estiverem sob minha responsabilidade.",
+  "Estou ciente de que retirada, devolução, montagem e desmontagem seguem o combinado para a modalidade contratada.",
+  "Li e concordo com as condições da contratação e com a Política de Privacidade.",
 ];
 
 function Index() {
@@ -149,8 +148,6 @@ function Index() {
     });
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
 
-    // Abre a aba ainda dentro do gesto do usuário para evitar bloqueio de popup
-    // em navegadores móveis. Só navega para o WhatsApp após a gravação confirmar.
     const whatsappWindow = window.open('', '_blank');
     setSubmitting(true);
 
@@ -202,7 +199,6 @@ function Index() {
       whatsappWindow.opener = null;
       whatsappWindow.location.href = whatsappUrl;
     } else {
-      // Se o navegador ainda bloquear a nova aba, mantém uma saída confiável.
       window.location.href = whatsappUrl;
       return;
     }
@@ -264,17 +260,17 @@ function Index() {
           <SectionTitle number="04" title="Logística" />
           <div className="mt-6 space-y-3">
             <Field label="Data do Evento" full><Input type="date" value={form.dataEvento} onChange={(e) => set("dataEvento")(e.target.value)} required /></Field>
-            <p className="text-xs italic text-muted-foreground bg-accent/40 border border-border/50 rounded-xl px-4 py-3">As retiradas e devoluções são alinhadas com nossa equipe conforme a modalidade contratada e a disponibilidade.</p>
+            <p className="text-xs italic text-muted-foreground bg-accent/40 border border-border/50 rounded-xl px-4 py-3">Nas modalidades com retirada, os horários de retirada e devolução são combinados com a equipe. Na Festa com Montagem, montagem e desmontagem acontecem no local do evento conforme o combinado.</p>
           </div>
 
           <Divider />
           <div className="mt-6 rounded-2xl border border-border/60 bg-accent/20 p-5">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Valores da locação</p>
-            <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor de kit é calculado automaticamente. O valor total, o sinal de <strong>30%</strong>, o restante e a caução aplicável serão informados pela equipe após a negociação.</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Condições da reserva</p>
+            <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor é calculado automaticamente nesta página. A data é confirmada após o pagamento do sinal de <strong>50% do valor acordado</strong>. O saldo restante e a caução, quando aplicável, serão informados pela equipe conforme a modalidade e a negociação.</p>
           </div>
 
           <Divider />
-          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">Ao enviar seus dados, eles serão usados para atendimento, elaboração da reserva e execução do serviço, conforme nossa <Link to="/privacidade" className="font-medium text-primary underline underline-offset-2">Política de Privacidade</Link>.</p>
+          <p className="mt-6 text-xs leading-relaxed text-muted-foreground">Ao enviar seus dados, eles serão usados para atendimento, elaboração da reserva, contrato e execução do serviço, conforme nossa <Link to="/privacidade" className="font-medium text-primary underline underline-offset-2">Política de Privacidade</Link>.</p>
 
           <Divider />
           <SectionTitle number="05" title="Confirmação da Reserva" />
@@ -283,11 +279,10 @@ function Index() {
             {ACEITE_ITEMS.map((txt, i) => <label key={i} className="flex items-start gap-3 cursor-pointer text-sm text-foreground"><input type="checkbox" checked={aceites[i]} onChange={(e) => setAceites((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))} className="mt-1 h-4 w-4 accent-primary" /><span>{txt}</span></label>)}
           </div>
 
-          <Button type="submit" disabled={!allAceites || submitting} className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? "Registrando sua solicitação..." : "Enviar Dados pelo WhatsApp ♥"}</Button>
+          <Button type="submit" disabled={!allAceites || submitting} className="mt-10 w-full h-12 text-base tracking-wide rounded-full bg-[image:var(--gradient-elegant)] text-primary-foreground border-0 hover:opacity-95 transition-opacity shadow-[var(--shadow-soft)] disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? "Registrando sua solicitação..." : "Enviar dados e continuar no WhatsApp ♥"}</Button>
         </form>
 
         <p className="mt-8 text-center font-script text-2xl text-primary">Sua festa, do seu jeito!</p>
-        <div className="mt-6 text-center"><Link to="/admin" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"><Lock className="h-3 w-3" /> Visão da Loja</Link></div>
       </main>
     </div>
   );
