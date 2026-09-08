@@ -9,6 +9,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { getServerEnv } from "@/lib/runtime-env.server";
 
 const PUBLIC_POST_ACTIONS = new Set(["create", "leadsCreate", "leadsMarkWaOpened"]);
 const PUBLIC_BODY_MAX_BYTES = 24_000;
@@ -26,19 +27,41 @@ const publicRateCache = new Map<string, RateEntry>();
 const ADMIN_ROLE_TTL_MS = 15_000;
 const adminRoleCache = new Map<string, number>();
 
-async function assertAdmin(context: { supabase: any; userId: string }) {
+async function assertAdmin(context: { userId: string; accessToken: string }) {
   const now = Date.now();
   const cachedUntil = adminRoleCache.get(context.userId) ?? 0;
   if (cachedUntil > now) return;
 
-  const { data, error } = await context.supabase.rpc("has_role", {
-    _user_id: context.userId,
-    _role: "admin",
+  const supabaseUrl = getServerEnv("SUPABASE_URL");
+  const publishableKey = getServerEnv("SUPABASE_PUBLISHABLE_KEY");
+  if (!supabaseUrl || !publishableKey || !context.accessToken) {
+    adminRoleCache.delete(context.userId);
+    throw new Error("Não foi possível validar a permissão administrativa.");
+  }
+
+  const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
+    method: "POST",
+    headers: {
+      apikey: publishableKey,
+      Authorization: `Bearer ${context.accessToken}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ _user_id: context.userId, _role: "admin" }),
   });
-  if (error || data !== true) {
+
+  let data: unknown = false;
+  try {
+    data = await response.json();
+  } catch {
+    data = false;
+  }
+
+  if (!response.ok || data !== true) {
     adminRoleCache.delete(context.userId);
     throw new Error("Forbidden: acesso restrito a administradores");
   }
+
   adminRoleCache.set(context.userId, now + ADMIN_ROLE_TTL_MS);
 }
 
