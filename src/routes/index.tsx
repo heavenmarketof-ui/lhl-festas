@@ -3,64 +3,53 @@ import { lazy, Suspense, useState } from "react";
 import {
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
   ChevronRight,
-  Gem,
   Heart,
-  Home,
   Instagram,
   Menu,
   MessageCircle,
   PackageCheck,
-  Settings2,
   ShieldCheck,
+  Sparkles,
   Star,
   Truck,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { feedbackImages, logoImages } from "@/assets/lhl";
+import {
+  extrasImages,
+  feedbackImages,
+  festaNaMesaImages,
+  heroImages,
+  inspireSeImages,
+  logoImages,
+  pegEMonteImages,
+} from "@/assets/lhl";
 import { WHATSAPP_NUMBER } from "@/lib/orders-storage";
 
 const ConsultorFAB = lazy(() => import("@/components/consultor/ConsultorFAB"));
-
-const driveImage = (id: string, width = 900) => `https://drive.google.com/thumbnail?id=${id}&sz=w${width}`;
-
-const HERO_IMAGE = driveImage("1FTVXnS_eFo_gZHo1EGhQgq1nauyGq5pc", 1600);
-const FESTA_NA_MESA_IMAGE = driveImage("1lPR3hKeeyibMSse1xzyK6ZfSz0zUV4ov", 900);
-const PERSONALIZADO_IMAGE = driveImage("12OGmQ4DEVI3ADHVu7weFGLDreXw49IIi", 900);
-const PEG_MONTE_IMAGE = driveImage("1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9", 900);
-
-const INSPIRACOES = [
-  driveImage("1YJUA1G3Qn2uwfSWn__iAbTWKDd-eMjTu"),
-  driveImage("1W6FsO5SegUa7yPvQmfuNinGkpZ4gYP-V"),
-  driveImage("15zwnq9Ejv-JYvqGfE3K69Rn7DgXthDCq"),
-  driveImage("1JctWsVWkfUZ8pHNdfT4szvCyKwbiU5Vf"),
-  HERO_IMAGE,
-  driveImage("133QbMl8xmGoa3XJD4sFGpjY51aDXmtpb"),
-];
 
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
   "Olá! Quero solicitar um orçamento com a LHL Festas.",
 )}`;
 
-const vinho = "#651421";
-const vinhoEscuro = "#470b15";
-const rosa = "#d87982";
-const rosaClaro = "#f6dbd7";
-const marfim = "#fff8f0";
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "LHL Festas — Transformamos momentos em memórias especiais" },
+      { title: "LHL Festas — Festa na Mesa, Peg & Monte e Decorações com Montagem" },
       {
         name: "description",
         content:
-          "Festa na Mesa, Peg & Monte e temas personalizados para celebrações inesquecíveis no ABC.",
+          "Decorações para festas no ABC: Festa na Mesa, Peg & Monte e projetos com montagem e desmontagem. Escolha uma inspiração e solicite seu orçamento.",
       },
-      { property: "og:title", content: "LHL Festas — Momentos inesquecíveis" },
-      { property: "og:image", content: HERO_IMAGE },
+      { property: "og:title", content: "LHL Festas — Sua festa merece ser inesquecível" },
+      {
+        property: "og:description",
+        content: "Festa na Mesa, Peg & Monte e decorações com montagem para celebrar do seu jeito.",
+      },
+      { property: "og:image", content: "https://www.lhlfestas.com.br/hero-principal.jpg" },
       { property: "og:url", content: "https://www.lhlfestas.com.br/" },
     ],
     links: [{ rel: "canonical", href: "https://www.lhlfestas.com.br/" }],
@@ -68,68 +57,96 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-function trackHomeEvent(event: string, extra: Record<string, unknown> = {}) {
+function track(event: string, extra: Record<string, unknown> = {}) {
   try {
     const w = window as unknown as { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void };
     w.dataLayer = w.dataLayer || [];
     w.dataLayer.push({ event, ...extra });
     w.gtag?.("event", event, extra);
-  } catch {}
+  } catch {
+    /* analytics nunca deve bloquear a navegação */
+  }
 }
 
 const NAV = [
-  { label: "Início", href: "#inicio" },
-  { label: "Catálogo", href: "/catalogo" },
-  { label: "Festa na Mesa", href: "#modalidades" },
-  { label: "Peg & Monte", href: "#modalidades" },
-  { label: "Tema Personalizado", href: "#personalizado" },
+  { label: "Decorações", href: "/catalogo" },
+  { label: "Modalidades", href: "#modalidades" },
   { label: "Como funciona", href: "#como-funciona" },
-  { label: "Depoimentos", href: "#clientes" },
-];
+  { label: "Clientes", href: "#clientes" },
+] as const;
 
 function Header() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 text-white shadow-lg" style={{ background: `linear-gradient(90deg, ${vinhoEscuro}, ${vinho})` }}>
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
-        <Link to="/" className="flex items-center gap-3">
-          <img src={logoImages[0]} alt="LHL Festas" loading="eager" decoding="async" className="h-14 w-14 rounded-full border border-[#d8b06c]/60 object-cover shadow-md" />
-          <div className="hidden sm:block">
-            <div className="font-serif text-xl text-[#f4d49b]">LHL Festas</div>
-            <div className="text-[9px] uppercase tracking-[.24em] text-white/65">Peg & Monte</div>
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#4b0c16]/96 text-white shadow-lg backdrop-blur">
+      <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-3" aria-label="LHL Festas — início">
+          <img
+            src={logoImages[0]}
+            alt="LHL Festas"
+            width={48}
+            height={48}
+            className="h-12 w-12 rounded-full border border-[#d8b06c]/60 object-cover"
+          />
+          <div>
+            <div className="font-serif text-xl leading-none text-[#f2d091]">LHL Festas</div>
+            <div className="mt-1 text-[9px] uppercase tracking-[.22em] text-white/55">Decorações para celebrar</div>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-5 text-[13px] lg:flex">
+        <nav className="hidden items-center gap-6 text-sm lg:flex" aria-label="Navegação principal">
           {NAV.map((item) => (
-            <a key={item.label} href={item.href} className="border-b border-transparent py-2 transition hover:border-[#d8b06c] hover:text-[#f4d49b]">
+            <a key={item.label} href={item.href} className="text-white/78 transition hover:text-[#f2d091]">
               {item.label}
             </a>
           ))}
         </nav>
 
-        <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" className="hidden lg:block" onClick={() => trackHomeEvent("home_whatsapp_click", { location: "header" })}>
-          <Button className="rounded-full border-0 px-6 font-semibold text-[#54101a] shadow-lg hover:opacity-90" style={{ background: rosa }}>
-            <MessageCircle className="mr-2 h-4 w-4" /> Fale com a gente <ChevronRight className="ml-1 h-4 w-4" />
+        <div className="hidden items-center gap-2 lg:flex">
+          <a href={WHATSAPP_URL} target="_blank" rel="noreferrer" onClick={() => track("home_whatsapp_click", { location: "header" })}>
+            <Button className="rounded-full border border-white/15 bg-white/10 text-white hover:bg-white/15">
+              <MessageCircle className="mr-2 h-4 w-4" /> Falar no WhatsApp
+            </Button>
+          </a>
+          <Button asChild className="rounded-full border-0 bg-[#d87982] text-[#4d0d16] hover:bg-[#e18b92]">
+            <Link to="/orcamento">Solicitar orçamento</Link>
           </Button>
-        </a>
+        </div>
 
-        <button className="rounded-full p-2 lg:hidden" onClick={() => setOpen(!open)} aria-label="Abrir menu">
-          {open ? <X /> : <Menu />}
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="grid h-11 w-11 place-items-center rounded-xl border border-white/15 lg:hidden"
+          aria-label={open ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={open}
+        >
+          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {open && (
-        <div className="border-t border-white/10 px-5 py-4 lg:hidden">
-          {NAV.map((item) => (
-            <a key={item.label} href={item.href} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-3 text-sm hover:bg-white/10">
-              {item.label}
-            </a>
-          ))}
-          <Link to="/orcamento">
-            <Button className="mt-3 w-full" style={{ background: rosa }}>Solicitar orçamento</Button>
-          </Link>
+        <div className="border-t border-white/10 bg-[#58101b] px-4 pb-5 pt-3 lg:hidden">
+          <nav className="mx-auto max-w-7xl space-y-1" aria-label="Navegação mobile">
+            {NAV.map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className="block rounded-xl px-3 py-3 text-sm text-white/86 hover:bg-white/10"
+              >
+                {item.label}
+              </a>
+            ))}
+            <div className="grid gap-2 pt-3 sm:grid-cols-2">
+              <Button asChild variant="outline" className="h-11 border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+                <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" /> WhatsApp</a>
+              </Button>
+              <Button asChild className="h-11 bg-[#d87982] text-[#4d0d16] hover:bg-[#e18b92]">
+                <Link to="/orcamento" onClick={() => setOpen(false)}>Solicitar orçamento</Link>
+              </Button>
+            </div>
+          </nav>
         </div>
       )}
     </header>
@@ -138,46 +155,51 @@ function Header() {
 
 function Hero() {
   return (
-    <section id="inicio" className="relative overflow-hidden text-white" style={{ background: vinho }}>
-      <div className="mx-auto grid max-w-7xl lg:min-h-[650px] lg:grid-cols-[.85fr_1.15fr]">
-        <div className="relative z-10 flex flex-col justify-center px-6 py-14 md:px-12 lg:py-20">
-          <div className="absolute inset-0 opacity-25" style={{ background: `radial-gradient(circle at 20% 30%, ${rosa}, transparent 48%)` }} />
+    <section className="relative overflow-hidden bg-[#651421] text-white">
+      <div className="mx-auto grid max-w-7xl lg:min-h-[650px] lg:grid-cols-[.9fr_1.1fr]">
+        <div className="relative z-10 flex flex-col justify-center px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(216,121,130,.28),transparent_42%)]" />
           <div className="relative">
-            <h1 className="max-w-xl font-serif text-5xl leading-[.95] sm:text-6xl lg:text-7xl">
-              Transformamos<br />momentos em<br />
-              <span className="italic text-[#efb6b5]">memórias especiais!</span>
-            </h1>
-            <div className="my-7 flex items-center gap-4 text-[#efb6b5]"><span className="h-px w-24 bg-current" /><Heart className="h-5 w-5 fill-current" /><span className="h-px w-24 bg-current" /></div>
-            <p className="max-w-lg text-base leading-relaxed text-white/85 sm:text-lg">
-              Decorações completas, práticas e cheias de encanto para tornar a sua celebração inesquecível.
+            <p className="mb-5 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-[#f0c984]">
+              <Sparkles className="h-4 w-4" /> Decorações para momentos especiais
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/catalogo" onClick={() => trackHomeEvent("home_catalog_click", { location: "hero" })}>
-                <Button size="lg" className="rounded-full border border-white/25 bg-white/10 px-7 font-semibold text-white shadow-xl hover:bg-white/20">
+            <h1 className="max-w-xl font-serif text-[clamp(3.1rem,7vw,5.6rem)] leading-[.92] tracking-[-.025em]">
+              Sua festa merece ser <span className="italic text-[#efb6b5]">inesquecível.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
+              Festa na Mesa, Peg &amp; Monte e decorações com montagem. Você escolhe a inspiração e a LHL cuida do caminho até a sua comemoração.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button asChild size="lg" className="h-12 rounded-full bg-[#d87982] px-7 font-semibold text-[#4d0d16] hover:bg-[#e18b92]">
+                <Link to="/catalogo" onClick={() => track("home_catalog_click", { location: "hero" })}>
                   Ver decorações <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link to="/orcamento" onClick={() => trackHomeEvent("home_budget_click", { location: "hero" })}>
-                <Button size="lg" className="rounded-full border-0 px-7 font-semibold shadow-xl" style={{ background: rosa }}>
-                  <MessageCircle className="mr-2 h-5 w-5" /> Quero fazer um orçamento <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-white/25 bg-white/8 px-7 text-white hover:bg-white/15 hover:text-white">
+                <Link to="/orcamento" onClick={() => track("home_budget_click", { location: "hero" })}>
+                  Solicitar orçamento
+                </Link>
+              </Button>
             </div>
-            <div className="mt-10 grid max-w-md grid-cols-4 gap-4 text-center text-xs text-white/90">
-              {[['Locou', CalendarDays], ['Retirou', PackageCheck], ['Montou', Settings2], ['Devolveu', Truck]].map(([label, Icon]) => {
-                const C = Icon as typeof CalendarDays;
-                return <div key={label as string}><C className="mx-auto mb-2 h-6 w-6 text-[#efb6b5]" /><span>{label as string}</span></div>;
-              })}
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/68">
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#efb6b5]" /> Atendimento personalizado</span>
+              <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-[#efb6b5]" /> Opções para diferentes tamanhos de festa</span>
             </div>
           </div>
         </div>
 
-        <div className="relative min-h-[500px] lg:min-h-full">
-          <img src={HERO_IMAGE} alt="Decoração Moranguinho da LHL Festas" decoding="async" className="absolute inset-0 h-full w-full object-cover object-center" fetchPriority="high" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#651421] via-[#651421]/15 to-transparent" />
-          <div className="absolute right-5 top-10 max-w-[180px] rounded-2xl bg-[#f6d9d3]/95 p-4 text-center text-xs leading-relaxed text-[#5d1720] shadow-xl">
-            <Heart className="mx-auto mb-2 h-4 w-4 fill-current" />
-            <strong className="block font-serif text-lg">Decorações que encantam de verdade!</strong>
+        <div className="relative min-h-[440px] sm:min-h-[520px] lg:min-h-full">
+          <img
+            src={heroImages[0]}
+            alt="Decoração de festa produzida pela LHL Festas"
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#651421] via-[#651421]/12 to-transparent" />
+          <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/20 bg-black/20 p-4 backdrop-blur-sm sm:left-auto sm:max-w-xs">
+            <p className="font-serif text-xl text-white">Seu estilo, seu momento.</p>
+            <p className="mt-1 text-xs leading-relaxed text-white/75">Escolha uma referência do catálogo ou conte para a gente o que você imaginou.</p>
           </div>
         </div>
       </div>
@@ -185,49 +207,71 @@ function Hero() {
   );
 }
 
-function Modalidades() {
-  const cards = [
-    {
-      title: "Festa na Mesa",
-      image: FESTA_NA_MESA_IMAGE,
-      text: "Decorações completas e encantadoras para celebrações intimistas.",
-      cta: "Ver temas",
-      href: "/catalogo?m=festa-na-mesa",
-    },
-    {
-      title: "Peg & Monte",
-      image: PEG_MONTE_IMAGE,
-      text: "Decorações práticas para você montar do seu jeito.",
-      cta: "Ver temas",
-      href: "/catalogo?m=peg-e-monte",
-      dark: true,
-    },
-    {
-      title: "Tema Personalizado",
-      image: PERSONALIZADO_IMAGE,
-      text: "Não encontrou o tema ideal? Criamos uma proposta especial para você.",
-      cta: "Solicitar orçamento",
-      href: "/orcamento?tipoSolicitacao=tema-personalizado",
-    },
-  ];
+type ServiceCardProps = {
+  title: string;
+  eyebrow: string;
+  description: string;
+  image: string;
+  href: string;
+  bullets: string[];
+};
 
+function ServiceCard({ title, eyebrow, description, image, href, bullets }: ServiceCardProps) {
   return (
-    <section id="modalidades" className="py-5" style={{ background: marfim }}>
-      <div className="mx-auto grid max-w-7xl gap-4 px-4 lg:grid-cols-3">
-        {cards.map((card, i) => (
-          <article id={i === 2 ? "personalizado" : undefined} key={card.title} className="grid min-h-[265px] grid-cols-[.95fr_1.05fr] items-center overflow-hidden rounded-2xl p-5 shadow-md" style={{ background: card.dark ? vinho : rosaClaro, color: card.dark ? "white" : vinho }}>
-            <img src={card.image} alt={card.title} loading="lazy" decoding="async" className="aspect-square w-full rounded-full border-4 border-white/30 object-cover object-center shadow-lg" />
-            <div className="pl-5">
-              <h2 className="font-serif text-3xl italic">{card.title}</h2>
-              <p className={`mt-3 text-sm leading-relaxed ${card.dark ? 'text-white/80' : ''}`}>{card.text}</p>
-              <a href={card.href}>
-                <Button className="mt-5 rounded-full border-0 text-xs" style={{ background: card.dark ? marfim : rosa, color: vinho }}>
-                  {card.cta}<ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </a>
-            </div>
-          </article>
-        ))}
+    <article className="group overflow-hidden rounded-[28px] border border-[#eadbd4] bg-white shadow-[0_20px_55px_-36px_rgba(82,20,33,.45)]">
+      <div className="aspect-[4/3] overflow-hidden bg-[#f5ebe5]">
+        <img src={image} alt={title} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]" />
+      </div>
+      <div className="p-6">
+        <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#b27b4e]">{eyebrow}</p>
+        <h2 className="mt-2 font-serif text-3xl text-[#651421]">{title}</h2>
+        <p className="mt-3 text-sm leading-relaxed text-[#715b5f]">{description}</p>
+        <ul className="mt-4 space-y-2 text-sm text-[#5d494c]">
+          {bullets.map((item) => <li key={item} className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#c18d55]" /> {item}</li>)}
+        </ul>
+        <Button asChild variant="outline" className="mt-6 h-11 w-full rounded-full border-[#dcc7bf] text-[#651421] hover:bg-[#fff3ed]">
+          <a href={href}>Conhecer esta opção <ChevronRight className="ml-1 h-4 w-4" /></a>
+        </Button>
+      </div>
+    </article>
+  );
+}
+
+function Modalidades() {
+  return (
+    <section id="modalidades" className="bg-[#fff8f0] py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#b27b4e]">Escolha como quer celebrar</p>
+          <h2 className="mt-3 font-serif text-4xl text-[#651421] sm:text-5xl">Três formas de montar uma festa linda</h2>
+          <p className="mt-4 text-sm leading-relaxed text-[#735d61] sm:text-base">Cada modalidade resolve uma necessidade diferente. Você não precisa entender tudo antes de falar com a gente — o orçamento ajuda a encontrar a melhor composição.</p>
+        </div>
+        <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          <ServiceCard
+            title="Festa na Mesa"
+            eyebrow="Compacta e charmosa"
+            description="Uma composição prática para comemorações menores, com visual organizado e itens selecionados para a mesa principal."
+            image={festaNaMesaImages[0]}
+            href="/festa-na-mesa"
+            bullets={["Ideal para espaços menores", "Kits com diferentes composições", "Orçamento sem preço automático"]}
+          />
+          <ServiceCard
+            title="Peg & Monte"
+            eyebrow="Você monta"
+            description="Você retira os itens, monta no local da festa e devolve depois. Uma opção flexível para quem quer uma decoração maior com autonomia."
+            image={pegEMonteImages[0]}
+            href="/peg-e-monte"
+            bullets={["Painéis, cilindros e acessórios", "Retirada e devolução combinadas", "Tema e kit seguem para o orçamento"]}
+          />
+          <ServiceCard
+            title="Decoração com montagem"
+            eyebrow="A LHL monta para você"
+            description="Projeto pensado para o seu evento com montagem e desmontagem no local, incluindo a composição alinhada no orçamento."
+            image={extrasImages[0] || inspireSeImages[0]}
+            href="/orcamento?tipoSolicitacao=festa-com-montagem"
+            bullets={["Montagem e desmontagem no local", "Composição personalizada", "Atendimento para alinhar cada detalhe"]}
+          />
+        </div>
       </div>
     </section>
   );
@@ -235,25 +279,60 @@ function Modalidades() {
 
 function ComoFunciona() {
   const steps = [
-    ["Escolha o tema", "Navegue pelas inspirações e escolha o seu preferido.", CalendarDays],
-    ["Reserve", "Fale com a gente e garanta a sua data.", PackageCheck],
-    ["Retire e monte", "Você retira, monta e aproveita a festa!", Settings2],
-    ["Devolva", "Após o evento, é só devolver.", Truck],
-  ] as const;
+    { title: "Escolha uma inspiração", text: "Veja o catálogo ou conte qual tema e estilo você procura.", icon: Heart },
+    { title: "Solicite o orçamento", text: "As escolhas que você já fez acompanham o pedido, sem precisar repetir tudo.", icon: MessageCircle },
+    { title: "Alinhamos os detalhes", text: "Confirmamos disponibilidade, composição, valores, datas e logística.", icon: CalendarDays },
+    { title: "Sua festa acontece", text: "Conforme a modalidade, você retira o kit ou a LHL realiza a montagem e desmontagem.", icon: Sparkles },
+  ];
 
   return (
-    <section id="como-funciona" className="py-16" style={{ background: "#fffaf4" }}>
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[.75fr_2.25fr]">
-        <div>
-          <h2 className="font-serif text-5xl italic leading-none" style={{ color: vinho }}>Como<br /><span style={{ color: rosa }}>funciona?</span></h2>
-          <p className="mt-4 text-sm text-[#5e4543]">Simples, prático e sem complicação!</p>
+    <section id="como-funciona" className="bg-white py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr] lg:items-start">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#b27b4e]">Da inspiração à festa</p>
+            <h2 className="mt-3 font-serif text-4xl leading-tight text-[#651421] sm:text-5xl">Um processo simples, sem caminhos confusos</h2>
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#735d61]">A LHL organiza o atendimento de acordo com a modalidade escolhida. O cliente informa uma vez e a equipe reaproveita esses dados no atendimento.</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.title} className="rounded-2xl border border-[#eadbd4] bg-[#fffaf6] p-5">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-10 w-10 place-items-center rounded-full bg-[#f6dbd7] font-serif text-xl text-[#651421]">{index + 1}</span>
+                    <Icon className="h-5 w-5 text-[#b27b4e]" />
+                  </div>
+                  <h3 className="mt-4 font-serif text-2xl text-[#651421]">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[#735d61]">{step.text}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map(([title, text, Icon], i) => (
-            <div key={title} className="border-l border-[#d8b7ad] pl-6">
-              <div className="mb-4 flex items-center gap-3"><span className="font-serif text-3xl" style={{ color: vinho }}>{i + 1}</span><span className="grid h-12 w-12 place-items-center rounded-full" style={{ background: rosaClaro }}><Icon className="h-6 w-6" style={{ color: vinho }} /></span></div>
-              <h3 className="font-serif text-xl font-semibold" style={{ color: vinho }}>{title}</h3>
-              <p className="mt-2 text-xs leading-relaxed text-[#624d49]">{text}</p>
+      </div>
+    </section>
+  );
+}
+
+function Inspiracoes() {
+  const images = [inspireSeImages[0], festaNaMesaImages[3], pegEMonteImages[2], heroImages[2]].filter(Boolean);
+  return (
+    <section className="bg-[#4b0c16] py-16 text-white sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#f0c984]">Inspire-se</p>
+            <h2 className="mt-3 font-serif text-4xl sm:text-5xl">Algumas festas que inspiram novas ideias</h2>
+          </div>
+          <Button asChild variant="outline" className="w-fit rounded-full border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white">
+            <Link to="/catalogo">Ver catálogo completo <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          </Button>
+        </div>
+        <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {images.map((image, index) => (
+            <div key={`${image}-${index}`} className="aspect-[3/4] overflow-hidden rounded-2xl bg-white/5">
+              <img src={image} alt={`Inspiração de decoração LHL ${index + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </div>
           ))}
         </div>
@@ -262,47 +341,21 @@ function ComoFunciona() {
   );
 }
 
-function Inspiracoes() {
+function Confianca() {
+  const points = [
+    { icon: ShieldCheck, title: "Tudo alinhado antes do evento", text: "Datas, modalidade, composição e condições ficam registradas no atendimento e no contrato." },
+    { icon: PackageCheck, title: "Operação organizada", text: "A equipe acompanha preparação, retirada ou montagem e as etapas de retorno." },
+    { icon: Truck, title: "Logística conforme a modalidade", text: "Peg & Monte tem retirada/devolução; festas montadas seguem fluxo de montagem/desmontagem." },
+  ];
   return (
-    <section id="decoracoes" className="py-16 text-white" style={{ background: `linear-gradient(120deg, ${vinhoEscuro}, ${vinho})` }}>
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[.65fr_2.35fr]">
-        <div className="flex flex-col justify-center">
-          <h2 className="font-serif text-5xl leading-none">Festas<br /><span className="italic text-[#efb6b5]">que inspiram</span></h2>
-          <div className="my-6 flex items-center gap-3 text-[#efb6b5]"><span className="h-px w-20 bg-current" /><Heart className="h-4 w-4 fill-current" /></div>
-          <p className="max-w-xs text-sm leading-relaxed text-white/75">Cada decoração é única, assim como cada história. Aqui estão algumas das festas reais da LHL que mais representam o nosso trabalho.</p>
-          <Link to="/catalogo" className="mt-7 inline-flex w-fit items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold" style={{ background: rosa }}>Ver mais decorações <ArrowRight className="h-4 w-4" /></Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          {INSPIRACOES.map((src, i) => (
-            <img key={i} src={src} alt="Festa real da LHL Festas" className="aspect-[3/4] w-full rounded-xl object-cover object-center shadow-xl" loading="lazy" />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Diferenciais() {
-  const itens = [
-    [Gem, "Decorações de qualidade"],
-    [Heart, "Temas atualizados"],
-    [MessageCircle, "Atendimento personalizado"],
-    [Home, "Atendemos em toda a região do ABC"],
-    [Star, "Seu momento, nossa prioridade!"],
-  ] as const;
-
-  return (
-    <section className="py-12" style={{ background: rosaClaro }}>
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[.7fr_2.3fr]">
-        <div>
-          <h2 className="font-serif text-4xl italic leading-none" style={{ color: vinho }}>O diferencial<br />da LHL</h2>
-          <div className="my-5 flex items-center gap-3" style={{ color: rosa }}><span className="h-px w-16 bg-current" /><Heart className="h-4 w-4 fill-current" /></div>
-        </div>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {itens.map(([Icon, label]) => (
-            <div key={label} className="text-center">
-              <Icon className="mx-auto h-8 w-8" style={{ color: rosa }} />
-              <p className="mt-3 text-sm leading-snug" style={{ color: vinho }}>{label}</p>
+    <section className="bg-[#fff8f0] py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-4 lg:grid-cols-3">
+          {points.map(({ icon: Icon, title, text }) => (
+            <div key={title} className="rounded-2xl border border-[#eadbd4] bg-white p-6">
+              <span className="grid h-11 w-11 place-items-center rounded-full bg-[#f6dbd7]"><Icon className="h-5 w-5 text-[#651421]" /></span>
+              <h3 className="mt-4 font-serif text-2xl text-[#651421]">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-[#735d61]">{text}</p>
             </div>
           ))}
         </div>
@@ -312,30 +365,21 @@ function Diferenciais() {
 }
 
 function Clientes() {
-  const textos = [
-    "Tudo lindo, organizado e de ótima qualidade! A decoração fez toda a diferença na nossa festa.",
-    "Atendimento impecável, peças lindas e muito práticas. Foi tudo perfeito!",
-    "Amei a experiência! A decoração é ainda mais linda pessoalmente.",
-  ];
-
   return (
-    <section id="clientes" className="py-16" style={{ background: "#fff4ec" }}>
-      <div className="mx-auto grid max-w-7xl gap-8 px-5 lg:grid-cols-[.7fr_2.3fr]">
-        <div>
-          <h2 className="font-serif text-5xl italic leading-none" style={{ color: vinho }}>O que nossos<br />clientes dizem</h2>
-          <div className="my-5 flex items-center gap-3 text-[#cf8587]"><span className="h-px w-16 bg-current" /><Heart className="h-4 w-4 fill-current" /><span className="h-px w-16 bg-current" /></div>
-          <p className="text-sm" style={{ color: vinho }}>Mais que decorações,<br />entregamos sorrisos!</p>
+    <section id="clientes" className="bg-white py-16 sm:py-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#b27b4e]">Clientes LHL</p>
+          <h2 className="mt-3 font-serif text-4xl text-[#651421] sm:text-5xl">Carinho que volta em forma de mensagem</h2>
+          <div className="mt-4 flex justify-center gap-1 text-[#c69a58]" aria-label="5 estrelas">
+            {Array.from({ length: 5 }).map((_, i) => <Star key={i} className="h-4 w-4 fill-current" />)}
+          </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {feedbackImages.slice(0, 3).map((img, i) => (
-            <article key={i} className="rounded-2xl bg-white p-5 shadow-md">
-              <div className="font-serif text-5xl leading-none text-[#d99496]">“</div>
-              <p className="min-h-16 text-sm leading-relaxed text-[#503a38]">{textos[i]}</p>
-              <div className="mt-4 flex items-center gap-3">
-                <img src={img} alt="Feedback de cliente" className="h-10 w-10 rounded-full object-cover" />
-                <div><div className="text-xs font-bold" style={{ color: vinho }}>Cliente LHL</div><div className="text-sm text-[#d29b45]">★★★★★</div></div>
-              </div>
-            </article>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {feedbackImages.slice(0, 3).map((image, index) => (
+            <div key={image} className="overflow-hidden rounded-2xl border border-[#eadbd4] bg-[#fffaf6] p-2">
+              <img src={image} alt={`Feedback de cliente LHL ${index + 1}`} loading="lazy" decoding="async" className="h-auto w-full rounded-xl" />
+            </div>
           ))}
         </div>
       </div>
@@ -345,21 +389,18 @@ function Clientes() {
 
 function FinalCTA() {
   return (
-    <section className="relative overflow-hidden py-14 text-white" style={{ background: `linear-gradient(100deg, ${vinhoEscuro}, ${vinho})` }}>
-      <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 lg:grid-cols-[1.7fr_.7fr]">
-        <div className="text-center lg:text-left">
-          <h2 className="font-serif text-4xl sm:text-5xl">Vamos tornar a sua festa <span className="italic text-[#efb6b5]">inesquecível?</span></h2>
-          <p className="mt-3 text-sm text-white/70">Fale agora com nossa equipe e receba um orçamento personalizado.</p>
-          <Link to="/orcamento">
-            <Button size="lg" className="mt-6 rounded-full border-0 px-8 font-semibold" style={{ background: rosa }}>
-              <MessageCircle className="mr-2 h-5 w-5" /> Quero um orçamento agora <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-        <div className="space-y-4 border-l border-white/20 pl-8 text-sm text-white/80">
-          <div className="flex gap-3"><CalendarDays className="text-[#efb6b5]" />Atendemos em toda a região do ABC</div>
-          <div className="flex gap-3"><ShieldCheck className="text-[#efb6b5]" />Decorações de qualidade e muito bem cuidadas</div>
-          <div className="flex gap-3"><Heart className="text-[#efb6b5]" />Seu momento, nossa prioridade!</div>
+    <section className="bg-[#f6dbd7] py-14 sm:py-16">
+      <div className="mx-auto max-w-4xl px-4 text-center sm:px-6">
+        <Heart className="mx-auto h-7 w-7 fill-[#651421] text-[#651421]" />
+        <h2 className="mt-4 font-serif text-4xl text-[#651421] sm:text-5xl">Vamos transformar sua ideia em uma festa especial?</h2>
+        <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-[#73545a] sm:text-base">Comece pelo catálogo ou envie seu pedido de orçamento. Você não precisa decidir todos os detalhes antes de falar com a LHL.</p>
+        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <Button asChild size="lg" className="h-12 rounded-full bg-[#651421] px-7 text-white hover:bg-[#52101b]">
+            <Link to="/orcamento">Solicitar orçamento <ArrowRight className="ml-2 h-4 w-4" /></Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-[#c9aaa6] bg-white/55 px-7 text-[#651421] hover:bg-white">
+            <a href={WHATSAPP_URL} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 h-4 w-4" /> Falar no WhatsApp</a>
+          </Button>
         </div>
       </div>
     </section>
@@ -368,31 +409,34 @@ function FinalCTA() {
 
 function Footer() {
   return (
-    <footer className="border-t border-[#d8b06c]/20 py-9 text-white" style={{ background: "#390b12" }}>
-      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-5 md:flex-row">
+    <footer className="bg-[#3d0912] py-10 text-white/70">
+      <div className="mx-auto flex max-w-7xl flex-col gap-7 px-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
         <div className="flex items-center gap-3">
-          <img src={logoImages[0]} className="h-12 w-12 rounded-full" alt="LHL Festas" />
-          <div><div className="font-serif text-xl text-[#f0cf91]">LHL Festas</div><div className="text-xs text-white/50">Transformamos momentos em memórias especiais.</div></div>
+          <img src={logoImages[0]} alt="LHL Festas" loading="lazy" width={48} height={48} className="h-12 w-12 rounded-full" />
+          <div><p className="font-serif text-xl text-[#f2d091]">LHL Festas</p><p className="text-xs">Festa na Mesa · Peg &amp; Monte · Decorações com montagem</p></div>
         </div>
-        <div className="flex items-center gap-5">
-          <Link to="/catalogo" className="text-sm text-white/70 hover:text-white">Catálogo</Link>
-          <a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-white/70 hover:text-white"><Instagram className="h-4 w-4" />@lhl_festas</a>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-3 text-sm">
+          <a href="https://www.instagram.com/lhl_festas" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:text-white"><Instagram className="h-4 w-4" /> @lhl_festas</a>
+          <Link to="/privacidade" className="hover:text-white">Privacidade</Link>
+          <Link to="/catalogo" className="hover:text-white">Catálogo</Link>
+          <Link to="/orcamento" className="hover:text-white">Orçamento</Link>
         </div>
       </div>
+      <div className="mx-auto mt-7 max-w-7xl border-t border-white/10 px-4 pt-5 text-xs text-white/40 sm:px-6 lg:px-8">© 2026 LHL Festas. Todos os direitos reservados.</div>
     </footer>
   );
 }
 
 function HomePage() {
   return (
-    <div className="min-h-screen" style={{ background: marfim }}>
+    <div className="min-h-screen bg-[#fff8f0]">
       <Header />
       <main>
         <Hero />
         <Modalidades />
         <ComoFunciona />
         <Inspiracoes />
-        <Diferenciais />
+        <Confianca />
         <Clientes />
         <FinalCTA />
       </main>
