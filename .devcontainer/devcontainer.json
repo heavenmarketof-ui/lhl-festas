@@ -1,0 +1,14 @@
+{
+  "name": "LHL Festas",
+  "customizations": {
+    "codespaces": {
+      "repositories": {
+        "heavenmarketof-ui/lhl-festas-abf33ac5": {
+          "permissions": {
+            "contents": "read"
+          }
+        }
+      }
+    }
+  }
+}

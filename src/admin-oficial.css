@@ -1,0 +1,134 @@
+/* Admin oficial LHL — camada visual global, isolada em #admin-app */
+#admin-app {
+  --adm-vinho: #651421;
+  --adm-vinho-escuro: #470b15;
+  --adm-rosa: #d87982;
+  --adm-rosa-claro: #f7e2df;
+  --adm-marfim: #fbf7f3;
+  --adm-dourado: #c89b58;
+  --adm-borda: #eadfd8;
+  --adm-texto: #43292e;
+  background: var(--adm-marfim);
+}
+
+#admin-app main {
+  color: var(--adm-texto);
+}
+
+#admin-app main > main,
+#admin-app main > div > main,
+#admin-app main > section,
+#admin-app main > div {
+  max-width: 1500px !important;
+}
+
+#admin-app h1,
+#admin-app h2,
+#admin-app h3 {
+  letter-spacing: -.015em;
+}
+
+#admin-app h1 {
+  color: var(--adm-vinho) !important;
+}
+
+#admin-app input,
+#admin-app select,
+#admin-app textarea {
+  border-color: #e4d6d0 !important;
+  background: rgba(255,255,255,.96) !important;
+  color: #40272c !important;
+}
+
+#admin-app input:focus,
+#admin-app select:focus,
+#admin-app textarea:focus {
+  border-color: rgba(101,20,33,.45) !important;
+  box-shadow: 0 0 0 3px rgba(216,121,130,.12) !important;
+}
+
+#admin-app section[class*="rounded"],
+#admin-app div[class*="rounded-2xl"][class*="border"],
+#admin-app div[class*="rounded-3xl"][class*="border"] {
+  border-color: var(--adm-borda) !important;
+  box-shadow: 0 10px 30px rgba(71,11,21,.045);
+}
+
+#admin-app button[class*="rounded-full"],
+#admin-app a[class*="rounded-full"] {
+  transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+#admin-app button[class*="rounded-full"]:hover,
+#admin-app a[class*="rounded-full"]:hover {
+  transform: translateY(-1px);
+}
+
+#admin-app .bg-primary {
+  background-color: var(--adm-vinho) !important;
+}
+
+#admin-app .text-primary {
+  color: var(--adm-vinho) !important;
+}
+
+#admin-app .text-gold {
+  color: var(--adm-dourado) !important;
+}
+
+/* Central de Produção e telas operacionais antigas passam a ocupar melhor o espaço */
+#admin-app main .max-w-6xl {
+  max-width: 1500px !important;
+}
+
+#admin-app main .max-w-5xl,
+#admin-app main .max-w-4xl {
+  max-width: 1280px !important;
+}
+
+#admin-app main > main > header,
+#admin-app main > div > header {
+  padding: .25rem 0 .5rem;
+}
+
+#admin-app main > main > header h1,
+#admin-app main > div > header h1 {
+  font-size: clamp(2rem, 2.7vw, 3.25rem) !important;
+  line-height: 1.02 !important;
+}
+
+#admin-app table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#admin-app table thead th {
+  color: #7e6468;
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  background: #fbf6f2;
+}
+
+#admin-app table tbody tr:hover {
+  background: rgba(247,226,223,.38);
+}
+
+#admin-app [role="dialog"] {
+  border-color: #eadbd5 !important;
+  border-radius: 24px !important;
+}
+
+@media (min-width: 1280px) {
+  #admin-app main .grid.md\:grid-cols-2 {
+    gap: 1.4rem !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  #admin-app main .max-w-6xl,
+  #admin-app main .max-w-5xl,
+  #admin-app main .max-w-4xl {
+    max-width: 100% !important;
+  }
+}

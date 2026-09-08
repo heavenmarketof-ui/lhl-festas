@@ -1,0 +1,2 @@
+ALTER TABLE public.solicitacoes_financeiras DROP CONSTRAINT solicitacoes_status_check;
+ALTER TABLE public.solicitacoes_financeiras ADD CONSTRAINT solicitacoes_status_check CHECK (status = ANY (ARRAY['pendente'::text, 'autorizada'::text, 'comprada'::text, 'lancada'::text, 'recusada'::text, 'cancelada'::text]));

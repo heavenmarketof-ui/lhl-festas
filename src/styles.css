@@ -1,0 +1,543 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-script: "Dancing Script", cursive;
+  --font-sans: "Karla", system-ui, sans-serif;
+}
+
+:root {
+  --radius: 1rem;
+  --background: oklch(0.975 0.012 75);
+  --foreground: oklch(0.32 0.03 20);
+  --card: oklch(0.99 0.008 75);
+  --card-foreground: oklch(0.32 0.03 20);
+  --popover: oklch(0.99 0.008 75);
+  --popover-foreground: oklch(0.32 0.03 20);
+  --primary: oklch(0.7 0.07 15);
+  --primary-foreground: oklch(0.99 0.008 75);
+  --secondary: oklch(0.94 0.02 30);
+  --secondary-foreground: oklch(0.4 0.05 20);
+  --muted: oklch(0.95 0.015 60);
+  --muted-foreground: oklch(0.5 0.03 30);
+  --accent: oklch(0.92 0.025 30);
+  --accent-foreground: oklch(0.4 0.05 20);
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(0.99 0 0);
+  --border: oklch(0.88 0.02 40);
+  --input: oklch(0.9 0.018 40);
+  --ring: oklch(0.75 0.08 60);
+  --gold: oklch(0.75 0.1 75);
+  --gold-foreground: oklch(0.3 0.04 30);
+  --gradient-elegant: linear-gradient(135deg, oklch(0.7 0.07 15), oklch(0.75 0.1 75));
+  --shadow-soft: 0 10px 40px -10px oklch(0.7 0.07 15 / 0.25);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4 { font-family: var(--font-serif); }
+}
+
+/* Home LHL — layout realmente fluido. Escopado pela presença do #inicio para não afetar o Admin. */
+body:has(#inicio) {
+  overflow-x: hidden;
+}
+
+body:has(#inicio) .max-w-7xl {
+  width: 100%;
+  max-width: none;
+}
+
+body:has(#inicio) header > div,
+body:has(#inicio) section > div,
+body:has(#inicio) footer > div {
+  padding-left: clamp(1rem, 3vw, 4.5rem);
+  padding-right: clamp(1rem, 3vw, 4.5rem);
+}
+
+body:has(#inicio) #inicio > div {
+  min-height: clamp(560px, 74vh, 900px);
+}
+
+/* Tipografia proporcional e responsiva da Home */
+body:has(#inicio) header nav {
+  font-size: clamp(.88rem, .82vw, 1.08rem);
+}
+
+body:has(#inicio) header button,
+body:has(#inicio) header a button {
+  font-size: clamp(.9rem, .8vw, 1.05rem);
+}
+
+body:has(#inicio) #inicio h1 {
+  font-size: clamp(3rem, 5.2vw, 6.5rem);
+  line-height: .92;
+  max-width: 13ch;
+}
+
+body:has(#inicio) #inicio p {
+  font-size: clamp(1.05rem, 1.25vw, 1.45rem);
+  line-height: 1.55;
+  max-width: 34rem;
+}
+
+body:has(#inicio) #inicio button {
+  min-height: 3.4rem;
+  padding-inline: clamp(1.3rem, 2vw, 2.2rem);
+  font-size: clamp(.98rem, 1vw, 1.15rem);
+}
+
+body:has(#inicio) #inicio .grid-cols-4 {
+  max-width: 34rem;
+  font-size: clamp(.82rem, .85vw, 1rem);
+}
+
+body:has(#inicio) #modalidades h2 {
+  font-size: clamp(2rem, 2.4vw, 3.4rem);
+  line-height: .95;
+}
+
+body:has(#inicio) #modalidades p {
+  font-size: clamp(.98rem, 1.05vw, 1.18rem);
+  line-height: 1.5;
+}
+
+body:has(#inicio) #modalidades button {
+  min-height: 2.8rem;
+  padding-inline: 1.3rem;
+  font-size: clamp(.9rem, .9vw, 1.02rem);
+}
+
+body:has(#inicio) #como-funciona h2,
+body:has(#inicio) #decoracoes h2,
+body:has(#inicio) #clientes h2 {
+  font-size: clamp(2.8rem, 4vw, 5.4rem);
+  line-height: .92;
+}
+
+body:has(#inicio) #como-funciona > div > div:first-child > p,
+body:has(#inicio) #decoracoes > div > div:first-child > p,
+body:has(#inicio) #clientes > div > div:first-child > p {
+  font-size: clamp(1rem, 1.05vw, 1.2rem);
+  line-height: 1.55;
+}
+
+body:has(#inicio) #como-funciona h3 {
+  font-size: clamp(1.3rem, 1.45vw, 1.75rem);
+}
+
+body:has(#inicio) #como-funciona .grid > div > p {
+  font-size: clamp(.92rem, .9vw, 1.08rem);
+  line-height: 1.5;
+}
+
+body:has(#inicio) #decoracoes a {
+  font-size: clamp(.95rem, .9vw, 1.08rem);
+}
+
+body:has(#inicio) #clientes article p {
+  font-size: clamp(.95rem, .95vw, 1.1rem);
+  line-height: 1.55;
+}
+
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) h2 {
+  font-size: clamp(2.3rem, 3.2vw, 4.5rem);
+  line-height: 1;
+}
+
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) p,
+body:has(#inicio) section:not(#inicio):not(#modalidades):not(#como-funciona):not(#decoracoes):not(#clientes) div {
+  font-size: clamp(.96rem, .92vw, 1.1rem);
+}
+
+body:has(#inicio) footer {
+  font-size: clamp(.9rem, .85vw, 1.02rem);
+}
+
+body:has(#inicio) #modalidades > div {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body:has(#inicio) #decoracoes img {
+  min-height: 0;
+}
+
+@media (max-width: 1100px) {
+  body:has(#inicio) #modalidades > div {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(#inicio) #modalidades article {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 1023px) {
+  body:has(#inicio) #inicio > div {
+    min-height: auto;
+  }
+
+  body:has(#inicio) #inicio > div > div:first-child {
+    min-height: auto;
+  }
+
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: clamp(430px, 64vw, 660px);
+  }
+
+  body:has(#inicio) #como-funciona > div,
+  body:has(#inicio) #decoracoes > div,
+  body:has(#inicio) #clientes > div {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#inicio) header > div,
+  body:has(#inicio) section > div,
+  body:has(#inicio) footer > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  body:has(#inicio) #inicio h1 {
+    font-size: clamp(2.7rem, 12vw, 4.3rem);
+    max-width: 11ch;
+  }
+
+  body:has(#inicio) #inicio p {
+    font-size: clamp(1rem, 4vw, 1.18rem);
+  }
+
+  body:has(#inicio) #inicio button {
+    min-height: 3.2rem;
+    font-size: .98rem;
+  }
+
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: 430px;
+  }
+
+  body:has(#inicio) #modalidades article {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    text-align: center;
+  }
+
+  body:has(#inicio) #modalidades article img {
+    width: min(78vw, 310px);
+    margin-inline: auto;
+  }
+
+  body:has(#inicio) #modalidades article > div {
+    padding-left: 0;
+  }
+
+  body:has(#inicio) #modalidades h2 {
+    font-size: clamp(2.2rem, 9vw, 3.2rem);
+  }
+
+  body:has(#inicio) #modalidades p {
+    font-size: 1rem;
+  }
+
+  body:has(#inicio) #como-funciona h2,
+  body:has(#inicio) #decoracoes h2,
+  body:has(#inicio) #clientes h2 {
+    font-size: clamp(2.6rem, 10vw, 4rem);
+  }
+
+  body:has(#inicio) #decoracoes .grid-cols-2 {
+    gap: .75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body:has(#inicio) #inicio > div > div:last-child {
+    min-height: 360px;
+  }
+
+  body:has(#inicio) #inicio .grid-cols-4 {
+    gap: .5rem;
+    font-size: .76rem;
+  }
+}
+
+/* Orçamento LHL — nova identidade pública, preservando toda a lógica existente */
+body:has(#orcamento) {
+  overflow-x: hidden;
+  --background: #fff8f0;
+  --foreground: #4b1a21;
+  --card: #fffdf9;
+  --card-foreground: #4b1a21;
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --secondary: #f6dbd7;
+  --secondary-foreground: #651421;
+  --muted: #f8eee8;
+  --muted-foreground: #765d58;
+  --accent: #ead1ca;
+  --accent-foreground: #651421;
+  --border: #e8d5cc;
+  --input: #decac1;
+  --ring: #c89b58;
+  background: #fff8f0;
+}
+
+body:has(#orcamento) header {
+  background: linear-gradient(90deg, #470b15, #651421) !important;
+  border-color: rgba(200,155,88,.25) !important;
+  color: #fff;
+}
+
+body:has(#orcamento) header > div,
+body:has(#orcamento) section > div,
+body:has(#orcamento) footer > div {
+  width: 100%;
+  max-width: none !important;
+  padding-left: clamp(1rem, 3vw, 4.5rem) !important;
+  padding-right: clamp(1rem, 3vw, 4.5rem) !important;
+}
+
+body:has(#orcamento) header span {
+  color: #f3d8d3;
+}
+
+body:has(#orcamento) header button {
+  background: #d87982 !important;
+  color: #4a0d18 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  min-height: 2.7rem;
+  padding-inline: 1.25rem;
+  font-size: clamp(.9rem, .9vw, 1.02rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type {
+  background: linear-gradient(115deg, #4a0d18 0%, #651421 48%, #7b2834 100%);
+  color: #fff;
+  padding-bottom: clamp(2.5rem, 5vw, 5rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child {
+  min-height: clamp(620px, 78vh, 900px);
+  gap: clamp(2rem, 4vw, 6rem);
+  padding-top: clamp(3rem, 6vw, 6rem) !important;
+  padding-bottom: clamp(3rem, 6vw, 6rem) !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 {
+  color: #fff !important;
+  font-size: clamp(3rem, 5vw, 6.2rem) !important;
+  line-height: .94 !important;
+  max-width: 11ch;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 span {
+  color: #f0b7b6 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type p,
+body:has(#orcamento) > div > section:first-of-type li {
+  color: rgba(255,255,255,.82) !important;
+  font-size: clamp(1rem, 1.15vw, 1.28rem);
+}
+
+body:has(#orcamento) > div > section:first-of-type > div:first-child > div:first-child > div:first-child {
+  border-color: rgba(255,255,255,.2) !important;
+  background: rgba(255,255,255,.08) !important;
+  color: #f3d8d3 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type button {
+  background: #d87982 !important;
+  color: #4a0d18 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type img {
+  border-radius: 2rem;
+}
+
+body:has(#orcamento) #orcamento {
+  max-width: min(920px, calc(100vw - 2rem)) !important;
+  margin-top: clamp(-4rem, -5vw, -2rem) !important;
+  margin-bottom: 2rem !important;
+  border: 1px solid rgba(200,155,88,.28) !important;
+  box-shadow: 0 24px 70px -30px rgba(74,13,24,.45) !important;
+}
+
+body:has(#orcamento) #orcamento h2 {
+  color: #651421 !important;
+  font-size: clamp(2.2rem, 3.3vw, 4rem) !important;
+}
+
+body:has(#orcamento) #orcamento label,
+body:has(#orcamento) #orcamento p,
+body:has(#orcamento) #orcamento li {
+  font-size: clamp(.95rem, .95vw, 1.08rem);
+}
+
+body:has(#orcamento) #orcamento input,
+body:has(#orcamento) #orcamento select,
+body:has(#orcamento) #orcamento textarea {
+  min-height: 3.2rem;
+  border-radius: .85rem;
+  background: #fffdf9;
+}
+
+body:has(#orcamento) #orcamento button[type="submit"] {
+  min-height: 3.6rem;
+  border-radius: 999px;
+  background: #651421 !important;
+  color: #fff8f0 !important;
+  font-size: clamp(1rem, 1vw, 1.12rem);
+}
+
+body:has(#orcamento) section h2 {
+  color: #651421;
+  font-size: clamp(2.5rem, 3.5vw, 4.5rem) !important;
+  line-height: .98;
+}
+
+body:has(#orcamento) section p,
+body:has(#orcamento) section li,
+body:has(#orcamento) section button,
+body:has(#orcamento) section a {
+  font-size: clamp(.95rem, .9vw, 1.08rem);
+}
+
+body:has(#orcamento) section.bg-muted\/40 {
+  background: #f8eee8 !important;
+}
+
+body:has(#orcamento) section .rounded-2xl,
+body:has(#orcamento) section .rounded-xl {
+  border-color: #e5cfc7 !important;
+}
+
+body:has(#orcamento) footer {
+  background: #390b12 !important;
+  color: rgba(255,255,255,.72) !important;
+  border-color: rgba(200,155,88,.2) !important;
+}
+
+body:has(#orcamento) footer a {
+  color: #efb6b5;
+}
+
+@media (max-width: 1023px) {
+  body:has(#orcamento) > div > section:first-of-type > div:first-child {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type h1 {
+    max-width: 13ch;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#orcamento) header > div,
+  body:has(#orcamento) section > div,
+  body:has(#orcamento) footer > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  body:has(#orcamento) > div > section:first-of-type h1 {
+    font-size: clamp(2.7rem, 12vw, 4.2rem) !important;
+  }
+
+  body:has(#orcamento) #orcamento {
+    padding: 1.25rem !important;
+  }
+}
+
+@media print {
+  @page { size: A4; margin: 18mm 16mm; }
+  html, body { background: white !important; }
+  .no-print { display: none !important; }
+  .a4-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    background: white !important;
+  }
+  .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+}
+
+/* ── HEAVEN FESTAS (apresentação pública isolada em /heaven) ────────────── */
+.heaven-theme {
+  --background: oklch(0.99 0.004 250);
+  --foreground: oklch(0.24 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0.02 260);
+  --primary: oklch(0.55 0.13 255);
+  --primary-foreground: oklch(0.99 0.004 250);
+  --secondary: oklch(0.96 0.01 250);
+  --secondary-foreground: oklch(0.3 0.02 260);
+  --muted: oklch(0.965 0.008 250);
+  --muted-foreground: oklch(0.52 0.02 260);
+  --accent: oklch(0.94 0.03 195);
+  --accent-foreground: oklch(0.28 0.03 245);
+  --border: oklch(0.91 0.008 250);
+  --input: oklch(0.9 0.01 250);
+  --ring: oklch(0.55 0.13 255);
+  --heaven-shadow: 0 1px 2px oklch(0.24 0.02 260 / 0.04), 0 8px 24px -12px oklch(0.24 0.02 260 / 0.12);
+  --heaven-shadow-lg: 0 24px 60px -24px oklch(0.24 0.02 260 / 0.22);
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+.heaven-theme h1,
+.heaven-theme h2,
+.heaven-theme h3,
+.heaven-theme h4 {
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
+}
+.heaven-theme { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  .heaven-theme { scroll-behavior: auto; }
+}

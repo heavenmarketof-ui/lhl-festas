@@ -1,0 +1,285 @@
+/* Identidade visual pública LHL — escopada por elementos exclusivos das rotas.
+   Não altera o Admin. */
+
+:root {
+  --lhl-vinho: #651421;
+  --lhl-vinho-escuro: #470b15;
+  --lhl-rosa: #d87982;
+  --lhl-rosa-claro: #f6dbd7;
+  --lhl-marfim: #fff8f0;
+  --lhl-dourado: #c89b58;
+  --lhl-texto: #4b1a21;
+}
+
+/* ORÇAMENTO */
+body:has(#orcamento) {
+  background: var(--lhl-marfim);
+  color: var(--lhl-texto);
+}
+
+body:has(#orcamento) header {
+  background: linear-gradient(90deg, var(--lhl-vinho-escuro), var(--lhl-vinho)) !important;
+  color: white !important;
+}
+
+body:has(#orcamento) header > div,
+body:has(#orcamento) section > div,
+body:has(#orcamento) footer > div {
+  width: 100%;
+  max-width: none !important;
+  padding-inline: clamp(1rem, 3vw, 4.5rem) !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type {
+  background: linear-gradient(118deg, #470b15 0%, #651421 52%, #7b2834 100%) !important;
+  color: white;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 {
+  color: white !important;
+  font-size: clamp(3rem, 5vw, 6.3rem) !important;
+  line-height: .93 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type h1 span {
+  color: #f1b8b7 !important;
+}
+
+body:has(#orcamento) > div > section:first-of-type p,
+body:has(#orcamento) > div > section:first-of-type li {
+  color: rgba(255,255,255,.84) !important;
+}
+
+body:has(#orcamento) #orcamento {
+  max-width: min(980px, calc(100vw - 2rem)) !important;
+  border-color: rgba(200,155,88,.32) !important;
+  box-shadow: 0 26px 80px -34px rgba(71,11,21,.48) !important;
+}
+
+body:has(#orcamento) #orcamento h2,
+body:has(#orcamento) section h2 {
+  color: var(--lhl-vinho) !important;
+}
+
+body:has(#orcamento) #orcamento input,
+body:has(#orcamento) #orcamento select,
+body:has(#orcamento) #orcamento textarea {
+  min-height: 3.25rem;
+  border-radius: .9rem;
+}
+
+body:has(#orcamento) footer {
+  background: #390b12 !important;
+  color: rgba(255,255,255,.72) !important;
+}
+
+/* RESERVA — identificada pelo logo exclusivo da tela */
+body:has(img[alt="LHL Festas Peg & Monte"]) {
+  --background: #fff8f0;
+  --foreground: #4b1a21;
+  --card: #fffdf9;
+  --card-foreground: #4b1a21;
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --muted: #f8eee8;
+  --muted-foreground: #765d58;
+  --accent: #f2ddd7;
+  --border: #e5cfc7;
+  --input: #decac1;
+  --ring: #c89b58;
+  background: var(--lhl-marfim);
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) > div > header {
+  margin-bottom: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(2rem, 5vw, 4.5rem) clamp(1rem, 4vw, 4rem) !important;
+  background: linear-gradient(120deg, var(--lhl-vinho-escuro), var(--lhl-vinho));
+  color: white;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) > div > header img {
+  width: clamp(7rem, 10vw, 10rem) !important;
+  border-radius: 999px;
+  box-shadow: 0 14px 35px rgba(0,0,0,.18);
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) > div > header h1 {
+  color: #f4d49b !important;
+  font-size: clamp(2.6rem, 4vw, 4.8rem) !important;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) > div > header p {
+  color: rgba(255,255,255,.82) !important;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) main {
+  padding-inline: clamp(1rem, 3vw, 4rem) !important;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) main form {
+  width: 100%;
+  max-width: 1080px !important;
+  padding: clamp(1.25rem, 3vw, 3rem) !important;
+  border-color: rgba(200,155,88,.28) !important;
+  box-shadow: 0 24px 70px -34px rgba(71,11,21,.35) !important;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) main form h2 {
+  color: var(--lhl-vinho) !important;
+  font-size: clamp(1.7rem, 2vw, 2.35rem) !important;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) main form input,
+body:has(img[alt="LHL Festas Peg & Monte"]) main form select {
+  min-height: 3rem;
+  border-radius: .8rem;
+}
+
+body:has(img[alt="LHL Festas Peg & Monte"]) main form button[type="submit"] {
+  min-height: 3.6rem;
+  background: linear-gradient(90deg, var(--lhl-vinho), #7b2834) !important;
+  color: white !important;
+  border: 1px solid rgba(200,155,88,.35) !important;
+}
+
+/* CONFIRMAÇÃO DO ORÇAMENTO */
+body:has(a[href="/orcamento"]):not(:has(#inicio)):not(:has(#orcamento)):not(:has(img[alt="LHL Festas Peg & Monte"])) {
+  --background: #fff8f0;
+  --foreground: #4b1a21;
+  --card: #fffdf9;
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --muted: #f8eee8;
+  --muted-foreground: #765d58;
+  --border: #e5cfc7;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 15%, rgba(216,121,130,.18), transparent 28%),
+    linear-gradient(145deg, #fff8f0, #f8e7e2);
+}
+
+body:has(a[href="/orcamento"]):not(:has(#inicio)):not(:has(#orcamento)):not(:has(img[alt="LHL Festas Peg & Monte"])) > div {
+  padding-inline: clamp(1rem, 4vw, 3rem) !important;
+}
+
+body:has(a[href="/orcamento"]):not(:has(#inicio)):not(:has(#orcamento)):not(:has(img[alt="LHL Festas Peg & Monte"])) > div > div {
+  max-width: 760px !important;
+  border-color: rgba(200,155,88,.32) !important;
+  box-shadow: 0 28px 80px -36px rgba(71,11,21,.42) !important;
+}
+
+body:has(a[href="/orcamento"]):not(:has(#inicio)):not(:has(#orcamento)):not(:has(img[alt="LHL Festas Peg & Monte"])) h1 {
+  color: var(--lhl-vinho) !important;
+  font-size: clamp(2.4rem, 4vw, 4rem) !important;
+}
+
+/* OBRIGADO / RESERVA RECEBIDA */
+body:has(a[href^="https://wa.me/5511925543380"]):has(a[href="/"]):not(:has(#inicio)):not(:has(#orcamento)) {
+  --background: #fff8f0;
+  --foreground: #4b1a21;
+  --card: #fffdf9;
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --muted: #f8eee8;
+  --muted-foreground: #765d58;
+  --border: #e5cfc7;
+  background:
+    radial-gradient(circle at 85% 8%, rgba(200,155,88,.18), transparent 24%),
+    radial-gradient(circle at 12% 18%, rgba(216,121,130,.2), transparent 30%),
+    #fff8f0;
+}
+
+body:has(a[href^="https://wa.me/5511925543380"]):has(a[href="/"]):not(:has(#inicio)):not(:has(#orcamento)) > div > div {
+  max-width: 760px !important;
+  border-color: rgba(200,155,88,.32) !important;
+  box-shadow: 0 28px 80px -36px rgba(71,11,21,.42) !important;
+}
+
+body:has(a[href^="https://wa.me/5511925543380"]):has(a[href="/"]):not(:has(#inicio)):not(:has(#orcamento)) h1 {
+  color: var(--lhl-vinho) !important;
+  font-size: clamp(2.4rem, 4vw, 4rem) !important;
+}
+
+body:has(a[href^="https://wa.me/5511925543380"]):has(a[href="/"]):not(:has(#inicio)):not(:has(#orcamento)) button {
+  border-radius: 999px !important;
+}
+
+/* CONSULTOR */
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) {
+  --primary: #651421;
+  --primary-foreground: #fff8f0;
+  --foreground: #4b1a21;
+  --muted-foreground: #765d58;
+  --border: #e5cfc7;
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] {
+  background: rgba(57,11,18,.58) !important;
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] > div {
+  width: min(100%, 560px) !important;
+  background: linear-gradient(180deg, #fff8f0, #fffdf9 42%, #f9eee9) !important;
+  border-left: 1px solid rgba(200,155,88,.25);
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] > div > div:first-child {
+  background: linear-gradient(90deg, var(--lhl-vinho-escuro), var(--lhl-vinho)) !important;
+  color: white !important;
+  border-color: rgba(200,155,88,.2) !important;
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] > div > div:first-child div {
+  color: white !important;
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] button {
+  min-height: 2.75rem;
+}
+
+body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] .bg-primary {
+  background-color: var(--lhl-vinho) !important;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 1023px) {
+  body:has(#orcamento) > div > section:first-of-type > div:first-child {
+    grid-template-columns: 1fr !important;
+    min-height: auto !important;
+  }
+
+  body:has(img[alt="LHL Festas Peg & Monte"]) main form {
+    max-width: 860px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  body:has(#orcamento) header > div,
+  body:has(#orcamento) section > div,
+  body:has(#orcamento) footer > div {
+    padding-inline: 1rem !important;
+  }
+
+  body:has(#orcamento) #orcamento {
+    max-width: calc(100vw - 1rem) !important;
+    padding: 1.15rem !important;
+  }
+
+  body:has(img[alt="LHL Festas Peg & Monte"]) > div > header {
+    padding-block: 2rem !important;
+  }
+
+  body:has(img[alt="LHL Festas Peg & Monte"]) main {
+    padding-inline: .75rem !important;
+  }
+
+  body:has(img[alt="LHL Festas Peg & Monte"]) main form {
+    padding: 1.15rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  body:has([role="dialog"][aria-label="Consultor de Festas LHL"]) [role="dialog"] > div {
+    max-width: none !important;
+    border-radius: 0 !important;
+  }
+}
