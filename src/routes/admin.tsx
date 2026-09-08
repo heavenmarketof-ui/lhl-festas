@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { signOutAdmin } from "@/lib/auth-session";
 
 export const Route = createFileRoute("/admin")({
+  ssr: false,
   component: AdminLayout,
   head: () => ({
     meta: [{ title: "Painel Administrativo — LHL Festas" }],
