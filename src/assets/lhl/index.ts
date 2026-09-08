@@ -55,6 +55,7 @@ import pm04 from "./peg-e-monte/peg-e-monte-04.jpg";
 import pm05 from "./peg-e-monte/peg-e-monte-05.jpg";
 import pm06 from "./peg-e-monte/peg-e-monte-06.jpg";
 
+import personalizado01 from "./personalizado/personalizado-lenda.jpg";
 import retirada01 from "./retirada/retirada-01.jpg";
 
 export const heroImages = [hero01, hero02, hero03, hero04];
@@ -63,5 +64,6 @@ export const pegEMonteImages = [pm01, pm02, pm03, pm04, pm05, pm06];
 export const inspireSeImages = [ins01, ins02, ins03, ins04];
 export const feedbackImages = [fb01, fb02, fb03, fb04, fb05, fb06];
 export const extrasImages = [extras01, extras02, extras03];
+export const personalizadoImages = [personalizado01];
 export const retiradaImages = [retirada01];
 export const logoImages = [logo01, logo02, logo03, logo04];
