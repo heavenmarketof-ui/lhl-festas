@@ -47,8 +47,12 @@ export function applyResponseSecurityHeaders(request: Request, response: Respons
     headers.set("X-Robots-Tag", "noindex, nofollow");
   }
 
-  if (shouldDisableCache(url.pathname)) {
-    headers.set("Cache-Control", "private, no-store, max-age=0");
+  const contentType = headers.get("content-type") || "";
+  const isHtml = contentType.includes("text/html");
+  const isDynamicPublicPage = url.pathname === "/orcamento" || url.pathname.startsWith("/orcamento/");
+
+  if (shouldDisableCache(url.pathname) || isDynamicPublicPage || isHtml) {
+    headers.set("Cache-Control", "no-store, max-age=0");
     headers.set("Pragma", "no-cache");
   }
 
