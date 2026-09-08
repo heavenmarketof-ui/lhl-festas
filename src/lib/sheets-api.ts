@@ -203,3 +203,6 @@ export async function fetchOrderByIdAdmin(id: string): Promise<StoredOrder | und
   const rows = await fetchOrdersFromSheet({ includeDeleted: true });
   return rows.find((row) => row.id === normalized);
 }
+
+/** Compatibilidade interna: o nome antigo permanece, mas a busca agora é autenticada. */
+export const fetchOrderByIdPublic = fetchOrderByIdAdmin;
