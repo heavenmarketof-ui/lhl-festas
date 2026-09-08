@@ -18,7 +18,6 @@ const PUBLIC_LIMITS: Record<string, number> = {
   create: 6,
   leadsCreate: 12,
   leadsMarkWaOpened: 40,
-  orderById: 40,
 };
 
 type RateEntry = { count: number; resetAt: number };
@@ -39,9 +38,8 @@ async function assertAdmin(context: { userId: string; accessToken: string }) {
     throw new Error("Não foi possível validar a permissão administrativa.");
   }
 
-  let response: Response;
   try {
-    response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
+    const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
       method: "POST",
       headers: {
         apikey: publishableKey,
@@ -51,28 +49,24 @@ async function assertAdmin(context: { userId: string; accessToken: string }) {
       },
       body: JSON.stringify({ _user_id: context.userId, _role: "admin" }),
     });
+
+    let data: unknown = false;
+    try {
+      data = await response.json();
+    } catch {
+      data = false;
+    }
+
+    if (!response.ok || data !== true) {
+      adminRoleCache.delete(context.userId);
+      console.warn(`[auth] validação admin recusada pelo Supabase (${response.status})`);
+      throw new Error("Forbidden: acesso restrito a administradores");
+    }
   } catch (error) {
     adminRoleCache.delete(context.userId);
-    const detail = error instanceof Error ? error.message : "falha de rede";
-    throw new Error(`Falha ao consultar permissão administrativa no Supabase: ${detail}`);
-  }
-
-  const raw = await response.text();
-  let data: unknown = false;
-  try {
-    data = raw ? JSON.parse(raw) : false;
-  } catch {
-    data = raw;
-  }
-
-  if (!response.ok || data !== true) {
-    adminRoleCache.delete(context.userId);
-    const safeDetail = String(raw || data || "sem resposta")
-      .replace(/eyJ[A-Za-z0-9._-]+/g, "[token]")
-      .slice(0, 280);
-    throw new Error(
-      `Forbidden: acesso restrito a administradores [Supabase ${response.status}; retorno: ${safeDetail}]`,
-    );
+    if (error instanceof Error && error.message.startsWith("Forbidden:")) throw error;
+    console.error("[auth] falha ao consultar permissão administrativa", error);
+    throw new Error("Não foi possível validar a permissão administrativa.");
   }
 
   adminRoleCache.set(context.userId, now + ADMIN_ROLE_TTL_MS);
@@ -121,10 +115,6 @@ function cleanPublicBody(body: Record<string, unknown>): Record<string, unknown>
   return clean;
 }
 
-function validPublicOrderId(id: string): boolean {
-  return /^[A-Za-z0-9_-]{8,120}$/.test(id);
-}
-
 function withLeadsToken(body: Record<string, unknown>, token: string) {
   const action = String(body.action || "");
   if (action.startsWith("leads")) return { ...body, adminToken: token };
@@ -147,21 +137,6 @@ export const gasPublicPost = createServerFn({ method: "POST" })
     const { callGas, leadsAdminToken } = await import("./sheets-endpoint.server");
     const body = withLeadsToken(cleanBody, leadsAdminToken());
     return { text: await callGas({ method: "POST", body }) };
-  });
-
-export const gasPublicOrderById = createServerFn({ method: "POST" })
-  .validator((input: { id: string }) => ({ id: String(input.id || "").trim().slice(0, 120) }))
-  .handler(async ({ data }) => {
-    if (!validPublicOrderId(data.id)) return { row: null };
-    enforcePublicRateLimit("orderById");
-    const { callGas } = await import("./sheets-endpoint.server");
-    const text = await callGas({ method: "GET" });
-    let rows: any[] = [];
-    try {
-      const json = JSON.parse(text);
-      rows = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
-    } catch { rows = []; }
-    return { row: rows.find((r) => String(r?.id ?? "") === data.id) ?? null };
   });
 
 /* --------------------------- Administrativo --------------------------- */
