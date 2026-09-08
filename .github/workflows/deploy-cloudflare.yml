@@ -1,6 +1,8 @@
-name: Deploy manual Cloudflare
+name: Deploy Cloudflare
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -22,33 +24,27 @@ jobs:
       GAS_SHARED_TOKEN: ${{ secrets.GAS_SHARED_TOKEN }}
       GAS_LEADS_ADMIN_TOKEN: ${{ secrets.GAS_LEADS_ADMIN_TOKEN }}
       CATALOGO_PUBLIC_URL: ${{ secrets.CATALOGO_PUBLIC_URL }}
-
     steps:
       - name: Baixar código de produção
         uses: actions/checkout@v4
         with:
           ref: main
-
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Validar credenciais de publicação
         shell: bash
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
-
       - name: Instalar dependências
         run: npm ci
-
       - name: Revalidar antes do deploy
         run: |
           npm audit --omit=dev --audit-level=high
           npm test
           npm run build
-
       - name: Publicar no Cloudflare
         run: npx wrangler deploy
