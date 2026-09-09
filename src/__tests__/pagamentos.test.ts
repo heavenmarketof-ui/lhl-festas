@@ -64,9 +64,7 @@ describe("getContractPaymentStatus", () => {
   });
 
   it("Cenário D — caução não quita nem confirma venda", () => {
-    const r = getContractPaymentStatus(order("d", "200"), [
-      lanc("d", 100, "Caução Recebida"),
-    ]);
+    const r = getContractPaymentStatus(order("d", "200"), [lanc("d", 100, "Caução Recebida")]);
     expect(r.totalRecebido).toBe(0);
     expect(r.caucaoRecebida).toBe(100);
     expect(r.saldoReceber).toBe(0);
@@ -81,28 +79,37 @@ describe("getContractPaymentStatus", () => {
     expect(r.isPago).toBe(true);
   });
 
-  it("legado — sem lançamentos usa sinal/pagamento final", () => {
-    const parcial = getContractPaymentStatus(
-      order("f", "200", { sinalRecebido: "Sim" }),
-      [],
-    );
+  it("legado — sem lançamentos usa sinal/pagamento final quando não há contradição", () => {
+    const parcial = getContractPaymentStatus(order("f", "200", { sinalRecebido: "Sim" }), []);
     expect(parcial.totalRecebido).toBe(100);
     expect(parcial.saldoReceber).toBe(100);
     expect(parcial.vendaConfirmada).toBe(true);
 
-    const quitado = getContractPaymentStatus(
-      order("g", "200", { pagamentoFinalRecebido: "Sim" }),
-      [],
-    );
+    const quitado = getContractPaymentStatus(order("g", "200", { pagamentoFinalRecebido: "Sim", valorRestante: "0" }), []);
     expect(quitado.saldoReceber).toBe(0);
     expect(quitado.isPago).toBe(true);
   });
 
+  it("não aceita quitação legada quando o contrato ainda declara saldo restante", () => {
+    const r = getContractPaymentStatus(
+      order("boleto-print", "1100", {
+        valorSinal: "220",
+        valorRestante: "880",
+        pagamentoFinalRecebido: "Sim",
+        pagamentoFinalizado: "Sim",
+      }),
+      [],
+    );
+    expect(r.totalRecebido).toBe(0);
+    expect(r.saldoNegociado).toBe(1100);
+    expect(r.saldoReceber).toBe(0);
+    expect(r.vendaConfirmada).toBe(false);
+    expect(r.isPago).toBe(false);
+    expect(r.status).toBe("Pendente");
+  });
+
   it("pré-contrato sem sinal não vira conta a receber", () => {
-    const r = getContractPaymentStatus(order("h", "200"), [
-      lanc("h", 200, "Sinal", "Saída"),
-      lanc("outro", 200),
-    ]);
+    const r = getContractPaymentStatus(order("h", "200"), [lanc("h", 200, "Sinal", "Saída"), lanc("outro", 200)]);
     expect(r.totalRecebido).toBe(0);
     expect(r.vendaConfirmada).toBe(false);
     expect(r.saldoNegociado).toBe(200);
@@ -111,10 +118,7 @@ describe("getContractPaymentStatus", () => {
   });
 
   it("contrato encerrado sai das pendências sem apagar o recebido", () => {
-    const r = getContractPaymentStatus(
-      order("i", "200", { devolucaoConfirmada: "Sim" }),
-      [lanc("i", 100)],
-    );
+    const r = getContractPaymentStatus(order("i", "200", { devolucaoConfirmada: "Sim" }), [lanc("i", 100)]);
     expect(r.totalRecebido).toBe(100);
     expect(r.saldoNegociado).toBe(100);
     expect(r.saldoReceber).toBe(0);
