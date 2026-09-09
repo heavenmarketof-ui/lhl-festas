@@ -125,11 +125,30 @@ async function proxyCatalogImage(request: Request): Promise<Response | null> {
   return new Response("Imagem indisponível", { status: 404, headers: { "cache-control": "public, max-age=300" } });
 }
 
+async function exportLegacyCatalog(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/__catalog-migration-export") return null;
+  try {
+    const upstream = await fetch("https://catalogo-lhlfestas.lovable.app/api/public/catalog.json", {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!upstream.ok) return new Response(JSON.stringify({ error: `upstream ${upstream.status}` }), { status: 502, headers: { "content-type": "application/json" } });
+    const body = await upstream.text();
+    return new Response(body, { status: 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "falha" }), { status: 502, headers: { "content-type": "application/json" } });
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       setRuntimeBindings(cloudflareEnv);
       setRuntimeBindings(env);
+
+      const catalogExport = await exportLegacyCatalog(request);
+      if (catalogExport) return catalogExport;
 
       const catalogImage = await proxyCatalogImage(request);
       if (catalogImage) return catalogImage;
