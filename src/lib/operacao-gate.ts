@@ -1,13 +1,9 @@
 // ============================================================================
-// REGRA SOBERANA DE LIBERAÇÃO OPERACIONAL — LHL FESTAS
+// GATES FINANCEIROS DA OPERAÇÃO — LHL FESTAS
 // ----------------------------------------------------------------------------
-// Pré-contrato NÃO libera operação.
-// Somente contrato com recebimento confirmado pode liberar compras, produção,
-// separação, preparação operacional e integrações de agenda comercial.
-//
-// Fonte da verdade: recebimentos reais vinculados ao contrato no Fluxo de Caixa,
-// excluindo caução. Para contratos legados sem lançamento financeiro, mantemos a
-// compatibilidade com os flags históricos já consolidados no sistema.
+// 1) PREPARAÇÃO: começa após qualquer recebimento real confirmado (sinal).
+// 2) ENTREGA/MONTAGEM: somente com o contrato 100% quitado.
+// Caução não compõe pagamento do contrato e nunca libera a operação.
 // ============================================================================
 
 import type { StoredOrder } from "./orders-storage";
@@ -17,44 +13,69 @@ import { fetchOrdersFromSheet } from "./sheets-api";
 import { getContractPaymentStatus } from "./pagamentos";
 
 export const OPERACAO_BLOQUEADA_SEM_RECEBIMENTO =
-  "Contrato ainda sem recebimento confirmado. A operação só é liberada após a confirmação real do sinal/pagamento.";
+  "Contrato ainda sem recebimento confirmado. A preparação só é liberada após a confirmação real do sinal/pagamento.";
+
+export const ENTREGA_BLOQUEADA_SALDO_PENDENTE =
+  "Contrato ainda possui saldo pendente. A LHL Festas não libera retirada, entrega ou montagem antes da quitação integral.";
 
 export type OperacaoGateStatus = {
+  /** Compatibilidade: liberada significa preparação liberada. */
   liberada: boolean;
+  preparacaoLiberada: boolean;
+  entregaLiberada: boolean;
   totalRecebido: number;
+  saldoReceber: number;
+  quitado: boolean;
   origemLegado: boolean;
   motivo: string;
+  motivoEntrega: string;
 };
 
-/**
- * Decide se um contrato pode entrar na operação.
- * Caução nunca libera a festa porque getContractPaymentStatus a exclui do recebido.
- */
 export function getOperacaoGateStatus(
   order: StoredOrder | null | undefined,
   lancamentos: Lancamento[],
 ): OperacaoGateStatus {
-  if (!order || order.status === "Cancelado") {
+  if (!order || order.status === "Cancelado" || order.status === "Excluído") {
+    const motivo = !order
+      ? "Contrato não encontrado."
+      : order.status === "Excluído"
+        ? "Contrato excluído."
+        : "Contrato cancelado.";
     return {
       liberada: false,
+      preparacaoLiberada: false,
+      entregaLiberada: false,
       totalRecebido: 0,
+      saldoReceber: 0,
+      quitado: false,
       origemLegado: false,
-      motivo: order?.status === "Cancelado" ? "Contrato cancelado." : "Contrato não encontrado.",
+      motivo,
+      motivoEntrega: motivo,
     };
   }
 
   const pagamento = getContractPaymentStatus(order, lancamentos);
-  const liberada = pagamento.totalRecebido > 0;
+  const preparacaoLiberada = pagamento.totalRecebido > 0;
+  const quitado = pagamento.saldoReceber <= 0.009 && pagamento.totalContratado > 0;
+  const entregaLiberada = preparacaoLiberada && quitado;
 
   return {
-    liberada,
+    liberada: preparacaoLiberada,
+    preparacaoLiberada,
+    entregaLiberada,
     totalRecebido: pagamento.totalRecebido,
+    saldoReceber: pagamento.saldoReceber,
+    quitado,
     origemLegado: pagamento.origemLegado,
-    motivo: liberada ? "Recebimento confirmado — operação liberada." : OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
+    motivo: preparacaoLiberada
+      ? "Recebimento confirmado — preparação liberada."
+      : OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
+    motivoEntrega: entregaLiberada
+      ? "Pagamento quitado — retirada, entrega ou montagem liberada."
+      : ENTREGA_BLOQUEADA_SALDO_PENDENTE,
   };
 }
 
-/** Resolve contrato + financeiro atuais e devolve o gate operacional. */
 export async function resolveOperacaoGate(
   contratoId: string,
   orderHint?: StoredOrder | null,
@@ -68,15 +89,22 @@ export async function resolveOperacaoGate(
   return { order, lancamentos, status: getOperacaoGateStatus(order, lancamentos) };
 }
 
-/**
- * Barreira arquitetural para qualquer mutation operacional.
- * Use antes de avançar compra, produção, separação ou preparação.
- */
+/** Compra, produção, separação e preparação podem começar após o sinal. */
 export async function assertOperacaoLiberada(
   contratoId: string,
   orderHint?: StoredOrder | null,
 ): Promise<StoredOrder> {
   const { order, status } = await resolveOperacaoGate(contratoId, orderHint);
-  if (!order || !status.liberada) throw new Error(status.motivo);
+  if (!order || !status.preparacaoLiberada) throw new Error(status.motivo);
+  return order;
+}
+
+/** Retirada pelo cliente, entrega e montagem exigem quitação integral. */
+export async function assertEntregaLiberada(
+  contratoId: string,
+  orderHint?: StoredOrder | null,
+): Promise<StoredOrder> {
+  const { order, status } = await resolveOperacaoGate(contratoId, orderHint);
+  if (!order || !status.entregaLiberada) throw new Error(status.motivoEntrega);
   return order;
 }
