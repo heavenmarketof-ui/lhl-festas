@@ -27,10 +27,11 @@ export function contratoEncerradoOperacionalmente(
     status === "excluido"
   ) return true;
 
+  // Quitação financeira não encerra a operação. Uma festa futura totalmente
+  // paga continua exigindo preparação, produção, calendário e execução.
   if (
     d?.devolucaoConfirmada === "Sim" ||
-    d?.caucaoDevolvida === "Sim" ||
-    d?.pagamentoFinalizado === "Sim"
+    d?.caucaoDevolvida === "Sim"
   ) return true;
 
   // Migração/limpeza histórica: festas que já aconteceram antes de hoje não
