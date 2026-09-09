@@ -3,6 +3,11 @@ import type { CachedReadOptions } from "./gas-cache";
 
 export * from "./financeiro-api";
 
+export function lancamentoEhRealizado(data: unknown, hojeISO: string): boolean {
+  const iso = String(data ?? "").slice(0, 10);
+  return !iso || iso <= hojeISO;
+}
+
 /**
  * Camada soberana LHL para o Fluxo de Caixa.
  * Lançamento financeiro é caixa realizado: uma data futura nunca pode entrar
@@ -16,8 +21,5 @@ export async function fetchLancamentos(
   const hoje = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
   const hojeISO = `${hoje.getFullYear()}-${p(hoje.getMonth() + 1)}-${p(hoje.getDate())}`;
-  return items.filter((l) => {
-    const data = String(l.data || "").slice(0, 10);
-    return !data || data <= hojeISO;
-  });
+  return items.filter((l) => lancamentoEhRealizado(l.data, hojeISO));
 }
