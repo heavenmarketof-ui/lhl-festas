@@ -18,6 +18,7 @@ import orcamentoFixCss from "../orcamento-fix.css?url";
 import adminOficialCss from "../admin-oficial.css?url";
 import { hasAnalyticsConsent, PrivacyConsent } from "../components/privacy-consent";
 import { RemoveContractControl } from "../components/admin/remove-contract-control";
+import { readAndPersistCampaignParams } from "../lib/campaign-params";
 
 function NotFoundComponent() {
   return (
@@ -96,11 +97,24 @@ function RootComponent() {
   }, [location.pathname]);
 
   useEffect(() => {
+    // Captura UTMs/gclid/fbclid em toda navegação pública. Assim a origem não se
+    // perde quando a pessoa passa por catálogo, orçamento, reserva ou obrigado.
+    readAndPersistCampaignParams();
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
     if (!hasAnalyticsConsent()) return;
     try {
+      const campaign = readAndPersistCampaignParams();
       const w = window as unknown as { dataLayer?: unknown[] };
       w.dataLayer = w.dataLayer || [];
-      w.dataLayer.push({ event: "page_view", page_path: location.pathname + location.search, page_location: window.location.href, page_title: document.title });
+      w.dataLayer.push({
+        event: "page_view",
+        page_path: location.pathname + location.search,
+        page_location: window.location.href,
+        page_title: document.title,
+        ...campaign,
+      });
     } catch { /* noop */ }
   }, [location.pathname, location.search]);
 
