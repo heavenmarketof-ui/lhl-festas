@@ -9,8 +9,9 @@
 //   • Contratos encerrados/finalizados deixam de aparecer como pendência ativa,
 //     preservando o histórico financeiro efetivamente recebido.
 //
-// Para registros legados sem Fluxo de Caixa, sinalRecebido/pagamentoFinalRecebido
-// continuam sendo aceitos como evidência histórica para não perder dados antigos.
+// Para registros legados sem Fluxo de Caixa, sinalRecebido continua sendo aceito
+// como evidência histórica. Flags de quitação só podem fechar o contrato quando
+// não contradizem um valorRestante positivo gravado no próprio contrato.
 // ============================================================================
 
 import type { StoredOrder } from "./orders-storage";
@@ -38,12 +39,10 @@ export type ContractPaymentStatus = {
   origemLegado: boolean;
 };
 
-/** Arredondamento monetário seguro (2 casas) — evita 0.000001 gerando alerta. */
 export function money(n: number): number {
   return Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
 }
 
-/** Tolerância de 1 centavo para considerar saldo zerado. */
 export function isZero(n: number): boolean {
   return Math.abs(money(n)) < 0.005;
 }
@@ -57,7 +56,6 @@ function ehCaucao(l: Lancamento): boolean {
   return norm(l.categoria).includes("caucao") || norm(l.origem).includes("caucao");
 }
 
-/** Índice contratoId → recebimentos (evita varrer a lista por contrato). */
 export function indexRecebimentos(lancamentos: Lancamento[]) {
   const receitas = new Map<string, number>();
   const caucoes = new Map<string, number>();
@@ -84,10 +82,6 @@ function contratoEncerrado(order: StoredOrder | null | undefined): boolean {
   );
 }
 
-/**
- * Função central de status financeiro do contrato.
- * Todas as telas devem usar esta função — nunca recalcular de forma própria.
- */
 export function getContractPaymentStatus(
   order: StoredOrder | null | undefined,
   lancamentos: Lancamento[] | { receitas: Map<string, number>; caucoes: Map<string, number> },
@@ -99,26 +93,28 @@ export function getContractPaymentStatus(
 
   const recebidoLanc = money(idx.receitas.get(id) || 0);
   const caucao = money(idx.caucoes.get(id) || 0);
+  const sinal = money(parseValor(d?.valorSinal));
+  const restanteDeclarado = money(parseValor(d?.valorRestante));
 
   let totalRecebido = recebidoLanc;
   let origemLegado = false;
 
-  if (recebidoLanc <= 0) {
-    const sinal = money(parseValor(d?.valorSinal));
-    if ((d?.pagamentoFinalRecebido || "Não") === "Sim") {
-      totalRecebido = valorTotal;
-      origemLegado = true;
-    } else if ((d?.sinalRecebido || "Não") === "Sim") {
-      totalRecebido = sinal;
-      origemLegado = true;
-    }
+  // Compatibilidade histórica: sinal marcado como recebido pode confirmar uma
+  // venda antiga sem lançamento financeiro. Nunca presume pagamento além do sinal.
+  if (recebidoLanc <= 0 && (d?.sinalRecebido || "Não") === "Sim" && sinal > 0) {
+    totalRecebido = Math.min(sinal, valorTotal || sinal);
+    origemLegado = true;
   }
 
-  const evidenciasEncerramentoPagamento =
+  // Flags legadas de quitação só são confiáveis quando o próprio contrato NÃO
+  // declara saldo restante positivo. Isso evita falsos "QUITADO" em contratos
+  // novos/migrados que ainda possuem saldo negociado.
+  const flagQuitacaoLegada =
     (d?.pagamentoFinalRecebido || "Não") === "Sim" ||
     (d?.pagamentoFinalizado || "Não") === "Sim";
+  const podeUsarQuitacaoLegada = recebidoLanc <= 0 && flagQuitacaoLegada && isZero(restanteDeclarado);
 
-  if (recebidoLanc <= 0 && evidenciasEncerramentoPagamento) {
+  if (podeUsarQuitacaoLegada && valorTotal > 0) {
     totalRecebido = valorTotal;
     origemLegado = true;
   }
@@ -130,8 +126,6 @@ export function getContractPaymentStatus(
   const vendaConfirmada = totalRecebido > 0;
   const encerrado = contratoEncerrado(order);
 
-  // Conta a receber só existe depois que o pré-contrato virou venda.
-  // Encerrados saem das pendências ativas, sem apagar o histórico recebido.
   const saldoReceber = !vendaConfirmada || encerrado ? 0 : saldoNegociado;
 
   const quitadoFinanceiramente = valorTotal > 0 ? saldoNegociado === 0 && vendaConfirmada : vendaConfirmada;
@@ -160,7 +154,6 @@ export function getContractPaymentStatus(
   };
 }
 
-/** Atalho: o contrato possui conta a receber reconhecida e ativa? */
 export function temPagamentoPendente(
   order: StoredOrder | null | undefined,
   lancamentos: Parameters<typeof getContractPaymentStatus>[1],
