@@ -3,7 +3,7 @@ import { getContractPaymentStatus } from "@/lib/pagamentos";
 import type { Lancamento } from "@/lib/financeiro-api";
 import type { StoredOrder } from "@/lib/orders-storage";
 
-const order = (id: string, valorTotal: string, extra: Record<string, unknown> = {}) =>
+const order = (id: string, valorTotal: string, extra: Record<string, unknown> = {}, status = "Pendente") =>
   ({
     id,
     nome: "Cliente",
@@ -15,7 +15,7 @@ const order = (id: string, valorTotal: string, extra: Record<string, unknown> = 
     tema: "",
     modalidade: "",
     plano: "",
-    status: "Pendente",
+    status,
     createdAt: new Date().toISOString(),
     details: { valorTotal, valorSinal: "100", ...extra },
   }) as unknown as StoredOrder;
@@ -44,6 +44,7 @@ describe("getContractPaymentStatus", () => {
     const r = getContractPaymentStatus(order("a", "200"), [lanc("a", 200)]);
     expect(r.totalRecebido).toBe(200);
     expect(r.saldoReceber).toBe(0);
+    expect(r.vendaConfirmada).toBe(true);
     expect(r.isPago).toBe(true);
     expect(r.status).toBe("Quitado");
   });
@@ -51,6 +52,8 @@ describe("getContractPaymentStatus", () => {
   it("Cenário B — parcial (100 de 200)", () => {
     const r = getContractPaymentStatus(order("b", "200"), [lanc("b", 100)]);
     expect(r.saldoReceber).toBe(100);
+    expect(r.saldoNegociado).toBe(100);
+    expect(r.vendaConfirmada).toBe(true);
     expect(r.isPago).toBe(false);
   });
 
@@ -60,14 +63,15 @@ describe("getContractPaymentStatus", () => {
     expect(r.isPago).toBe(true);
   });
 
-  it("Cenário D — caução não quita o contrato", () => {
+  it("Cenário D — caução não quita nem confirma venda", () => {
     const r = getContractPaymentStatus(order("d", "200"), [
-      lanc("d", 100),
       lanc("d", 100, "Caução Recebida"),
     ]);
-    expect(r.totalRecebido).toBe(100);
+    expect(r.totalRecebido).toBe(0);
     expect(r.caucaoRecebida).toBe(100);
-    expect(r.saldoReceber).toBe(100);
+    expect(r.saldoReceber).toBe(0);
+    expect(r.saldoNegociado).toBe(200);
+    expect(r.vendaConfirmada).toBe(false);
     expect(r.isPago).toBe(false);
   });
 
@@ -84,6 +88,7 @@ describe("getContractPaymentStatus", () => {
     );
     expect(parcial.totalRecebido).toBe(100);
     expect(parcial.saldoReceber).toBe(100);
+    expect(parcial.vendaConfirmada).toBe(true);
 
     const quitado = getContractPaymentStatus(
       order("g", "200", { pagamentoFinalRecebido: "Sim" }),
@@ -93,12 +98,33 @@ describe("getContractPaymentStatus", () => {
     expect(quitado.isPago).toBe(true);
   });
 
-  it("ignora saídas e lançamentos de outros contratos", () => {
+  it("pré-contrato sem sinal não vira conta a receber", () => {
     const r = getContractPaymentStatus(order("h", "200"), [
       lanc("h", 200, "Sinal", "Saída"),
       lanc("outro", 200),
     ]);
     expect(r.totalRecebido).toBe(0);
-    expect(r.saldoReceber).toBe(200);
+    expect(r.vendaConfirmada).toBe(false);
+    expect(r.saldoNegociado).toBe(200);
+    expect(r.saldoReceber).toBe(0);
+    expect(r.status).toBe("Pendente");
+  });
+
+  it("contrato encerrado sai das pendências sem apagar o recebido", () => {
+    const r = getContractPaymentStatus(
+      order("i", "200", { devolucaoConfirmada: "Sim" }),
+      [lanc("i", 100)],
+    );
+    expect(r.totalRecebido).toBe(100);
+    expect(r.saldoNegociado).toBe(100);
+    expect(r.saldoReceber).toBe(0);
+    expect(r.encerrado).toBe(true);
+    expect(r.isPago).toBe(true);
+  });
+
+  it("status Finalizado também encerra a pendência ativa", () => {
+    const r = getContractPaymentStatus(order("j", "200", {}, "Finalizado"), [lanc("j", 100)]);
+    expect(r.saldoReceber).toBe(0);
+    expect(r.encerrado).toBe(true);
   });
 });
