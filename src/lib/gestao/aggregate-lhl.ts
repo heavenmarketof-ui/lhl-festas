@@ -143,11 +143,10 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
   const pedidosAnterior = countCreatedOrders(snap, moveCursor(cursor, -1));
   replaceKpi(data, "Pedidos", pedidosAtual, pedidosAnterior);
 
+  // O label é independente do tipo de período: é sempre o valor integral das
+  // vendas confirmadas naquele intervalo, nunca apenas o sinal recebido.
   const vendas = data.kpis.find((k) => k.label === "Vendas do mês");
   if (vendas) vendas.label = "Vendas confirmadas";
-
-  const faturamento = data.kpis.find((k) => k.label === "Faturamento");
-  if (faturamento) faturamento.label = "Faturamento realizado";
 
   return data;
 }
