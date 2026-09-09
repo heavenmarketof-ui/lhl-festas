@@ -44,6 +44,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { label: "Festas", to: "/admin/festas", icon: FileText, desc: "Contratos e eventos" },
     { label: "Agenda", to: "/admin/agenda", icon: CalendarDays, desc: "Calendário de festas" },
     { label: "Operação", to: "/admin/operacao", icon: ShieldCheck, desc: "Preparação e acompanhamento" },
+    { label: "Itens exclusivos", to: "/admin/itens-exclusivos", icon: Lock, desc: "Mesas, tapetes e peças especiais" },
     { label: "Financeiro", to: "/admin/financeiro", icon: Wallet, desc: "Entradas e saídas", search: { tab: "dashboard" } },
     { label: "Gestão", to: "/admin/gestao", icon: BarChart3, desc: "Indicadores do negócio" },
     { label: "Patrimônio", to: "/admin/patrimonio", icon: Package, desc: "Acervo e bens" },
@@ -52,7 +53,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const secondary = [
     { label: "Solicitações", to: "/admin/solicitacoes", icon: ClipboardCheck, search: { status: "pendente", urgencia: "todas", q: "" } },
     { label: "Auditoria", to: "/admin/auditoria", icon: ShieldAlert },
-    { label: "Itens exclusivos", to: "/admin/itens-exclusivos", icon: Lock },
   ] as const;
 
   const NavItem = ({ item }: { item: (typeof nav)[number] | (typeof secondary)[number] }) => {
