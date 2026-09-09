@@ -9,6 +9,7 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import publicThemeCss from "../public-theme.css?url";
@@ -123,6 +124,7 @@ function RootComponent() {
       <Outlet />
       <RemoveContractControl />
       <PrivacyConsent />
+      <Toaster richColors position="top-center" closeButton />
     </QueryClientProvider>
   );
 }
