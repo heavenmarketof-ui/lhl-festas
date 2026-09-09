@@ -37,6 +37,10 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src/lib/sheets-api-lhl.ts", import.meta.url)),
       },
       {
+        find: "@/lib/financeiro-api",
+        replacement: fileURLToPath(new URL("./src/lib/financeiro-api-lhl.ts", import.meta.url)),
+      },
+      {
         find: "@",
         replacement: fileURLToPath(new URL("./src", import.meta.url)),
       },
