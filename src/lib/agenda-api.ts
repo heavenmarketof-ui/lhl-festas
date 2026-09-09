@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { excluirAgendaEventoFn, salvarAgendaEventoFn } from "./agenda.functions";
+import { withAdminAccessToken } from "./admin-action-auth";
 import type { AgendaEvento, AgendaBloqueio } from "./agenda-types";
 
 const LS_KEY = "lhl_agenda_eventos";
@@ -22,9 +23,7 @@ function readLocal(): AgendaEvento[] {
     const raw = localStorage.getItem(LS_KEY);
     const list = raw ? JSON.parse(raw) : [];
     return Array.isArray(list) ? list.map(parse).filter((e) => e.id && e.data) : [];
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function writeLocal(list: AgendaEvento[]) {
@@ -40,20 +39,15 @@ function salvarLocal(input: { id?: string; titulo: string; data: string; observa
   const now = new Date().toISOString();
   const list = readLocal();
   const id = input.id || crypto.randomUUID();
-  const next: AgendaEvento = {
-    id,
-    titulo: input.titulo.trim(),
-    data: input.data.slice(0, 10),
-    observacoes: String(input.observacoes || ""),
-    bloqueio: input.bloqueio || "nenhum",
-    createdAt: list.find((x) => x.id === id)?.createdAt || now,
-    updatedAt: now,
-  };
-  const out = list.some((x) => x.id === id)
-    ? list.map((x) => (x.id === id ? next : x))
-    : [...list.filter((x) => !sameEvent(x, next)), next];
+  const next: AgendaEvento = { id, titulo: input.titulo.trim(), data: input.data.slice(0, 10), observacoes: String(input.observacoes || ""), bloqueio: input.bloqueio || "nenhum", createdAt: list.find((x) => x.id === id)?.createdAt || now, updatedAt: now };
+  const out = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? next : x)) : [...list.filter((x) => !sameEvent(x, next)), next];
   writeLocal(out);
   return next;
+}
+
+async function salvarRemoto(input: { id?: string; titulo: string; data: string; observacoes?: string; bloqueio?: AgendaBloqueio }) {
+  const data = await withAdminAccessToken(input as Record<string, unknown>);
+  return salvarAgendaEventoFn({ data } as any);
 }
 
 async function migrarLocaisParaRemoto(remotos: AgendaEvento[]) {
@@ -64,12 +58,10 @@ async function migrarLocaisParaRemoto(remotos: AgendaEvento[]) {
   for (const local of locais) {
     if (result.some((r) => sameEvent(r, local))) continue;
     try {
-      const saved = await salvarAgendaEventoFn({ data: { titulo: local.titulo, data: local.data, observacoes: local.observacoes, bloqueio: local.bloqueio } as any });
+      const saved = await salvarRemoto({ titulo: local.titulo, data: local.data, observacoes: local.observacoes, bloqueio: local.bloqueio });
       result.push(parse(saved));
       mudou = true;
     } catch {
-      // O Supabase é legado e pode não estar disponível/autenticado no ambiente
-      // oficial. Mantemos a agenda funcional localmente até a migração definitiva.
       return remotos.length ? [...remotos, ...locais.filter((l) => !remotos.some((r) => sameEvent(r, l)))] : locais;
     }
   }
@@ -86,42 +78,39 @@ export async function fetchAgendaEventos(): Promise<AgendaEvento[]> {
     writeLocal(sincronizado);
     return sincronizado.sort((a, b) => a.data.localeCompare(b.data));
   } catch {
-    // Não deixa uma integração Supabase legada derrubar a Agenda oficial.
     return readLocal().sort((a, b) => a.data.localeCompare(b.data));
   }
 }
 
 export async function salvarAgendaEvento(input: { id?: string; titulo: string; data: string; observacoes?: string; bloqueio?: AgendaBloqueio }) {
   const titulo = String(input.titulo || "").trim();
-  const data = String(input.data || "").slice(0, 10);
+  const dataEvento = String(input.data || "").slice(0, 10);
   if (!titulo) throw new Error("Informe o título do compromisso.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error("Informe uma data válida.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dataEvento)) throw new Error("Informe uma data válida.");
 
   try {
-    const saved = await salvarAgendaEventoFn({ data: { ...input, titulo, data } as any });
+    const saved = await salvarRemoto({ ...input, titulo, data: dataEvento });
     const parsed = parse(saved);
     const list = readLocal();
-    const out = list.some((x) => x.id === parsed.id)
-      ? list.map((x) => (x.id === parsed.id ? parsed : x))
-      : [...list.filter((x) => !sameEvent(x, parsed)), parsed];
+    const out = list.some((x) => x.id === parsed.id) ? list.map((x) => (x.id === parsed.id ? parsed : x)) : [...list.filter((x) => !sameEvent(x, parsed)), parsed];
     writeLocal(out);
     return parsed;
   } catch (e) {
-    // A Agenda não pode ficar indisponível porque a antiga autenticação/tabela
-    // Supabase não existe mais no ambiente oficial. Salva imediatamente no
-    // espelho local e mantém edição/exclusão funcionando no dispositivo.
-    console.warn("[Agenda] Backend legado indisponível; salvando localmente.", e);
-    return salvarLocal({ ...input, titulo, data });
+    // Modo de contingência: não perde o compromisso se o backend estiver fora,
+    // mas a via normal agora é remota/autenticada e compartilhada entre aparelhos.
+    console.warn("[Agenda] Falha remota; salvando cópia local de contingência.", e);
+    return salvarLocal({ ...input, titulo, data: dataEvento });
   }
 }
 
 export async function excluirAgendaEvento(id: string) {
   try {
-    const result = await excluirAgendaEventoFn({ data: { id } });
+    const data = await withAdminAccessToken({ id });
+    const result = await excluirAgendaEventoFn({ data } as any);
     writeLocal(readLocal().filter((x) => x.id !== id));
     return result;
   } catch (e) {
-    console.warn("[Agenda] Backend legado indisponível; removendo localmente.", e);
+    console.warn("[Agenda] Falha remota; removendo apenas da contingência local.", e);
     writeLocal(readLocal().filter((x) => x.id !== id));
     return { ok: true };
   }
