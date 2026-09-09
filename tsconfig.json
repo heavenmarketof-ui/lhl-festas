@@ -22,6 +22,7 @@
     "noUncheckedSideEffectImports": true,
     "paths": {
       "@/lib/gestao/aggregate": ["./src/lib/gestao/aggregate-lhl.ts"],
+      "@/lib/producao-api": ["./src/lib/producao-api-lhl.ts"],
       "@/*": ["./src/*"]
     }
   }
