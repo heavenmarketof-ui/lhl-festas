@@ -7,6 +7,7 @@ import { fetchOrdersFromSheet } from "@/lib/sheets-api";
 import { fetchLancamentos, fmtBRL, type Lancamento } from "@/lib/financeiro-api";
 import { fetchOrdens, type OrdemProducao } from "@/lib/producao-api";
 import { getOperacaoGateStatus } from "@/lib/operacao-gate";
+import { contratoOperacionalmenteAtivo } from "@/lib/contrato-operacional";
 import { indexRecebimentos } from "@/lib/pagamentos";
 import { classeStatusFinanceiro, resumoFinanceiroContrato, type ContratoFinanceiroView } from "@/lib/contrato-financeiro-view";
 import { toDateISO } from "@/lib/date-utils";
@@ -35,6 +36,11 @@ function br(iso: string) {
   return y && m && d ? `${d}/${m}/${y}` : "—";
 }
 
+function hojeLocalISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function OperacaoPage() {
   const [orders, setOrders] = useState<StoredOrder[]>([]);
   const [ops, setOps] = useState<OrdemProducao[]>([]);
@@ -47,7 +53,7 @@ function OperacaoPage() {
     try {
       const [pedidos, ordens, fluxo] = await Promise.all([
         fetchOrdersFromSheet({ force: true }),
-        fetchOrdens().catch(() => [] as OrdemProducao[]),
+        fetchOrdens(),
         fetchLancamentos({ force: true }),
       ]);
       setOrders(pedidos);
@@ -63,9 +69,10 @@ function OperacaoPage() {
 
   useEffect(() => { void load(); }, []);
   const idx = useMemo(() => indexRecebimentos(lancamentos), [lancamentos]);
+  const hojeISO = hojeLocalISO();
 
   const linhas = useMemo<Linha[]>(() => orders
-    .filter((o) => o.status !== "Cancelado" && o.status !== "Finalizado" && o.status !== "Excluído")
+    .filter((o) => contratoOperacionalmenteAtivo(o, hojeISO))
     .map((order) => {
       const gate = getOperacaoGateStatus(order, lancamentos);
       return {
@@ -80,7 +87,7 @@ function OperacaoPage() {
         financeiro: resumoFinanceiroContrato(order, idx),
       };
     })
-    .sort((a, b) => (a.retirada || a.evento || "9999").localeCompare(b.retirada || b.evento || "9999")), [orders, ops, lancamentos, idx]);
+    .sort((a, b) => (a.retirada || a.evento || "9999").localeCompare(b.retirada || b.evento || "9999")), [orders, ops, lancamentos, idx, hojeISO]);
 
   const aguardando = linhas.filter((l) => !l.preparacaoLiberada);
   const preparandoComSaldo = linhas.filter((l) => l.preparacaoLiberada && !l.quitado);
