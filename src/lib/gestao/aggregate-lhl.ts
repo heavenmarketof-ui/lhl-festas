@@ -28,12 +28,6 @@ const isClosed = (o: StoredOrder) =>
 const isCanceled = (o: StoredOrder) =>
   norm(o.status) === "cancelado" || norm(o.status) === "excluido";
 
-/**
- * Regra comercial LHL:
- * - Pedido = contrato/pré-contrato criado no período, ainda que sem sinal.
- * - Venda = primeiro recebimento real não-caução vinculado ao contrato.
- * - O valor da venda é o valor TOTAL negociado do contrato.
- */
 function firstSaleDates(lancamentos: Lancamento[]) {
   const map = new Map<string, string>();
   for (const l of lancamentos) {
@@ -77,10 +71,8 @@ function comparablePreviousEnd(cursor: PeriodoCursor): string | null {
   const atual = buildPeriodo(cursor);
   const fimAtual = effectiveEnd(atual.inicio, atual.fim);
   if (!fimAtual) return null;
-
   const anterior = buildPeriodo(moveCursor(cursor, -1));
   if (fimAtual === atual.fim) return anterior.fim;
-
   const elapsed = daysBetween(atual.inicio, fimAtual);
   const target = addDaysISO(anterior.inicio, elapsed);
   return target < anterior.fim ? target : anterior.fim;
@@ -126,14 +118,37 @@ function modalidadeNome(o: StoredOrder) {
   return String(o.modalidade || "").trim() || "Não classificado";
 }
 
-/**
- * FATURAMENTO LHL = caixa efetivamente recebido NO PERÍODO referente às festas
- * que também foram ENTREGUES/REALIZADAS nesse período, até a data de corte.
- *
- * Isso evita dois erros:
- * 1) venda futura entrar como faturamento antes da festa acontecer;
- * 2) somar o valor total do contrato quando só uma parcela entrou no caixa.
- */
+function aplicarEvolucaoPedidosEVendas(data: GestaoData, snap: Snapshot, cursor: PeriodoCursor) {
+  const periodo = buildPeriodo(cursor);
+  const fim = effectiveEnd(periodo.inicio, periodo.fim);
+  const bs = buckets(periodo);
+  const saleDates = firstSaleDates(snap.lancamentos);
+
+  const stats = new Map(bs.map((b) => [b.label, { pedidos: 0, vendas: 0 }]));
+  if (fim) {
+    for (const o of snap.orders) {
+      if (isCanceled(o)) continue;
+      const created = toDateISO(o.createdAt) || toDateISO(o.details?.dataHoraAceite);
+      if (inPeriod(created, periodo.inicio, fim)) {
+        const b = bs.find((x) => created >= x.inicio && created <= x.fim);
+        if (b) stats.get(b.label)!.pedidos += 1;
+      }
+
+      const saleDate = saleDates.get(o.id) || "";
+      if (inPeriod(saleDate, periodo.inicio, fim)) {
+        const b = bs.find((x) => saleDate >= x.inicio && saleDate <= x.fim);
+        if (b) stats.get(b.label)!.vendas += parseValor(o.details?.valorTotal);
+      }
+    }
+  }
+
+  data.evolucao = data.evolucao.map((e) => ({
+    ...e,
+    Pedidos: stats.get(e.label)?.pedidos || 0,
+    Vendas: Math.round((stats.get(e.label)?.vendas || 0) * 100) / 100,
+  }));
+}
+
 function faturamentoRealizado(
   snap: Snapshot,
   cursor: PeriodoCursor,
@@ -141,7 +156,7 @@ function faturamentoRealizado(
 ) {
   const periodo = buildPeriodo(cursor);
   const fim = fimOverride === undefined ? effectiveEnd(periodo.inicio, periodo.fim) : fimOverride;
-  if (!fim) return { total: 0, porModalidade: new Map<string, number>(), ids: new Set<string>() };
+  if (!fim) return { total: 0, porModalidade: new Map<string, number>() };
 
   const entregues = snap.orders.filter((o) => {
     if (isCanceled(o)) return false;
@@ -149,7 +164,6 @@ function faturamentoRealizado(
     return inPeriod(dataEvento, periodo.inicio, fim);
   });
   const porId = new Map(entregues.map((o) => [String(o.id), o]));
-  const ids = new Set(porId.keys());
   const porModalidade = new Map<string, number>();
   let total = 0;
 
@@ -159,27 +173,17 @@ function faturamentoRealizado(
     if (valor <= 0) continue;
     const data = toDateISO(l.data);
     if (!inPeriod(data, periodo.inicio, fim)) continue;
-    const contratoId = String(l.contratoId || "").trim();
-    const order = porId.get(contratoId);
+    const order = porId.get(String(l.contratoId || "").trim());
     if (!order) continue;
-
     total += valor;
     const mod = modalidadeNome(order);
     porModalidade.set(mod, (porModalidade.get(mod) || 0) + valor);
   }
 
-  return {
-    total: Math.round(total * 100) / 100,
-    porModalidade,
-    ids,
-  };
+  return { total: Math.round(total * 100) / 100, porModalidade };
 }
 
-function aplicarFaturamentoRealizado(
-  data: GestaoData,
-  snap: Snapshot,
-  cursor: PeriodoCursor,
-) {
+function aplicarFaturamentoRealizado(data: GestaoData, snap: Snapshot, cursor: PeriodoCursor) {
   const atual = faturamentoRealizado(snap, cursor);
   const anteriorCursor = moveCursor(cursor, -1);
   const anterior = faturamentoRealizado(snap, anteriorCursor, comparablePreviousEnd(cursor));
@@ -187,8 +191,6 @@ function aplicarFaturamentoRealizado(
   data.resumo.faturamento = atual.total;
   replaceKpi(data, "Faturamento", atual.total, anterior.total);
 
-  // Gráfico temporal: mostra apenas entradas reais de contratos cuja festa já
-  // foi realizada dentro do período selecionado.
   const periodo = buildPeriodo(cursor);
   const fim = effectiveEnd(periodo.inicio, periodo.fim);
   const deliveredOrders = new Map(
@@ -217,17 +219,9 @@ function aplicarFaturamentoRealizado(
   const total = atual.total;
   data.modalidades = data.modalidades.map((m) => {
     const fat = Math.round((atual.porModalidade.get(m.nome) || 0) * 100) / 100;
-    return {
-      ...m,
-      faturamento: fat,
-      percFaturamento: total > 0 ? (fat / total) * 100 : 0,
-    };
+    return { ...m, faturamento: fat, percFaturamento: total > 0 ? (fat / total) * 100 : 0 };
   });
-  data.participacao = data.modalidades.map((m) => ({
-    nome: m.nome,
-    valor: m.faturamento,
-    qtd: m.pedidos,
-  }));
+  data.participacao = data.modalidades.map((m) => ({ nome: m.nome, valor: m.faturamento, qtd: m.pedidos }));
 
   data.comparativo = data.comparativo.map((c) =>
     norm(c.label).includes("fatur")
@@ -241,34 +235,15 @@ function aplicarFaturamentoRealizado(
   );
 }
 
-/**
- * Camada soberana de Gestão LHL.
- *
- * Conceitos oficiais:
- * - PEDIDOS: contratos/pré-contratos criados no período, com ou sem sinal.
- * - VENDAS DO MÊS: contratos cujo primeiro recebimento real não-caução entrou
- *   no período; soma o valor TOTAL negociado desses contratos.
- * - FATURAMENTO: somente dinheiro efetivamente recebido no período referente
- *   às festas entregues/realizadas nesse mesmo período, até hoje.
- */
 export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData {
   const soldSnap = prepareSoldSnapshot(snap);
   const data = getGestaoDataBase(soldSnap, cursor);
 
-  // Pedidos usam a data em que o contrato/pré-contrato foi criado, mesmo sem sinal.
   const pedidosAtual = countCreatedOrders(snap, cursor);
-  const pedidosAnterior = countCreatedOrders(
-    snap,
-    moveCursor(cursor, -1),
-    comparablePreviousEnd(cursor),
-  );
+  const pedidosAnterior = countCreatedOrders(snap, moveCursor(cursor, -1), comparablePreviousEnd(cursor));
   replaceKpi(data, "Pedidos", pedidosAtual, pedidosAnterior);
 
-  // A base calcula corretamente o valor integral das vendas a partir do snapshot
-  // de vendas confirmadas. Apenas deixamos o nome explícito para a operação.
-  const vendas = data.kpis.find((k) => k.label === "Vendas do mês");
-  if (vendas) vendas.label = "Vendas do mês";
-
+  aplicarEvolucaoPedidosEVendas(data, snap, cursor);
   aplicarFaturamentoRealizado(data, snap, cursor);
 
   return data;
