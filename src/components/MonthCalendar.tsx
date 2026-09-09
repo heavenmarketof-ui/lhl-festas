@@ -1,160 +1,29 @@
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  CalendarDays 
-} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, CalendarDays, Plus, Ban, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { formatDateBR, toDateISO } from "@/lib/date-utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { StoredOrder } from "@/lib/orders-storage";
-import { 
-  orderCalendarLevel, 
-  PriorityDot, 
-  CalendarLegend 
-} from "@/components/admin-shell";
+import { orderCalendarLevel, PriorityDot, CalendarLegend } from "@/components/admin-shell";
 import type { OrdemProducao } from "@/lib/producao-api";
-import { 
-  isAtrasada, 
-  pendenciasDaOP, 
-  progressPercent, 
-  conferenciaCompleta 
-} from "@/lib/producao-api";
+import type { AgendaEvento, AgendaBloqueio } from "@/lib/agenda-types";
+import { AGENDA_BLOQUEIO_LABEL } from "@/lib/agenda-types";
+import { excluirAgendaEvento, fetchAgendaEventos, salvarAgendaEvento } from "@/lib/agenda-api";
 
-interface MonthCalendarProps {
-  cursor: Date;
-  onPrev: () => void;
-  onNext: () => void;
-  onToday: () => void;
-  eventsByDay: Map<string, StoredOrder[]>;
-  onOpen: (id: string) => void;
-  todayISO?: string;
-  in7ISO?: string;
-  ordens?: OrdemProducao[];
-}
+interface MonthCalendarProps { cursor: Date; onPrev: () => void; onNext: () => void; onToday: () => void; eventsByDay: Map<string, StoredOrder[]>; onOpen: (id: string) => void; todayISO?: string; in7ISO?: string; ordens?: OrdemProducao[]; }
+const emptyForm=()=>({id:"",titulo:"",data:"",observacoes:"",bloqueio:"nenhum" as AgendaBloqueio});
 
-export function MonthCalendar({
-  cursor,
-  onPrev,
-  onNext,
-  onToday,
-  eventsByDay,
-  onOpen,
-  todayISO,
-  in7ISO,
-  ordens = [],
-}: MonthCalendarProps) {
-  const year = cursor.getFullYear();
-  const month = cursor.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const startWeekday = firstDay.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const computedTodayISO =
-    todayISO ??
-    (() => {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    })();
-  const monthLabel = cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-
-  const cells: Array<{ iso: string; day: number } | null> = [];
-  for (let i = 0; i < startWeekday; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) {
-    const iso = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    cells.push({ iso, day: d });
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  const opDe = (contratoId: string) => ordens.find((x) => x && x.contratoId === contratoId);
-
-  return (
-    <section className="rounded-2xl bg-card border border-border/60 p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-medium text-primary flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-gold" /> Agenda
-        </h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 rounded-full text-[11px]"
-            onClick={onToday}
-          >
-            Hoje
-          </Button>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={onPrev}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="font-serif text-lg text-primary capitalize min-w-[140px] text-center">
-            {monthLabel}
-          </span>
-          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={onNext}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-        {weekdays.map((w) => (
-          <div key={w} className="text-center py-1">
-            {w}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map((c, i) => {
-          if (!c) return <div key={i} className="min-h-[70px] rounded-lg bg-background/30" />;
-          const events = eventsByDay.get(c.iso) ?? [];
-          const isToday = c.iso === computedTodayISO;
-          return (
-            <div
-              key={i}
-              className={`min-h-[70px] rounded-lg border p-1.5 flex flex-col gap-1 ${
-                isToday ? "border-primary bg-primary/5" : "border-border/60 bg-background/50"
-              } ${events.length > 0 ? "ring-1 ring-gold/40" : ""}`}
-            >
-              <div
-                className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}
-              >
-                {c.day}
-              </div>
-              <div className="flex flex-col gap-0.5">
-                {events.slice(0, 3).map((o) => {
-                  if (!o) return null;
-                  const opAtual = opDe(o.id);
-                  const level = orderCalendarLevel(
-                    o,
-                    computedTodayISO,
-                    in7ISO ?? computedTodayISO,
-                    opAtual,
-                  );
-                  const nomeExib = o.details?.nomeAniversariante || o.nome || "—";
-                  const kitPronto = opAtual ? conferenciaCompleta(opAtual) : false;
-                  
-                  return (
-                    <button
-                      key={o.id}
-                      onClick={() => onOpen(o.id)}
-                      className={`flex items-center gap-1 hover:opacity-70 transition-opacity`}
-                    >
-                      <PriorityDot level={level} />
-                      <span className="text-[9px] font-medium truncate text-foreground max-w-[40px] sm:max-w-none">
-                        {nomeExib}
-                      </span>
-                    </button>
-                  );
-                })}
-                {events.length > 3 && (
-                  <div className="text-[8px] text-muted-foreground pl-3">
-                    +{events.length - 3}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <CalendarLegend />
-    </section>
-  );
+export function MonthCalendar({cursor,onPrev,onNext,onToday,eventsByDay,onOpen,todayISO,in7ISO,ordens=[]}:MonthCalendarProps){
+ const [agenda,setAgenda]=useState<AgendaEvento[]>([]),[form,setForm]=useState(emptyForm),[dialogOpen,setDialogOpen]=useState(false),[saving,setSaving]=useState(false),[deleting,setDeleting]=useState(false);
+ async function carregarAgenda(){try{setAgenda(await fetchAgendaEventos())}catch{toast.error("Não foi possível carregar os compromissos da agenda.")}}
+ useEffect(()=>{void carregarAgenda()},[]);
+ const agendaByDay=useMemo(()=>{const map=new Map<string,AgendaEvento[]>();for(const e of agenda)map.set(e.data,[...(map.get(e.data)||[]),e]);return map},[agenda]);
+ const abrirNovo=()=>{setForm(emptyForm());setDialogOpen(true)};const abrirEdicao=(e:AgendaEvento)=>{setForm({id:e.id,titulo:e.titulo,data:e.data,observacoes:e.observacoes,bloqueio:e.bloqueio});setDialogOpen(true)};
+ async function salvar(){if(saving)return;if(!form.titulo.trim())return toast.error("Informe o título do compromisso.");if(!form.data)return toast.error("Informe a data.");setSaving(true);try{await salvarAgendaEvento({id:form.id||undefined,titulo:form.titulo,data:form.data,observacoes:form.observacoes,bloqueio:form.bloqueio});await carregarAgenda();toast.success(form.id?"Compromisso atualizado.":"Compromisso adicionado à agenda.");setDialogOpen(false);setForm(emptyForm())}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível salvar o compromisso.")}finally{setSaving(false)}}
+ async function excluir(){if(!form.id||deleting)return;if(!window.confirm("Remover este compromisso da agenda?"))return;setDeleting(true);try{await excluirAgendaEvento(form.id);await carregarAgenda();toast.success("Compromisso removido da agenda.");setDialogOpen(false);setForm(emptyForm())}catch(e){toast.error(e instanceof Error?e.message:"Não foi possível remover o compromisso.")}finally{setDeleting(false)}}
+ const year=cursor.getFullYear(),month=cursor.getMonth(),startWeekday=new Date(year,month,1).getDay(),daysInMonth=new Date(year,month+1,0).getDate();const computedTodayISO=todayISO??(()=>{const d=new Date();d.setHours(0,0,0,0);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`})();const monthLabel=cursor.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});const cells:Array<{iso:string;day:number}|null>=[];for(let i=0;i<startWeekday;i++)cells.push(null);for(let d=1;d<=daysInMonth;d++)cells.push({iso:`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`,day:d});while(cells.length%7!==0)cells.push(null);const weekdays=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];const opDe=(contratoId:string)=>ordens.find(x=>x&&x.contratoId===contratoId);
+ return <><section className="rounded-2xl border border-border/60 bg-card p-4 sm:p-5"><div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-2"><h2 className="flex items-center gap-2 text-sm font-medium text-primary"><CalendarDays className="h-4 w-4 text-gold"/>Agenda</h2><Button size="sm" className="h-8 rounded-full" onClick={abrirNovo}><Plus className="mr-1 h-3.5 w-3.5"/>Adicionar evento</Button></div><div className="flex items-center gap-2"><Button variant="outline" size="sm" className="h-8 rounded-full text-[11px]" onClick={onToday}>Hoje</Button><Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={onPrev}><ChevronLeft className="h-4 w-4"/></Button><span className="min-w-[140px] text-center font-serif text-lg capitalize text-primary">{monthLabel}</span><Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={onNext}><ChevronRight className="h-4 w-4"/></Button></div></div><div className="mb-1 grid grid-cols-7 gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">{weekdays.map(w=><div key={w} className="py-1 text-center">{w}</div>)}</div><div className="grid grid-cols-7 gap-1">{cells.map((c,i)=>{if(!c)return <div key={i} className="min-h-[78px] rounded-lg bg-background/30"/>;const events=eventsByDay.get(c.iso)??[],internos=agendaByDay.get(c.iso)??[],isToday=c.iso===computedTodayISO,bloqueado=internos.some(e=>e.bloqueio!=="nenhum"),maxContratos=Math.max(1,3-Math.min(internos.length,2)),totalMostrado=Math.min(internos.length,2)+Math.min(events.length,maxContratos),total=internos.length+events.length;return <div key={i} className={`flex min-h-[78px] flex-col gap-1 rounded-lg border p-1.5 ${isToday?"border-primary bg-primary/5":"border-border/60 bg-background/50"} ${events.length?"ring-1 ring-gold/40":""} ${bloqueado?"bg-destructive/[0.04]":""}`}><div className="flex items-center justify-between gap-1"><span className={`text-xs font-medium ${isToday?"text-primary":"text-muted-foreground"}`}>{c.day}</span>{bloqueado&&<Ban className="h-3 w-3 text-destructive"/>}</div><div className="flex flex-col gap-0.5">{internos.slice(0,2).map(e=><button type="button" key={e.id} onClick={()=>abrirEdicao(e)} className={`truncate rounded px-1 py-0.5 text-left text-[9px] font-semibold ${e.bloqueio==="total"?"bg-destructive/10 text-destructive":e.bloqueio==="montagens"?"bg-amber-500/10 text-amber-700":"bg-primary/10 text-primary"}`} title={`${e.titulo} — ${AGENDA_BLOQUEIO_LABEL[e.bloqueio]}`}>{e.titulo}</button>)}{events.slice(0,maxContratos).map(o=>{const level=orderCalendarLevel(o,computedTodayISO,in7ISO??computedTodayISO,opDe(o.id));const nome=o.details?.nomeAniversariante||o.nome||"—";return <button type="button" key={o.id} onClick={()=>onOpen(o.id)} className="flex items-center gap-1 hover:opacity-70"><PriorityDot level={level}/><span className="max-w-[40px] truncate text-[9px] font-medium text-foreground sm:max-w-none">{nome}</span></button>})}{total>totalMostrado&&<div className="pl-1 text-[8px] text-muted-foreground">+{total-totalMostrado}</div>}</div></div>})}</div><CalendarLegend/></section><Dialog open={dialogOpen} onOpenChange={v=>{if(!saving&&!deleting)setDialogOpen(v)}}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{form.id?"Editar compromisso":"Adicionar evento à agenda"}</DialogTitle><DialogDescription>Use para compromissos pessoais, bloqueios de montagem ou dias em que a LHL não poderá aceitar eventos.</DialogDescription></DialogHeader><div className="space-y-4 py-2"><div><Label>Título</Label><Input value={form.titulo} onChange={e=>setForm(f=>({...f,titulo:e.target.value}))}/></div><div><Label>Data</Label><Input type="date" value={form.data} onChange={e=>setForm(f=>({...f,data:e.target.value}))}/></div><div><Label>O que esta data bloqueia?</Label><select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.bloqueio} onChange={e=>setForm(f=>({...f,bloqueio:e.target.value as AgendaBloqueio}))}><option value="nenhum">Somente compromisso — não bloqueia agenda</option><option value="montagens">Bloquear novas festas com montagem</option><option value="total">Bloquear agenda inteira</option></select></div><div><Label>Observações</Label><Textarea rows={3} value={form.observacoes} onChange={e=>setForm(f=>({...f,observacoes:e.target.value}))}/></div></div><DialogFooter className="gap-2 sm:justify-between"><div>{form.id&&<Button type="button" variant="ghost" className="text-destructive" onClick={()=>void excluir()} disabled={saving||deleting}>{deleting?<Loader2 className="mr-2 h-4 w-4 animate-spin"/>:<Trash2 className="mr-2 h-4 w-4"/>}Remover</Button>}</div><div className="flex gap-2"><Button type="button" variant="outline" onClick={()=>setDialogOpen(false)} disabled={saving||deleting}>Cancelar</Button><Button type="button" onClick={()=>void salvar()} disabled={saving||deleting}>{saving&&<Loader2 className="mr-2 h-4 w-4 animate-spin"/>}Salvar evento</Button></div></DialogFooter></DialogContent></Dialog></>
 }
