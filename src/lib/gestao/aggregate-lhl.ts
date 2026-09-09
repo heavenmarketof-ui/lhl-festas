@@ -137,14 +137,17 @@ export function getGestaoData(snap: Snapshot, cursor: PeriodoCursor): GestaoData
   mergeRealizedFinancialViews(data, realized);
 
   // "Pedidos" é quantidade de pré-contratos/contratos criados no período.
-  // "Vendas" continua sendo apenas contratos que receberam sinal.
+  // "Vendas confirmadas" é o valor integral dos contratos cujo primeiro
+  // recebimento real aconteceu no período.
   const pedidosAtual = countCreatedOrders(snap, cursor);
   const pedidosAnterior = countCreatedOrders(snap, moveCursor(cursor, -1));
   replaceKpi(data, "Pedidos", pedidosAtual, pedidosAnterior);
 
-  // O label é dinâmico porque o seletor também possui trimestre/semestre/ano.
   const vendas = data.kpis.find((k) => k.label === "Vendas do mês");
   if (vendas) vendas.label = "Vendas confirmadas";
+
+  const faturamento = data.kpis.find((k) => k.label === "Faturamento");
+  if (faturamento) faturamento.label = "Faturamento realizado";
 
   return data;
 }
