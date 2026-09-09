@@ -13,30 +13,68 @@ export const CAMPAIGN_KEYS = [
   "fbclid",
 ] as const;
 
-export type CampaignParams = Partial<Record<(typeof CAMPAIGN_KEYS)[number], string>>;
+export type CampaignKey = (typeof CAMPAIGN_KEYS)[number];
+export type CampaignParams = Partial<Record<CampaignKey, string>>;
 
 const STORAGE_KEY = "lhl_campaign_params";
+const MAX_VALUE_LENGTH = 300;
 
 function isBrowser() {
   return typeof window !== "undefined";
+}
+
+function cleanValue(value: unknown): string {
+  return String(value ?? "").trim().slice(0, MAX_VALUE_LENGTH);
+}
+
+/** Mantém somente chaves oficiais e valores não vazios. */
+export function sanitizeCampaignParams(input: unknown): CampaignParams {
+  if (!input || typeof input !== "object") return {};
+  const raw = input as Record<string, unknown>;
+  const out: CampaignParams = {};
+  for (const key of CAMPAIGN_KEYS) {
+    const value = cleanValue(raw[key]);
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
+/** Mescla preservando valores anteriores quando a navegação atual não informa a chave. */
+export function mergeCampaignParams(
+  stored: CampaignParams,
+  current: Partial<Record<string, unknown>>,
+): CampaignParams {
+  const out = sanitizeCampaignParams(stored);
+  for (const key of CAMPAIGN_KEYS) {
+    const value = cleanValue(current[key]);
+    if (value) out[key] = value;
+  }
+  return out;
+}
+
+function readStored(): CampaignParams {
+  if (!isBrowser()) return {};
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    return sanitizeCampaignParams(JSON.parse(raw));
+  } catch {
+    return {};
+  }
 }
 
 /** Lê parâmetros da URL atual, mescla com o que já estiver salvo em
  * sessionStorage e persiste novamente. Retorna o objeto mesclado. */
 export function readAndPersistCampaignParams(): CampaignParams {
   if (!isBrowser()) return {};
-  let stored: CampaignParams = {};
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (raw) stored = JSON.parse(raw) as CampaignParams;
-  } catch { /* noop */ }
-
+  const stored = readStored();
   const url = new URLSearchParams(window.location.search);
-  const merged: CampaignParams = { ...stored };
-  for (const k of CAMPAIGN_KEYS) {
-    const v = url.get(k);
-    if (v) merged[k] = v;
+  const current: Record<string, string> = {};
+  for (const key of CAMPAIGN_KEYS) {
+    const value = url.get(key);
+    if (value) current[key] = value;
   }
+  const merged = mergeCampaignParams(stored, current);
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
   } catch { /* noop */ }
@@ -44,12 +82,7 @@ export function readAndPersistCampaignParams(): CampaignParams {
 }
 
 export function getCampaignParams(): CampaignParams {
-  if (!isBrowser()) return {};
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as CampaignParams;
-  } catch { /* noop */ }
-  return {};
+  return readStored();
 }
 
 /** Anexa os parâmetros de campanha (não vazios) a uma URL base. */
