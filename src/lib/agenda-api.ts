@@ -32,13 +32,28 @@ function writeLocal(list: AgendaEvento[]) {
   localStorage.setItem(LS_KEY, JSON.stringify(list));
 }
 
-function isMissingTableError(message: string) {
-  const m = message.toLowerCase();
-  return m.includes("agenda_eventos") && (m.includes("schema cache") || m.includes("does not exist") || m.includes("not find"));
-}
-
 function sameEvent(a: AgendaEvento, b: AgendaEvento) {
   return a.titulo.trim().toLowerCase() === b.titulo.trim().toLowerCase() && a.data === b.data && a.bloqueio === b.bloqueio && String(a.observacoes || "").trim() === String(b.observacoes || "").trim();
+}
+
+function salvarLocal(input: { id?: string; titulo: string; data: string; observacoes?: string; bloqueio?: AgendaBloqueio }): AgendaEvento {
+  const now = new Date().toISOString();
+  const list = readLocal();
+  const id = input.id || crypto.randomUUID();
+  const next: AgendaEvento = {
+    id,
+    titulo: input.titulo.trim(),
+    data: input.data.slice(0, 10),
+    observacoes: String(input.observacoes || ""),
+    bloqueio: input.bloqueio || "nenhum",
+    createdAt: list.find((x) => x.id === id)?.createdAt || now,
+    updatedAt: now,
+  };
+  const out = list.some((x) => x.id === id)
+    ? list.map((x) => (x.id === id ? next : x))
+    : [...list.filter((x) => !sameEvent(x, next)), next];
+  writeLocal(out);
+  return next;
 }
 
 async function migrarLocaisParaRemoto(remotos: AgendaEvento[]) {
@@ -53,7 +68,9 @@ async function migrarLocaisParaRemoto(remotos: AgendaEvento[]) {
       result.push(parse(saved));
       mudou = true;
     } catch {
-      return remotos;
+      // O Supabase é legado e pode não estar disponível/autenticado no ambiente
+      // oficial. Mantemos a agenda funcional localmente até a migração definitiva.
+      return remotos.length ? [...remotos, ...locais.filter((l) => !remotos.some((r) => sameEvent(r, l)))] : locais;
     }
   }
   if (mudou || locais.length) writeLocal(result);
@@ -61,35 +78,40 @@ async function migrarLocaisParaRemoto(remotos: AgendaEvento[]) {
 }
 
 export async function fetchAgendaEventos(): Promise<AgendaEvento[]> {
-  const { data, error } = await supabase.from("agenda_eventos" as any).select("*").order("data", { ascending: true });
-  if (error) {
-    if (isMissingTableError(error.message || "")) return readLocal().sort((a, b) => a.data.localeCompare(b.data));
-    throw new Error("Não foi possível carregar a agenda interna.");
+  try {
+    const { data, error } = await supabase.from("agenda_eventos" as any).select("*").order("data", { ascending: true });
+    if (error) throw error;
+    const remoto = (data || []).map(parse);
+    const sincronizado = await migrarLocaisParaRemoto(remoto);
+    writeLocal(sincronizado);
+    return sincronizado.sort((a, b) => a.data.localeCompare(b.data));
+  } catch {
+    // Não deixa uma integração Supabase legada derrubar a Agenda oficial.
+    return readLocal().sort((a, b) => a.data.localeCompare(b.data));
   }
-  const remoto = (data || []).map(parse);
-  const sincronizado = await migrarLocaisParaRemoto(remoto);
-  writeLocal(sincronizado);
-  return sincronizado.sort((a, b) => a.data.localeCompare(b.data));
 }
 
 export async function salvarAgendaEvento(input: { id?: string; titulo: string; data: string; observacoes?: string; bloqueio?: AgendaBloqueio }) {
+  const titulo = String(input.titulo || "").trim();
+  const data = String(input.data || "").slice(0, 10);
+  if (!titulo) throw new Error("Informe o título do compromisso.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) throw new Error("Informe uma data válida.");
+
   try {
-    const saved = await salvarAgendaEventoFn({ data: input as any });
+    const saved = await salvarAgendaEventoFn({ data: { ...input, titulo, data } as any });
     const parsed = parse(saved);
     const list = readLocal();
-    const out = list.some((x) => x.id === parsed.id) ? list.map((x) => (x.id === parsed.id ? parsed : x)) : [...list.filter((x) => !sameEvent(x, parsed)), parsed];
+    const out = list.some((x) => x.id === parsed.id)
+      ? list.map((x) => (x.id === parsed.id ? parsed : x))
+      : [...list.filter((x) => !sameEvent(x, parsed)), parsed];
     writeLocal(out);
     return parsed;
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e || "");
-    if (!isMissingTableError(message)) throw new Error("Não foi possível salvar o compromisso.");
-    const now = new Date().toISOString();
-    const list = readLocal();
-    const id = input.id || crypto.randomUUID();
-    const next: AgendaEvento = { id, titulo: input.titulo.trim(), data: input.data.slice(0, 10), observacoes: String(input.observacoes || ""), bloqueio: input.bloqueio || "nenhum", createdAt: list.find((x) => x.id === id)?.createdAt || now, updatedAt: now };
-    const out = list.some((x) => x.id === id) ? list.map((x) => (x.id === id ? next : x)) : [...list, next];
-    writeLocal(out);
-    return next;
+    // A Agenda não pode ficar indisponível porque a antiga autenticação/tabela
+    // Supabase não existe mais no ambiente oficial. Salva imediatamente no
+    // espelho local e mantém edição/exclusão funcionando no dispositivo.
+    console.warn("[Agenda] Backend legado indisponível; salvando localmente.", e);
+    return salvarLocal({ ...input, titulo, data });
   }
 }
 
@@ -99,8 +121,7 @@ export async function excluirAgendaEvento(id: string) {
     writeLocal(readLocal().filter((x) => x.id !== id));
     return result;
   } catch (e) {
-    const message = e instanceof Error ? e.message : String(e || "");
-    if (!isMissingTableError(message)) throw new Error("Não foi possível remover o compromisso.");
+    console.warn("[Agenda] Backend legado indisponível; removendo localmente.", e);
     writeLocal(readLocal().filter((x) => x.id !== id));
     return { ok: true };
   }
