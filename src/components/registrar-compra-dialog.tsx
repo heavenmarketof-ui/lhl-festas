@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/money-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fmtBRL, CONTAS_PADRAO, FORMAS_PAGAMENTO } from "@/lib/financeiro-api";
-import { type OrdemProducao, type ItemCompra } from "@/lib/producao-api";
+import { compraStatusOf, type OrdemProducao, type ItemCompra } from "@/lib/producao-api";
 import { mudarEtapaCompra } from "@/lib/compras-flow";
 import {
   OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
@@ -39,7 +39,6 @@ interface RegistrarCompraDialogProps {
   order?: any;
   solicitacao?: any;
   onSuccess?: (op: OrdemProducao) => void;
-  // Suporte legado
   alvo?: RegistrarCompraAlvo;
   onClose?: () => void;
   onAtualizado?: (op: OrdemProducao) => void;
@@ -73,6 +72,16 @@ export function RegistrarCompraDialog({
   const currentOrder = propOrder ?? alvo?.order;
   const currentSolicitacao = propSolicitacao ?? alvo?.solicitacao;
 
+  // O Dashboard já reconcilia a OP com a Solicitação Financeira. Em registros
+  // antigos, porém, a solicitação pode não ter origemItemId e não chegar ao
+  // diálogo. Se o próprio item já está em "Compra autorizada", preservamos
+  // essa evidência para que uma OP remota atrasada não bloqueie a compra.
+  const solicitacaoEfetiva = currentSolicitacao ?? (
+    currentItem && compraStatusOf(currentItem) === "Compra autorizada"
+      ? { id: currentItem.solicitacaoId || "", status: "autorizada" }
+      : undefined
+  );
+
   useEffect(() => {
     setCurrentOp(propOp ?? alvo?.op);
   }, [propOp, alvo?.op]);
@@ -95,9 +104,14 @@ export function RegistrarCompraDialog({
         if (ativo) {
           setGate({
             liberada: false,
+            preparacaoLiberada: false,
+            entregaLiberada: false,
             totalRecebido: 0,
+            saldoReceber: 0,
+            quitado: false,
             origemLegado: false,
             motivo: "Não foi possível confirmar o recebimento deste contrato agora.",
+            motivoEntrega: "Não foi possível consultar a situação financeira agora.",
           });
         }
       })
@@ -137,7 +151,6 @@ export function RegistrarCompraDialog({
 
   const operacaoBloqueada = !checandoGate && gate?.liberada === false;
 
-  // Passo 1: Confirmar Compra na OP
   const handleConfirmarCompra = async () => {
     if (operacaoBloqueada) {
       toast.error(gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO);
@@ -150,19 +163,15 @@ export function RegistrarCompraDialog({
         itemId: currentItem.id,
         status: "Compra realizada",
         order: currentOrder,
-        // A autorização financeira é a fonte soberana para liberar a compra.
-        // Sem repassá-la, uma OP ainda desatualizada podia bloquear uma compra
-        // que já estava autorizada na Central de Solicitações.
-        solicitacao: currentSolicitacao,
+        solicitacao: solicitacaoEfetiva,
         confirmacao: {
           valorReal,
           dataCompra: new Date().toISOString().split("T")[0],
         }
       });
-      
       handleSuccess(res.op);
-      toast.success("Compra marcada como realizada na Ordem de Produção!");
-      setStep(2); // Avança para pergunta sobre financeiro
+      toast.success("Compra registrada com sucesso.");
+      setStep(2);
     } catch (error) {
       console.error("Erro ao registrar compra:", error);
       toast.error(error instanceof Error ? error.message : "Falha ao registrar compra.");
@@ -171,7 +180,6 @@ export function RegistrarCompraDialog({
     }
   };
 
-  // Passo 3: Registrar no Financeiro (Pago)
   const handleRegistrarFinanceiro = async () => {
     if (operacaoBloqueada) {
       toast.error(gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO);
@@ -184,7 +192,7 @@ export function RegistrarCompraDialog({
         itemId: currentItem.id,
         status: "Pago",
         order: currentOrder,
-        solicitacao: currentSolicitacao,
+        solicitacao: solicitacaoEfetiva,
         confirmacao: {
           valorReal,
           conta,
@@ -192,9 +200,8 @@ export function RegistrarCompraDialog({
           dataCompra: new Date().toISOString().split("T")[0],
         }
       });
-      
       handleSuccess(res.op);
-      toast.success("Pagamento registrado com sucesso no Fluxo de Caixa!");
+      toast.success("Pagamento registrado com sucesso no Fluxo de Caixa.");
       handleOpenChange(false);
     } catch (error) {
       console.error("Erro financeiro:", error);
@@ -214,9 +221,7 @@ export function RegistrarCompraDialog({
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                 Registrar Compra
               </DialogTitle>
-              <DialogDescription>
-                Confirme os detalhes da aquisição do material.
-              </DialogDescription>
+              <DialogDescription>Confirme os detalhes da aquisição do material.</DialogDescription>
             </DialogHeader>
 
             {checandoGate ? (
@@ -225,56 +230,29 @@ export function RegistrarCompraDialog({
               </div>
             ) : operacaoBloqueada ? (
               <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800">
-                <p className="flex items-center gap-2 font-semibold">
-                  <AlertTriangle className="h-4 w-4" /> Compra bloqueada — aguardando sinal
-                </p>
+                <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Compra bloqueada — aguardando sinal</p>
                 <p className="mt-1 text-xs">{gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO}</p>
               </div>
             ) : gate?.liberada ? (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800">
-                Recebimento confirmado · operação liberada.
-              </div>
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800">Recebimento confirmado · operação liberada.</div>
             ) : null}
 
             <div className="grid gap-4 py-4">
-              <div className="space-y-1">
-                <Label className="text-[10px] uppercase text-muted-foreground">Item</Label>
-                <p className="font-bold text-sm">{currentItem.descricao}</p>
-              </div>
-
+              <div className="space-y-1"><Label className="text-[10px] uppercase text-muted-foreground">Item</Label><p className="font-bold text-sm">{currentItem.descricao}</p></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-muted-foreground">Quantidade</Label>
-                  <p className="font-medium text-sm">{currentItem.quantidade} {currentItem.unidade}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-[10px] uppercase text-muted-foreground">Valor Previsto</Label>
-                  <p className="font-medium text-sm">{fmtBRL((currentItem.valorOrcado || 0) * (currentItem.quantidade || 1))}</p>
-                </div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase text-muted-foreground">Quantidade</Label><p className="font-medium text-sm">{currentItem.quantidade} {currentItem.unidade}</p></div>
+                <div className="space-y-1"><Label className="text-[10px] uppercase text-muted-foreground">Valor Previsto</Label><p className="font-medium text-sm">{fmtBRL((currentItem.valorOrcado || 0) * (currentItem.quantidade || 1))}</p></div>
               </div>
-
               <div className="space-y-2 border-t pt-4">
-                <Label htmlFor="valorReal" className="text-sm font-bold text-primary">
-                  VALOR REAL PAGO (TOTAL)
-                </Label>
-                <MoneyInput
-                  id="valorReal"
-                  value={valorReal}
-                  onChange={setValorReal}
-                  className="text-lg font-bold text-emerald-700"
-                />
+                <Label htmlFor="valorReal" className="text-sm font-bold text-primary">VALOR REAL PAGO (TOTAL)</Label>
+                <MoneyInput id="valorReal" value={valorReal} onChange={setValorReal} className="text-lg font-bold text-emerald-700" />
               </div>
             </div>
 
             <DialogFooter>
               <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancelar</Button>
-              <Button 
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                onClick={handleConfirmarCompra}
-                disabled={loading || checandoGate || operacaoBloqueada}
-              >
-                {loading || checandoGate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                CONFIRMAR COMPRA
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={handleConfirmarCompra} disabled={loading || checandoGate || operacaoBloqueada}>
+                {loading || checandoGate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR COMPRA
               </Button>
             </DialogFooter>
           </>
@@ -283,39 +261,16 @@ export function RegistrarCompraDialog({
         {step === 2 && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-primary">
-                <Wallet className="h-5 w-5 text-gold" />
-                Autorização Financeira
-              </DialogTitle>
-              <DialogDescription>
-                A compra foi registrada na OP. Deseja lançar o pagamento no Fluxo de Caixa agora?
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2 text-primary"><Wallet className="h-5 w-5 text-gold" />Compra registrada</DialogTitle>
+              <DialogDescription>A compra foi registrada. Deseja lançar o pagamento no Fluxo de Caixa agora?</DialogDescription>
             </DialogHeader>
-
             <div className="py-6 flex flex-col items-center justify-center gap-4">
-               <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-               </div>
-               <p className="text-center text-sm font-medium text-muted-foreground px-4">
-                 O item saiu das filas de compra pendente.
-               </p>
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle2 className="h-8 w-8 text-emerald-600" /></div>
+              <p className="text-center text-sm font-medium text-muted-foreground px-4">O item saiu das filas de compra pendente.</p>
             </div>
-
             <DialogFooter className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => handleOpenChange(false)}
-                disabled={loading}
-              >
-                AGORA NÃO
-              </Button>
-              <Button 
-                className="bg-gold hover:bg-gold/90 text-amber-950 font-bold"
-                onClick={() => setStep(3)}
-                disabled={loading || operacaoBloqueada}
-              >
-                REGISTRAR NO FLUXO
-              </Button>
+              <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading}>AGORA NÃO</Button>
+              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={() => setStep(3)} disabled={loading || operacaoBloqueada}>REGISTRAR NO FLUXO</Button>
             </DialogFooter>
           </>
         )}
@@ -323,67 +278,26 @@ export function RegistrarCompraDialog({
         {step === 3 && (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-gold" />
-                Confirmar Lançamento
-              </DialogTitle>
-              <DialogDescription>
-                Revise os dados bancários para a saída financeira.
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-gold" />Confirmar Lançamento</DialogTitle>
+              <DialogDescription>Revise os dados bancários para a saída financeira.</DialogDescription>
             </DialogHeader>
-
             <div className="grid gap-4 py-4">
               <div className="rounded-xl border border-gold/20 bg-gold/5 p-4 space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-amber-800/70 uppercase font-bold">Valor a Lançar</span>
-                  <span className="text-lg font-bold text-amber-950">{fmtBRL(valorReal)}</span>
-                </div>
-                
+                <div className="flex justify-between items-center"><span className="text-xs text-amber-800/70 uppercase font-bold">Valor a Lançar</span><span className="text-lg font-bold text-amber-950">{fmtBRL(valorReal)}</span></div>
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase text-amber-800/70">Forma de Pagamento</Label>
-                  <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                    <SelectTrigger className="h-8 text-xs border-gold/30 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FORMAS_PAGAMENTO.map(f => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Select value={formaPagamento} onValueChange={setFormaPagamento}><SelectTrigger className="h-8 text-xs border-gold/30 bg-white"><SelectValue /></SelectTrigger><SelectContent>{FORMAS_PAGAMENTO.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase text-amber-800/70">Conta de Origem</Label>
-                  <Select value={conta} onValueChange={setConta}>
-                    <SelectTrigger className="h-8 text-xs border-gold/30 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CONTAS_PADRAO.map(c => (
-                        <SelectItem key={c} value={c}>{c}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Select value={conta} onValueChange={setConta}><SelectTrigger className="h-8 text-xs border-gold/30 bg-white"><SelectValue /></SelectTrigger><SelectContent>{CONTAS_PADRAO.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                 </div>
               </div>
             </div>
-
             <DialogFooter className="grid grid-cols-2 gap-3">
-              <Button 
-                variant="ghost" 
-                onClick={() => setStep(2)}
-                disabled={loading}
-              >
-                Voltar
-              </Button>
-              <Button 
-                className="bg-gold hover:bg-gold/90 text-amber-950 font-bold"
-                onClick={handleRegistrarFinanceiro}
-                disabled={loading || operacaoBloqueada}
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                CONFIRMAR SAÍDA
+              <Button variant="ghost" onClick={() => setStep(2)} disabled={loading}>Voltar</Button>
+              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={handleRegistrarFinanceiro} disabled={loading || operacaoBloqueada}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR SAÍDA
               </Button>
             </DialogFooter>
           </>
