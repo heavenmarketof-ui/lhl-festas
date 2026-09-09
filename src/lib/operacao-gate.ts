@@ -38,19 +38,21 @@ export function getOperacaoGateStatus(
   order: StoredOrder | null | undefined,
   lancamentos: Lancamento[],
 ): OperacaoGateStatus {
-  if (!order || order.status === "Cancelado" || order.status === "Excluído") {
+  if (!order || order.status === "Cancelado" || order.status === "Excluído" || order.status === "Finalizado") {
     const motivo = !order
       ? "Contrato não encontrado."
       : order.status === "Excluído"
         ? "Contrato excluído."
-        : "Contrato cancelado.";
+        : order.status === "Cancelado"
+          ? "Contrato cancelado."
+          : "Contrato finalizado.";
     return {
       liberada: false,
       preparacaoLiberada: false,
       entregaLiberada: false,
       totalRecebido: 0,
       saldoReceber: 0,
-      quitado: false,
+      quitado: order?.status === "Finalizado",
       origemLegado: false,
       motivo,
       motivoEntrega: motivo,
@@ -58,8 +60,8 @@ export function getOperacaoGateStatus(
   }
 
   const pagamento = getContractPaymentStatus(order, lancamentos);
-  const preparacaoLiberada = pagamento.totalRecebido > 0;
-  const quitado = pagamento.saldoReceber <= 0.009 && pagamento.totalContratado > 0;
+  const preparacaoLiberada = pagamento.vendaConfirmada && !pagamento.encerrado;
+  const quitado = pagamento.isPago;
 
   return {
     liberada: preparacaoLiberada,
@@ -72,9 +74,11 @@ export function getOperacaoGateStatus(
     origemLegado: pagamento.origemLegado,
     motivo: preparacaoLiberada
       ? "Recebimento confirmado — preparação liberada."
-      : OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
+      : pagamento.encerrado
+        ? "Contrato encerrado."
+        : OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
     motivoEntrega: quitado
-      ? "Pagamento quitado."
+      ? "Pagamento/contrato encerrado para controle da equipe."
       : "Há saldo pendente — informação para controle da equipe; a entrega é decidida manualmente.",
   };
 }
