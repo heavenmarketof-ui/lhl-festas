@@ -21,6 +21,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "paths": {
+      "@/lib/gestao/aggregate": ["./src/lib/gestao/aggregate-lhl.ts"],
       "@/*": ["./src/*"]
     }
   }
