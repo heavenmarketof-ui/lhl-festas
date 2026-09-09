@@ -6,6 +6,10 @@ const ROOT = path.resolve(process.cwd(), "src");
 const ALVOS = [path.join(ROOT, "routes"), path.join(ROOT, "components")];
 const IGNORAR = new Set([
   path.join(ROOT, "components", "ui", "button.tsx"),
+  // Componente de infraestrutura do DayPicker: recebe todos os handlers por
+  // {...props}. Não é um botão concreto de tela e strings CSS com ">" tornam
+  // a inspeção regex intencionalmente inadequada para este arquivo.
+  path.join(ROOT, "components", "ui", "calendar.tsx"),
 ]);
 
 function arquivosTsx(dir: string): string[] {
@@ -39,11 +43,8 @@ function dentroDeTag(source: string, index: number, tag: string) {
 }
 
 function dentroDeWrapperAcionavel(source: string, index: number) {
-  // Button dentro de <a href=...> herda a navegação do link.
   if (dentroDeTag(source, index, "a")) return true;
 
-  // Componentes Radix/Shadcn usam Trigger + asChild para transferir o evento
-  // ao Button filho. O Button não precisa de onClick próprio.
   const wrappers = [
     "DropdownMenuTrigger",
     "DialogTrigger",
