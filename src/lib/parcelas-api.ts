@@ -6,6 +6,7 @@ import {
 } from "./parcelas.functions";
 import type { Parcela, ParcelaInput, ParcelaStatus } from "./parcelas.server";
 import { createLancamento, fetchLancamentos, type Lancamento } from "./financeiro-api";
+import { withAdminAccessToken } from "./admin-action-auth";
 
 export type { Parcela, ParcelaInput, ParcelaStatus } from "./parcelas.server";
 
@@ -20,11 +21,13 @@ export function statusEfetivo(p: Parcela, hoje = new Date().toISOString().slice(
 }
 
 export async function listarParcelas(contratoId: string): Promise<Parcela[]> {
-  return await listarParcelasFn({ data: { contratoId } } as any) as Parcela[];
+  const data = await withAdminAccessToken({ contratoId });
+  return await listarParcelasFn({ data } as any) as Parcela[];
 }
 
 export async function salvarParcelas(contratoId: string, contratoCliente: string, parcelas: ParcelaInput[]): Promise<Parcela[]> {
-  return await salvarParcelasFn({ data: { contratoId, contratoCliente, parcelas } } as any) as Parcela[];
+  const data = await withAdminAccessToken({ contratoId, contratoCliente, parcelas });
+  return await salvarParcelasFn({ data } as any) as Parcela[];
 }
 
 /** Cancela somente parcelas ainda não pagas. Parcelas pagas permanecem soberanas no histórico. */
@@ -40,7 +43,8 @@ export async function cancelarPlanoParcelas(contratoId: string, contratoCliente:
 }
 
 export async function atualizarStatusParcela(id: string, status: Exclude<ParcelaStatus, "pago">, observacoes?: string): Promise<Parcela> {
-  return await atualizarStatusParcelaFn({ data: { id, status, observacoes } } as any) as Parcela;
+  const data = await withAdminAccessToken({ id, status, observacoes });
+  return await atualizarStatusParcelaFn({ data } as any) as Parcela;
 }
 
 export function gerarPlanoParcelas(opts: { quantidade: number; valorTotal: number; primeiroVencimento: string }): ParcelaInput[] {
@@ -63,12 +67,13 @@ export function gerarPlanoParcelas(opts: { quantidade: number; valorTotal: numbe
 /** Pagamento idempotente: cada parcela usa um ID financeiro determinístico. */
 export async function registrarPagamentoParcela(opts: { parcela: Parcela; contratoCliente: string; valorPago: number; data?: string }): Promise<Parcela> {
   const lancamentoId = `boleto-parcela-${opts.parcela.id}`;
-  const data = opts.data || new Date().toISOString().slice(0, 10);
-  const result = await registrarPagamentoParcelaFn({ data: { id: opts.parcela.id, valorPago: opts.valorPago, lancamentoId } } as any) as { parcela: Parcela; criarLancamento: boolean };
+  const dataPagamento = opts.data || new Date().toISOString().slice(0, 10);
+  const authData = await withAdminAccessToken({ id: opts.parcela.id, valorPago: opts.valorPago, lancamentoId });
+  const result = await registrarPagamentoParcelaFn({ data: authData } as any) as { parcela: Parcela; criarLancamento: boolean };
   const atuais = await fetchLancamentos({ force: true }).catch(() => [] as Lancamento[]);
   if (!atuais.some((l) => l.id === lancamentoId)) {
     const lancamento: Lancamento = {
-      id: lancamentoId, data, tipo: "Entrada", categoria: "Pagamento Boleto",
+      id: lancamentoId, data: dataPagamento, tipo: "Entrada", categoria: "Pagamento Boleto",
       descricao: `Pagamento boleto ${opts.parcela.numero}/${opts.parcela.total} — ${opts.contratoCliente}`,
       valor: opts.valorPago, formaPagamento: "Boleto", conta: "PIX", beneficiario: opts.contratoCliente,
       observacoes: `Parcela ${opts.parcela.numero}/${opts.parcela.total}. Vencimento ${opts.parcela.vencimento}.`,
