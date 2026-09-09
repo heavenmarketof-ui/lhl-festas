@@ -23,6 +23,7 @@
     "paths": {
       "@/lib/gestao/aggregate": ["./src/lib/gestao/aggregate-lhl.ts"],
       "@/lib/producao-api": ["./src/lib/producao-api-lhl.ts"],
+      "@/lib/sheets-api": ["./src/lib/sheets-api-lhl.ts"],
       "@/*": ["./src/*"]
     }
   }
