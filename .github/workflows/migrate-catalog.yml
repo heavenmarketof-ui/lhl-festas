@@ -1,0 +1,38 @@
+name: Migrar catálogo para fonte própria
+
+on:
+  push:
+    paths:
+      - .github/workflows/migrate-catalog.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Baixar catálogo atual
+        shell: bash
+        run: |
+          mkdir -p src/data
+          curl --fail --silent --show-error --location --max-time 30 \
+            https://catalogo-lhlfestas.lovable.app/api/public/catalog.json \
+            -o src/data/catalogo-oficial.json
+          node -e 'const fs=require("fs"); const p=JSON.parse(fs.readFileSync("src/data/catalogo-oficial.json","utf8")); if(!Array.isArray(p.themes)||!p.themes.length) process.exit(1); console.log(`Temas migrados: ${p.themes.length}`)'
+      - name: Salvar catálogo no GitHub
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/catalogo-oficial.json
+          if git diff --cached --quiet; then
+            echo "Catálogo já está atualizado."
+            exit 0
+          fi
+          git commit -m "data: internalizar catalogo completo da LHL"
+          git push origin main
