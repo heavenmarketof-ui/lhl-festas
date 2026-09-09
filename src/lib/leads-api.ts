@@ -12,6 +12,9 @@
 //   essas ações para um backend com sessão (ex.: função protegida no Cloud).
 
 import { sheetPost, sheetPublicPost } from "./sheets-gateway";
+import { fetchOrdersFromSheet } from "./sheets-api";
+import { fetchLancamentos } from "./financeiro-api";
+import { resolveLeadVenda } from "./lead-venda";
 
 export type LeadStatus = "Novo Lead" | "Em Atendimento" | "Convertido" | "Perdido";
 export const LEAD_STATUSES: LeadStatus[] = [
@@ -217,11 +220,33 @@ export async function createLeadOnSheet(lead: LeadInput): Promise<LeadCreateResu
   };
 }
 
+async function rawLeadById(id: string): Promise<LeadRecord | null> {
+  const json = await postAdmin({ action: "leadsList" });
+  const rows = Array.isArray(json) ? json : Array.isArray((json as any)?.data) ? (json as any).data : [];
+  const row = rows.find((r: any) => String(r?.id ?? "") === String(id));
+  return row ? mapLead(row) : null;
+}
+
+async function assertVendaConfirmada(id: string): Promise<void> {
+  const [lead, orders, lancamentos] = await Promise.all([
+    rawLeadById(id),
+    fetchOrdersFromSheet({ force: true }),
+    fetchLancamentos({ force: true }),
+  ]);
+  if (!lead) throw new Error("Lead não encontrado.");
+  const venda = resolveLeadVenda(lead, orders, lancamentos);
+  if (!venda.confirmada) {
+    throw new Error("Este lead só pode ser marcado como Convertido/Fechado após um recebimento real do contrato, normalmente o sinal.");
+  }
+}
+
 export async function updateLeadStatusOnSheet(id: string, status: LeadStatus): Promise<void> {
+  if (status === "Convertido") await assertVendaConfirmada(id);
   await postAdmin({ action: "leadsUpdateStatus", id, status });
 }
 
 export async function updateLeadStageOnSheet(id: string, leadStage: LeadStage): Promise<void> {
+  if (leadStage === "CLOSED") await assertVendaConfirmada(id);
   await postAdmin({ action: "leadsUpdateStage", id, leadStage });
 }
 
@@ -278,7 +303,30 @@ function mapLead(r: any): LeadRecord {
 export async function fetchLeadsFromSheet(): Promise<LeadRecord[]> {
   const json = await postAdmin({ action: "leadsList" });
   const rows = Array.isArray(json) ? json : Array.isArray((json as any)?.data) ? (json as any).data : [];
-  return rows.map(mapLead);
+  const leads = rows.map(mapLead);
+
+  try {
+    const [orders, lancamentos] = await Promise.all([
+      fetchOrdersFromSheet(),
+      fetchLancamentos(),
+    ]);
+    return leads.map((lead) => {
+      const venda = resolveLeadVenda(lead, orders, lancamentos);
+      if (venda.confirmada) return { ...lead, status: "Convertido" as LeadStatus, leadStage: "CLOSED" as LeadStage };
+
+      // Corrige apenas a visão operacional: um fechamento manual antigo sem
+      // recebimento não deve inflar conversão nem vendas do CRM.
+      return {
+        ...lead,
+        status: lead.status === "Convertido" ? "Em Atendimento" as LeadStatus : lead.status,
+        leadStage: lead.leadStage === "CLOSED" ? "NEGOTIATION" as LeadStage : lead.leadStage,
+      };
+    });
+  } catch {
+    // Se Financeiro/Contratos estiver temporariamente indisponível, mantém a
+    // leitura de Leads em vez de derrubar o CRM inteiro.
+    return leads;
+  }
 }
 
 export async function deleteLeadOnSheet(id: string): Promise<void> {
