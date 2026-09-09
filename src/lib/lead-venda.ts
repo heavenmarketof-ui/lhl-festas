@@ -1,8 +1,13 @@
-import type { LeadRecord } from "./leads-api";
 import type { StoredOrder } from "./orders-storage";
 import type { Lancamento } from "./financeiro-api";
 import { getContractPaymentStatus } from "./pagamentos";
 import { toDateISO } from "./date-utils";
+
+export type LeadLike = {
+  whatsapp?: string;
+  whatsappNormalizado?: string;
+  dataFesta?: string;
+};
 
 function digits(v: unknown) {
   let d = String(v ?? "").replace(/\D/g, "");
@@ -22,7 +27,7 @@ export type LeadVenda = {
  * telefone, a data da festa precisa desambiguar.
  */
 export function resolveLeadVenda(
-  lead: LeadRecord,
+  lead: LeadLike,
   orders: StoredOrder[],
   lancamentos: Lancamento[],
 ): LeadVenda {
