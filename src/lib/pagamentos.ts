@@ -1,17 +1,16 @@
 // ============================================================================
 // FONTE ÚNICA DA VERDADE DO STATUS FINANCEIRO DO CONTRATO — LHL FESTAS
 // ----------------------------------------------------------------------------
-// Regra oficial:
-//   Saldo Real a Receber = Valor Total do Contrato − Recebimentos Confirmados
-//   saldoReceber <= 0  →  PAGAMENTO CONCLUÍDO (isPago = true)
+// Regras oficiais:
+//   • Pré-contrato sem recebimento confirmado NÃO é venda e NÃO gera A Receber.
+//   • A venda nasce no primeiro recebimento real não-caução (normalmente o sinal).
+//   • Depois da venda, Saldo a Receber = Valor Total − Recebimentos Confirmados.
+//   • Caução nunca compõe receita nem quita o contrato.
+//   • Contratos encerrados/finalizados deixam de aparecer como pendência ativa,
+//     preservando o histórico financeiro efetivamente recebido.
 //
-// Recebimentos confirmados = lançamentos de ENTRADA do Fluxo de Caixa
-// vinculados ao contrato (contratoId), EXCLUINDO caução (caução não é receita
-// operacional e nunca quita o contrato).
-//
-// Somente se o contrato ainda não possui NENHUM lançamento de entrada usamos o
-// legado (sinalRecebido / pagamentoFinalRecebido) como aproximação, para não
-// perder o histórico de contratos anteriores ao Fluxo de Caixa.
+// Para registros legados sem Fluxo de Caixa, sinalRecebido/pagamentoFinalRecebido
+// continuam sendo aceitos como evidência histórica para não perder dados antigos.
 // ============================================================================
 
 import type { StoredOrder } from "./orders-storage";
@@ -23,9 +22,16 @@ export type PaymentStatusLabel = "Quitado" | "Parcial" | "Pendente" | "Sem valor
 export type ContractPaymentStatus = {
   valorTotal: number;
   totalRecebido: number;
+  /** Saldo reconhecido como conta a receber. Antes da venda confirmada é zero. */
   saldoReceber: number;
+  /** Diferença matemática entre valor negociado e recebido, mesmo em pré-contrato. */
+  saldoNegociado: number;
   isPago: boolean;
   status: PaymentStatusLabel;
+  /** true quando houve o primeiro recebimento não-caução (ou evidência legada equivalente). */
+  vendaConfirmada: boolean;
+  /** true quando o contrato já saiu das pendências operacionais/financeiras ativas. */
+  encerrado: boolean;
   /** Total de caução recebida (informativo — nunca entra em totalRecebido). */
   caucaoRecebida: number;
   /** true quando o cálculo veio dos campos legados (sem lançamentos). */
@@ -68,10 +74,19 @@ export function indexRecebimentos(lancamentos: Lancamento[]) {
   return { receitas, caucoes, saldoAcumulado };
 }
 
+function contratoEncerrado(order: StoredOrder | null | undefined): boolean {
+  if (!order) return false;
+  if (order.status === "Finalizado" || order.status === "Cancelado" || order.status === "Excluído") return true;
+  const d = order.details;
+  return (
+    (d?.devolucaoConfirmada || "Não") === "Sim" ||
+    (d?.caucaoDevolvida || "Não") === "Sim"
+  );
+}
+
 /**
  * Função central de status financeiro do contrato.
- * Todas as telas (Dashboard, Financeiro, Gestão Financeira, Contrato) devem
- * usar esta função — nunca recalcular de forma própria.
+ * Todas as telas devem usar esta função — nunca recalcular de forma própria.
  */
 export function getContractPaymentStatus(
   order: StoredOrder | null | undefined,
@@ -85,13 +100,10 @@ export function getContractPaymentStatus(
   const recebidoLanc = money(idx.receitas.get(id) || 0);
   const caucao = money(idx.caucoes.get(id) || 0);
 
-  // REGRA LHL: O saldo a receber ignora a caução para fins de quitação do contrato.
-  // A caução é um valor de garantia que circula no caixa mas não abate o valor do serviço.
   let totalRecebido = recebidoLanc;
   let origemLegado = false;
 
   if (recebidoLanc <= 0) {
-    // Nenhum recebimento registrado no Fluxo de Caixa: usa o legado.
     const sinal = money(parseValor(d?.valorSinal));
     if ((d?.pagamentoFinalRecebido || "Não") === "Sim") {
       totalRecebido = valorTotal;
@@ -102,29 +114,35 @@ export function getContractPaymentStatus(
     }
   }
 
-  // REGRA DE LEGADO: Se não há lançamentos e existem evidências de encerramento,
-  // ou se os dados históricos indicam quitação, tratamos como quitado.
-  const evidenciasEncerramento =
+  const evidenciasEncerramentoPagamento =
     (d?.pagamentoFinalRecebido || "Não") === "Sim" ||
     (d?.pagamentoFinalizado || "Não") === "Sim";
 
-  if (recebidoLanc <= 0 && evidenciasEncerramento) {
+  if (recebidoLanc <= 0 && evidenciasEncerramentoPagamento) {
     totalRecebido = valorTotal;
     origemLegado = true;
   }
 
-
   totalRecebido = money(Math.min(totalRecebido, Math.max(valorTotal, totalRecebido)));
   const saldoBruto = money(valorTotal - totalRecebido);
-  const saldoReceber = isZero(saldoBruto) || saldoBruto < 0 ? 0 : saldoBruto;
-  const isPago = valorTotal > 0 ? saldoReceber === 0 : totalRecebido > 0;
+  const saldoNegociado = isZero(saldoBruto) || saldoBruto < 0 ? 0 : saldoBruto;
+
+  const vendaConfirmada = totalRecebido > 0;
+  const encerrado = contratoEncerrado(order);
+
+  // Conta a receber só existe depois que o pré-contrato virou venda.
+  // Encerrados saem das pendências ativas, sem apagar o histórico recebido.
+  const saldoReceber = !vendaConfirmada || encerrado ? 0 : saldoNegociado;
+
+  const quitadoFinanceiramente = valorTotal > 0 ? saldoNegociado === 0 && vendaConfirmada : vendaConfirmada;
+  const isPago = encerrado || quitadoFinanceiramente;
 
   const status: PaymentStatusLabel =
     valorTotal <= 0 && totalRecebido <= 0
       ? "Sem valor"
       : isPago
         ? "Quitado"
-        : totalRecebido > 0
+        : vendaConfirmada
           ? "Parcial"
           : "Pendente";
 
@@ -132,14 +150,17 @@ export function getContractPaymentStatus(
     valorTotal,
     totalRecebido,
     saldoReceber,
+    saldoNegociado,
     isPago,
     status,
+    vendaConfirmada,
+    encerrado,
     caucaoRecebida: caucao,
     origemLegado,
   };
 }
 
-/** Atalho: o contrato possui saldo real a receber? */
+/** Atalho: o contrato possui conta a receber reconhecida e ativa? */
 export function temPagamentoPendente(
   order: StoredOrder | null | undefined,
   lancamentos: Parameters<typeof getContractPaymentStatus>[1],
