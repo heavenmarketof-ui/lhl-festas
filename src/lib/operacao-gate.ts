@@ -1,9 +1,14 @@
 // ============================================================================
-// GATES FINANCEIROS DA OPERAÇÃO — LHL FESTAS
+// REGRA SOBERANA DE LIBERAÇÃO OPERACIONAL — LHL FESTAS
 // ----------------------------------------------------------------------------
-// 1) PREPARAÇÃO: começa após qualquer recebimento real confirmado (sinal).
-// 2) ENTREGA/MONTAGEM: somente com o contrato 100% quitado.
-// Caução não compõe pagamento do contrato e nunca libera a operação.
+// Pré-contrato sem recebimento permanece fora da preparação operacional.
+// Após qualquer recebimento real confirmado (normalmente o sinal), compras,
+// produção, separação e preparação podem começar.
+//
+// IMPORTANTE: saldo pendente NÃO cria bloqueio técnico de retirada, entrega ou
+// montagem. A situação financeira deve ficar visível para controle humano de
+// Vitor/Josi, que decidem operacionalmente a entrega.
+// Caução não compõe pagamento do contrato.
 // ============================================================================
 
 import type { StoredOrder } from "./orders-storage";
@@ -15,13 +20,11 @@ import { getContractPaymentStatus } from "./pagamentos";
 export const OPERACAO_BLOQUEADA_SEM_RECEBIMENTO =
   "Contrato ainda sem recebimento confirmado. A preparação só é liberada após a confirmação real do sinal/pagamento.";
 
-export const ENTREGA_BLOQUEADA_SALDO_PENDENTE =
-  "Contrato ainda possui saldo pendente. A LHL Festas não libera retirada, entrega ou montagem antes da quitação integral.";
-
 export type OperacaoGateStatus = {
   /** Compatibilidade: liberada significa preparação liberada. */
   liberada: boolean;
   preparacaoLiberada: boolean;
+  /** Informativo apenas: indica quitação, nunca deve ser usado como bloqueio de entrega. */
   entregaLiberada: boolean;
   totalRecebido: number;
   saldoReceber: number;
@@ -57,12 +60,12 @@ export function getOperacaoGateStatus(
   const pagamento = getContractPaymentStatus(order, lancamentos);
   const preparacaoLiberada = pagamento.totalRecebido > 0;
   const quitado = pagamento.saldoReceber <= 0.009 && pagamento.totalContratado > 0;
-  const entregaLiberada = preparacaoLiberada && quitado;
 
   return {
     liberada: preparacaoLiberada,
     preparacaoLiberada,
-    entregaLiberada,
+    // Mantido por compatibilidade com telas existentes; é somente um indicador financeiro.
+    entregaLiberada: quitado,
     totalRecebido: pagamento.totalRecebido,
     saldoReceber: pagamento.saldoReceber,
     quitado,
@@ -70,9 +73,9 @@ export function getOperacaoGateStatus(
     motivo: preparacaoLiberada
       ? "Recebimento confirmado — preparação liberada."
       : OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
-    motivoEntrega: entregaLiberada
-      ? "Pagamento quitado — retirada, entrega ou montagem liberada."
-      : ENTREGA_BLOQUEADA_SALDO_PENDENTE,
+    motivoEntrega: quitado
+      ? "Pagamento quitado."
+      : "Há saldo pendente — informação para controle da equipe; a entrega é decidida manualmente.",
   };
 }
 
@@ -96,15 +99,5 @@ export async function assertOperacaoLiberada(
 ): Promise<StoredOrder> {
   const { order, status } = await resolveOperacaoGate(contratoId, orderHint);
   if (!order || !status.preparacaoLiberada) throw new Error(status.motivo);
-  return order;
-}
-
-/** Retirada pelo cliente, entrega e montagem exigem quitação integral. */
-export async function assertEntregaLiberada(
-  contratoId: string,
-  orderHint?: StoredOrder | null,
-): Promise<StoredOrder> {
-  const { order, status } = await resolveOperacaoGate(contratoId, orderHint);
-  if (!order || !status.entregaLiberada) throw new Error(status.motivoEntrega);
   return order;
 }
