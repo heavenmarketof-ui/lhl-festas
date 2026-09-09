@@ -1,14 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getServerEnv } from "./runtime-env.server";
+import OWN_CATALOG from "@/data/catalogo-oficial.json";
 import { THEMES as LOCAL_THEMES } from "./catalog-source";
 
 export type CatalogImage = { url: string; thumbnailUrl: string; modality: string };
 export type CatalogTheme = { id: string; name: string; slug: string; aliases: string[]; modalities: string[]; images: CatalogImage[] };
 export type CatalogPayload = { version: number; updatedAt: string; totalThemes: number; themes: CatalogTheme[] };
 
-const LEGACY_CATALOG_SOURCE = "https://catalogo-lhlfestas.lovable.app/api/public/catalog.json";
-const CACHE_MS = 5 * 60 * 1000;
-let cache: { expiresAt: number; payload: CatalogPayload } | null = null;
+let cache: CatalogPayload | null = null;
 
 function slugify(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -39,27 +37,30 @@ function normalizeImageUrl(value: unknown) {
   return raw;
 }
 
-function normalizePayload(raw: any): CatalogPayload {
+export function normalizeCatalogPayload(raw: any): CatalogPayload {
   const themes = Array.isArray(raw?.themes) ? raw.themes : [];
   return {
     version: Number(raw?.version || 1),
     updatedAt: String(raw?.updatedAt || ""),
-    totalThemes: Number(raw?.totalThemes || themes.length),
-    themes: themes.map((theme: any) => ({
-      id: String(theme?.id || ""),
-      name: String(theme?.name || "Tema"),
-      slug: String(theme?.slug || ""),
-      aliases: Array.isArray(theme?.aliases) ? theme.aliases.map(String) : [],
-      modalities: Array.isArray(theme?.modalities) ? theme.modalities.map(String) : [],
-      images: (Array.isArray(theme?.images) ? theme.images : [])
-        .filter((image: any) => image?.url || image?.thumbnailUrl)
-        .map((image: any) => {
-          const url = normalizeImageUrl(image?.url || image?.thumbnailUrl);
-          const thumbnailUrl = normalizeImageUrl(image?.thumbnailUrl || image?.url);
-          return { url, thumbnailUrl, modality: String(image?.modality || "") };
-        })
-        .filter((image: CatalogImage) => Boolean(image.url || image.thumbnailUrl)),
-    })),
+    totalThemes: themes.length,
+    themes: themes
+      .filter((theme: any) => theme?.isActive !== false)
+      .map((theme: any) => ({
+        id: String(theme?.id || theme?.slug || ""),
+        name: String(theme?.name || "Tema"),
+        slug: String(theme?.slug || slugify(String(theme?.name || "tema"))),
+        aliases: Array.isArray(theme?.aliases) ? theme.aliases.map(String) : [],
+        modalities: Array.isArray(theme?.modalities) ? theme.modalities.map(String) : [],
+        images: (Array.isArray(theme?.images) ? theme.images : [])
+          .filter((image: any) => image?.url || image?.thumbnailUrl)
+          .map((image: any) => {
+            const url = normalizeImageUrl(image?.url || image?.thumbnailUrl);
+            const thumbnailUrl = normalizeImageUrl(image?.thumbnailUrl || image?.url);
+            return { url, thumbnailUrl, modality: String(image?.modality || "") };
+          })
+          .filter((image: CatalogImage) => Boolean(image.url || image.thumbnailUrl)),
+      }))
+      .filter((theme: CatalogTheme) => Boolean(theme.id && theme.name)),
   };
 }
 
@@ -75,28 +76,17 @@ function localFallbackPayload(): CatalogPayload {
   return { version: 1, updatedAt: "", totalThemes: themes.length, themes };
 }
 
-async function trySource(source: string): Promise<CatalogPayload> {
-  const response = await fetch(source, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(15_000) });
-  if (!response.ok) throw new Error(`${response.status}`);
-  const payload = normalizePayload(await response.json());
-  if (!payload.themes.length) throw new Error("sem temas");
-  return payload;
-}
-
 export const fetchCatalogoPublico = createServerFn({ method: "GET" }).handler(async () => {
-  if (cache && cache.expiresAt > Date.now()) return cache.payload;
-  const configured = getServerEnv("CATALOGO_PUBLIC_URL").trim();
-  const sources = Array.from(new Set([configured, LEGACY_CATALOG_SOURCE].filter(Boolean)));
-  for (const source of sources) {
-    try {
-      const payload = await trySource(source);
-      cache = { payload, expiresAt: Date.now() + CACHE_MS };
-      return payload;
-    } catch (error) {
-      console.warn("[catalogo] fonte indisponível", source, error instanceof Error ? error.message : error);
-    }
+  if (cache) return cache;
+  try {
+    const payload = normalizeCatalogPayload(OWN_CATALOG);
+    if (!payload.themes.length) throw new Error("catálogo próprio vazio");
+    cache = payload;
+    return payload;
+  } catch (error) {
+    console.warn("[catalogo] falha ao carregar catálogo próprio", error instanceof Error ? error.message : error);
+    const payload = localFallbackPayload();
+    cache = payload;
+    return payload;
   }
-  const payload = localFallbackPayload();
-  cache = { payload, expiresAt: Date.now() + 60_000 };
-  return payload;
 });
