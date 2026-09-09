@@ -1,11 +1,10 @@
 // Catálogo remoto usado pelo Consultor.
-// O navegador não acessa mais diretamente a antiga hospedagem do catálogo:
-// toda leitura passa pela fachada server-side do Sistema Oficial LHL.
+// Toda leitura passa pela fachada server-side do Sistema Oficial LHL.
 
 import type { CatalogArt } from "./types";
 import { fetchCatalogoPublico } from "@/lib/catalogo-publico.functions";
 
-const CACHE_KEY = "lhl_consultor_catalog_v3";
+const CACHE_KEY = "lhl_consultor_catalog_v4";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 const MAX_THEMES = 5000;
 const MAX_IMAGES_PER_THEME = 60;
@@ -27,10 +26,6 @@ function asStringArray(v: unknown, maxItems = 80, maxLen = 120): string[] {
   return out;
 }
 
-/**
- * Converte links do Google Drive em URLs diretas servidas pelo CDN público,
- * mantendo a URL real vinculada à arte no catálogo.
- */
 export function normalizeDriveUrl(url: string, width = 1200): string {
   const m =
     url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/) ||
@@ -41,7 +36,14 @@ export function normalizeDriveUrl(url: string, width = 1200): string {
 
 function safeImageUrl(v: unknown, width = 1200): string {
   const s = asString(v, 800);
-  if (!s || !/^https?:\/\//i.test(s)) return "";
+  if (!s) return "";
+
+  // A fachada oficial transforma arquivos do Drive em /catalog-image?id=...
+  // para que a própria LHL sirva a imagem. O Consultor precisa aceitar essa
+  // URL relativa, além de URLs HTTPS tradicionais.
+  if (s.startsWith("/catalog-image?")) return s;
+  if (!/^https?:\/\//i.test(s)) return "";
+
   return /drive\.google\.com|drive\.usercontent\.google\.com/.test(s)
     ? normalizeDriveUrl(s, width)
     : s;
@@ -67,9 +69,9 @@ function artsFromTheme(raw: unknown): CatalogArt[] {
   rawImages.forEach((img, i) => {
     if (!img || typeof img !== "object") return;
     const o = img as Record<string, unknown>;
-    const imageUrl = safeImageUrl(o.url);
+    const imageUrl = safeImageUrl(o.url || o.thumbnailUrl);
     if (!imageUrl) return;
-    const thumbnailUrl = safeImageUrl(o.thumbnailUrl, 800) || imageUrl;
+    const thumbnailUrl = safeImageUrl(o.thumbnailUrl || o.url, 800) || imageUrl;
     const modality = asString(o.modality, 60) || modalities[0] || "";
     arts.push({
       id: `${themeId}::${i}`,
@@ -141,12 +143,6 @@ async function fetchCatalogoOficial(): Promise<CatalogArt[] | null> {
   }
 }
 
-/**
- * Artes do catálogo oficial:
- * 1. cache válido em sessionStorage;
- * 2. fachada server-side do Sistema LHL;
- * 3. null — o chamador usa o fallback local.
- */
 export function loadRemoteCatalog(): Promise<CatalogArt[] | null> {
   const cached = readCache();
   if (cached && cached.length) return Promise.resolve(cached);
