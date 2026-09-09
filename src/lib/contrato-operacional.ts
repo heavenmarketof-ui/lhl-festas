@@ -34,11 +34,15 @@ export function contratoEncerradoOperacionalmente(
     d?.caucaoDevolvida === "Sim"
   ) return true;
 
-  // Migração/limpeza histórica: festas que já aconteceram antes de hoje não
-  // devem continuar produzindo compras, produção, alertas ou tarefas ativas.
+  // Limpeza histórica: a data da festa é a referência principal. Em contratos
+  // legados que vieram sem dataEvento, usa devolução e, por último, retirada.
+  // Isso impede que kits antigos já entregues continuem aparecendo nas tarefas.
   if (hojeISO) {
     const evento = toDateISO(d?.dataEvento);
-    if (evento && evento < hojeISO) return true;
+    const devolucao = toDateISO(d?.dataDevolucao);
+    const retirada = toDateISO(d?.dataRetirada);
+    const referencia = evento || devolucao || retirada;
+    if (referencia && referencia < hojeISO) return true;
   }
 
   return false;
