@@ -9,7 +9,6 @@ import {
   Wallet,
   Package,
   Lock,
-  Factory,
   LogOut,
   ClipboardCheck,
   Menu,
@@ -44,8 +43,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     { label: "Clientes", to: "/admin/clientes", icon: Users, desc: "Histórico por pessoa" },
     { label: "Festas", to: "/admin/festas", icon: FileText, desc: "Contratos e eventos" },
     { label: "Agenda", to: "/admin/agenda", icon: CalendarDays, desc: "Calendário de festas" },
-    { label: "Operação", to: "/admin/operacao", icon: ShieldCheck, desc: "Liberados e aguardando sinal" },
-    { label: "Produção", to: "/admin/producao", icon: Factory, desc: "Kits, compras e preparação", search: { filtro: "pendentes", etapa: "todas", q: "" } },
+    { label: "Operação", to: "/admin/operacao", icon: ShieldCheck, desc: "Preparação e acompanhamento" },
     { label: "Financeiro", to: "/admin/financeiro", icon: Wallet, desc: "Entradas e saídas", search: { tab: "dashboard" } },
     { label: "Gestão", to: "/admin/gestao", icon: BarChart3, desc: "Indicadores do negócio" },
     { label: "Patrimônio", to: "/admin/patrimonio", icon: Package, desc: "Acervo e bens" },
@@ -118,8 +116,13 @@ export type CalendarLevel = "green" | "red" | "yellow" | "orange" | "purple";
 
 export function orderCalendarLevel(o: StoredOrder, todayISO: string, in7ISO: string, opAtual?: OrdemProducao | null): CalendarLevel {
   const d = o.details;
-  if ((d?.caucaoDevolvida || "Não") === "Sim" || (d?.devolucaoConfirmada || "Não") === "Sim") return "green";
-  if (opAtual) { const pend = pendenciasOperacionais(opAtual); if (pend.compras > 0 || pend.producao > 0) return "yellow"; if (opAtual.kitProntoConfirmadoEm) return "purple"; if (isAtrasada(opAtual, o)) return "red"; }
+  if ((d?.caucaoDevolvida || "Não") === "Sim" || (d?.devolucaoConfirmada || "Não") === "Sim" || String(o.status).toLowerCase().includes("finaliz")) return "green";
+  if (opAtual) {
+    const pend = pendenciasOperacionais(opAtual);
+    if (pend.compras > 0 || pend.producao > 0) return "yellow";
+    if (pend.compras === 0 && pend.producao === 0) return "purple";
+    if (isAtrasada(opAtual, o)) return "red";
+  }
   if (countItensPendentes(d?.observacoesInternas) > 0) return "yellow";
   const baseData = toDateISO(d?.dataRetirada) || toDateISO(d?.dataEvento);
   if (baseData && baseData >= todayISO && baseData <= in7ISO) return "red";
@@ -127,7 +130,7 @@ export function orderCalendarLevel(o: StoredOrder, todayISO: string, in7ISO: str
 }
 
 const DOT_CLASS: Record<CalendarLevel, string> = { green: "bg-emerald-500", red: "bg-red-500", yellow: "bg-yellow-400", orange: "bg-orange-500", purple: "bg-purple-500" };
-const DOT_LABEL: Record<CalendarLevel, string> = { green: "Cliente Finalizado (caução devolvida)", yellow: "Cliente com Itens Pendentes", red: "Cliente da Semana", orange: "Cliente em Aberto", purple: "Kit Pronto" };
+const DOT_LABEL: Record<CalendarLevel, string> = { green: "Cliente Finalizado", yellow: "Cliente com Itens Pendentes", red: "Cliente da Semana", orange: "Cliente em Aberto", purple: "Kit Pronto" };
 
 export function PriorityDot({ level }: { level: CalendarLevel | null }) { if (!level) return null; return <span className={`inline-block h-2.5 w-2.5 rounded-full ${DOT_CLASS[level] ?? "bg-muted"}`} title={DOT_LABEL[level] ?? ""} aria-label={DOT_LABEL[level] ?? ""} />; }
 
