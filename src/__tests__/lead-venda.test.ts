@@ -3,7 +3,7 @@ import { resolveLeadVenda } from "@/lib/lead-venda";
 import type { StoredOrder } from "@/lib/orders-storage";
 import type { Lancamento } from "@/lib/financeiro-api";
 
-function order(id: string, telefone: string, dataEvento: string): StoredOrder {
+function order(id: string, telefone: string, dataEvento: string, leadId = ""): StoredOrder {
   return {
     id,
     nome: "Cliente",
@@ -29,6 +29,7 @@ function order(id: string, telefone: string, dataEvento: string): StoredOrder {
       pagamentoFinalizado: "Não",
       devolucaoConfirmada: "Não",
       caucaoDevolvida: "Não",
+      observacoesInternas: leadId ? `Lead CRM vinculado: ${leadId}` : "",
     } as any,
   } as StoredOrder;
 }
@@ -49,7 +50,8 @@ function entrada(contratoId: string, valor = 500): Lancamento {
   };
 }
 
-const lead = (telefone = "(11) 99999-0000", dataFesta = "2026-10-10") => ({
+const lead = (telefone = "(11) 99999-0000", dataFesta = "2026-10-10", id = "") => ({
+  id,
   whatsapp: telefone,
   whatsappNormalizado: telefone.replace(/\D/g, ""),
   dataFesta,
@@ -82,6 +84,16 @@ describe("resolveLeadVenda", () => {
     const r = resolveLeadVenda(lead(), orders, [entrada("atual")]);
     expect(r.confirmada).toBe(true);
     expect(r.order?.id).toBe("atual");
+  });
+
+  it("prioriza o ID explícito do lead gravado no pré-contrato", () => {
+    const orders = [
+      order("outro", "11999990000", "2026-10-10", "LEAD-OUTRO"),
+      order("correto", "11999990000", "2026-10-10", "LEAD-2026-0001"),
+    ];
+    const r = resolveLeadVenda(lead("11999990000", "2026-10-10", "LEAD-2026-0001"), orders, [entrada("correto")]);
+    expect(r.confirmada).toBe(true);
+    expect(r.order?.id).toBe("correto");
   });
 
   it("não presume vínculo quando há ambiguidade sem data útil", () => {
