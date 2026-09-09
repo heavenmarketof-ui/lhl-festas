@@ -20,6 +20,11 @@ describe("contrato operacional", () => {
     expect(contratoOperacionalmenteAtivo(o, "2026-09-09")).toBe(true);
   });
 
+  it("mantém festa futura totalmente paga nas filas operacionais", () => {
+    const o = order("1b", "Pendente", { pagamentoFinalizado: "Sim" });
+    expect(contratoOperacionalmenteAtivo(o, "2026-09-09")).toBe(true);
+  });
+
   it("remove festa passada das filas ativas", () => {
     const o = order("2", "Pendente", { dataEvento: "2026-09-08" });
     expect(contratoEncerradoOperacionalmente(o, "2026-09-09")).toBe(true);
