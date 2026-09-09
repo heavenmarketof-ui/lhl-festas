@@ -28,6 +28,21 @@ describe("validação da reserva pública", () => {
     expect(validateReserva(valid)).toBeNull();
   });
 
+  it("aceita Festa com Montagem sem seleção manual de kit", () => {
+    expect(
+      validateReserva({
+        ...valid,
+        modalidade: "Festa com Montagem",
+        plano: "",
+      }),
+    ).toBeNull();
+  });
+
+  it("continua exigindo kit nas modalidades com retirada", () => {
+    expect(validateReserva({ ...valid, modalidade: "Peg & Monte", plano: "" })).toContain("kit");
+    expect(validateReserva({ ...valid, modalidade: "Festa na Mesa", plano: "" })).toContain("kit");
+  });
+
   it("rejeita telefone, e-mail, CEP e data inválidos", () => {
     expect(validateReserva({ ...valid, telefone: "123" })).toContain("telefone");
     expect(validateReserva({ ...valid, email: "invalido" })).toContain("e-mail");
