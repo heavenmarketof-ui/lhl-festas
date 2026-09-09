@@ -19,6 +19,10 @@ function manualChunks(id: string) {
 }
 
 export default defineConfig({
+  // CNPJ é dado público institucional e fica disponível nos documentos gerados.
+  define: {
+    "import.meta.env.VITE_LHL_CNPJ": JSON.stringify("66.067.187/0001-59"),
+  },
   server: {
     host: "0.0.0.0",
     port: 8080,
