@@ -14,13 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { fmtBRL, CONTAS_PADRAO, FORMAS_PAGAMENTO } from "@/lib/financeiro-api";
 import { compraStatusOf, type OrdemProducao, type ItemCompra } from "@/lib/producao-api";
 import { mudarEtapaCompra } from "@/lib/compras-flow";
-import {
-  OPERACAO_BLOQUEADA_SEM_RECEBIMENTO,
-  resolveOperacaoGate,
-  type OperacaoGateStatus,
-} from "@/lib/operacao-gate";
 import { toast } from "sonner";
-import { AlertTriangle, CheckCircle2, Wallet, Loader2 } from "lucide-react";
+import { CheckCircle2, Wallet, Loader2 } from "lucide-react";
 
 export type RegistrarCompraAlvo = {
   op: OrdemProducao;
@@ -62,8 +57,6 @@ export function RegistrarCompraDialog({
   const [valorReal, setValorReal] = useState<number>(0);
   const [conta, setConta] = useState("Caixa");
   const [formaPagamento, setFormaPagamento] = useState("PIX");
-  const [checandoGate, setChecandoGate] = useState(false);
-  const [gate, setGate] = useState<OperacaoGateStatus | null>(null);
 
   const currentOpen = open ?? !!alvo;
   const [currentOp, setCurrentOp] = useState<OrdemProducao | undefined>(propOp ?? alvo?.op);
@@ -72,10 +65,8 @@ export function RegistrarCompraDialog({
   const currentOrder = propOrder ?? alvo?.order;
   const currentSolicitacao = propSolicitacao ?? alvo?.solicitacao;
 
-  // O Dashboard já reconcilia a OP com a Solicitação Financeira. Em registros
-  // antigos, porém, a solicitação pode não ter origemItemId e não chegar ao
-  // diálogo. Se o próprio item já está em "Compra autorizada", preservamos
-  // essa evidência para que uma OP remota atrasada não bloqueie a compra.
+  // A Central já reconciliou OP + Solicitação. Em registros antigos, se o item
+  // já está autorizado, isso é evidência suficiente para abrir o diálogo.
   const solicitacaoEfetiva = currentSolicitacao ?? (
     currentItem && compraStatusOf(currentItem) === "Compra autorizada"
       ? { id: currentItem.solicitacaoId || "", status: "autorizada" }
@@ -86,44 +77,6 @@ export function RegistrarCompraDialog({
     setCurrentOp(propOp ?? alvo?.op);
   }, [propOp, alvo?.op]);
 
-  useEffect(() => {
-    let ativo = true;
-    if (!currentOpen || !currentOp?.contratoId) {
-      setGate(null);
-      setChecandoGate(false);
-      return;
-    }
-
-    setChecandoGate(true);
-    setGate(null);
-    void resolveOperacaoGate(currentOp.contratoId, currentOrder)
-      .then(({ status }) => {
-        if (ativo) setGate(status);
-      })
-      .catch(() => {
-        if (ativo) {
-          setGate({
-            liberada: false,
-            preparacaoLiberada: false,
-            entregaLiberada: false,
-            totalRecebido: 0,
-            saldoReceber: 0,
-            quitado: false,
-            origemLegado: false,
-            motivo: "Não foi possível confirmar o recebimento deste contrato agora.",
-            motivoEntrega: "Não foi possível consultar a situação financeira agora.",
-          });
-        }
-      })
-      .finally(() => {
-        if (ativo) setChecandoGate(false);
-      });
-
-    return () => {
-      ativo = false;
-    };
-  }, [currentOpen, currentOp?.contratoId, currentOrder?.id]);
-  
   const handleOpenChange = (val: boolean) => {
     onOpenChange?.(val);
     if (!val) {
@@ -131,7 +84,7 @@ export function RegistrarCompraDialog({
       setStep(1);
     }
   };
-  
+
   const handleSuccess = (op: OrdemProducao) => {
     setCurrentOp(op);
     propOnSuccess?.(op);
@@ -149,13 +102,7 @@ export function RegistrarCompraDialog({
 
   if (!currentOp || !currentItem) return null;
 
-  const operacaoBloqueada = !checandoGate && gate?.liberada === false;
-
   const handleConfirmarCompra = async () => {
-    if (operacaoBloqueada) {
-      toast.error(gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO);
-      return;
-    }
     setLoading(true);
     try {
       const res = await mudarEtapaCompra({
@@ -164,10 +111,11 @@ export function RegistrarCompraDialog({
         status: "Compra realizada",
         order: currentOrder,
         solicitacao: solicitacaoEfetiva,
+        usarOpAtual: true,
         confirmacao: {
           valorReal,
           dataCompra: new Date().toISOString().split("T")[0],
-        }
+        },
       });
       handleSuccess(res.op);
       toast.success("Compra registrada com sucesso.");
@@ -181,10 +129,6 @@ export function RegistrarCompraDialog({
   };
 
   const handleRegistrarFinanceiro = async () => {
-    if (operacaoBloqueada) {
-      toast.error(gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO);
-      return;
-    }
     setLoading(true);
     try {
       const res = await mudarEtapaCompra({
@@ -193,12 +137,13 @@ export function RegistrarCompraDialog({
         status: "Pago",
         order: currentOrder,
         solicitacao: solicitacaoEfetiva,
+        usarOpAtual: true,
         confirmacao: {
           valorReal,
           conta,
           formaPagamento,
           dataCompra: new Date().toISOString().split("T")[0],
-        }
+        },
       });
       handleSuccess(res.op);
       toast.success("Pagamento registrado com sucesso no Fluxo de Caixa.");
@@ -224,19 +169,6 @@ export function RegistrarCompraDialog({
               <DialogDescription>Confirme os detalhes da aquisição do material.</DialogDescription>
             </DialogHeader>
 
-            {checandoGate ? (
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Conferindo recebimento do contrato...
-              </div>
-            ) : operacaoBloqueada ? (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-800">
-                <p className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-4 w-4" /> Compra bloqueada — aguardando sinal</p>
-                <p className="mt-1 text-xs">{gate?.motivo || OPERACAO_BLOQUEADA_SEM_RECEBIMENTO}</p>
-              </div>
-            ) : gate?.liberada ? (
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-800">Recebimento confirmado · operação liberada.</div>
-            ) : null}
-
             <div className="grid gap-4 py-4">
               <div className="space-y-1"><Label className="text-[10px] uppercase text-muted-foreground">Item</Label><p className="font-bold text-sm">{currentItem.descricao}</p></div>
               <div className="grid grid-cols-2 gap-4">
@@ -247,12 +179,13 @@ export function RegistrarCompraDialog({
                 <Label htmlFor="valorReal" className="text-sm font-bold text-primary">VALOR REAL PAGO (TOTAL)</Label>
                 <MoneyInput id="valorReal" value={valorReal} onChange={setValorReal} className="text-lg font-bold text-emerald-700" />
               </div>
+              <p className="text-xs text-muted-foreground">O recebimento do contrato é validado somente ao confirmar, sem uma consulta extra ao abrir esta tela.</p>
             </div>
 
             <DialogFooter>
               <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancelar</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={handleConfirmarCompra} disabled={loading || checandoGate || operacaoBloqueada}>
-                {loading || checandoGate ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR COMPRA
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={handleConfirmarCompra} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR COMPRA
               </Button>
             </DialogFooter>
           </>
@@ -270,7 +203,7 @@ export function RegistrarCompraDialog({
             </div>
             <DialogFooter className="grid grid-cols-2 gap-3">
               <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={loading}>AGORA NÃO</Button>
-              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={() => setStep(3)} disabled={loading || operacaoBloqueada}>REGISTRAR NO FLUXO</Button>
+              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={() => setStep(3)} disabled={loading}>REGISTRAR NO FLUXO</Button>
             </DialogFooter>
           </>
         )}
@@ -296,7 +229,7 @@ export function RegistrarCompraDialog({
             </div>
             <DialogFooter className="grid grid-cols-2 gap-3">
               <Button variant="ghost" onClick={() => setStep(2)} disabled={loading}>Voltar</Button>
-              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={handleRegistrarFinanceiro} disabled={loading || operacaoBloqueada}>
+              <Button className="bg-gold hover:bg-gold/90 text-amber-950 font-bold" onClick={handleRegistrarFinanceiro} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR SAÍDA
               </Button>
             </DialogFooter>
