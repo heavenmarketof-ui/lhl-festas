@@ -19,7 +19,7 @@ export const PERSONALIZADOS_CATEGORIES: Array<"Todos" | PersonalizadoCategory> =
   "Convites",
 ];
 
-// PREÇOS PÚBLICOS DE VENDA — RASCUNHO.
+// PREÇOS PÚBLICOS DE VENDA.
 // A base de custo da produção não deve ser armazenada no repositório/site público.
 // Estes valores foram calculados fora do código aplicando +50% sobre o custo informado.
 export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
@@ -177,8 +177,6 @@ export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
     price: 7.2,
     unit: "un",
     category: "Convites",
-    // Referência visual externa provisória (Elo7). Substituir por foto própria/licenciada antes da publicação final.
-    imageId: "https://img.elo7.com.br/product/main/4F94056/convite-caixa-livro-a-bela-e-a-fera-caixa-15-anos.jpg",
     description: "Convite físico em formato de caixinha livro com arte personalizada.",
   },
   {
