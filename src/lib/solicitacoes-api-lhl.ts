@@ -16,6 +16,7 @@ import {
   applyCompraStatus,
   compraStatusOf,
   fetchOrdens,
+  getOrdensLocal,
   logAction,
   saveOrdem,
   sincronizarItensContrato,
@@ -46,6 +47,27 @@ function hojeISO(): string {
   return local.toISOString().slice(0, 10);
 }
 
+function localizarItemEmOps(
+  ops: Iterable<OrdemProducao>,
+  id: string,
+): { op: OrdemProducao; item: ItemCompra } | null {
+  for (const op of ops) {
+    const item = (op.compras || []).find((c) =>
+      c.solicitacaoId === id || c.id === id || c.origemContratoItemId === id,
+    );
+    if (item) return { op, item };
+  }
+  return null;
+}
+
+function itemOperacionalDaSolicitacao(s: Solicitacao, ops: OrdemProducao[]): boolean {
+  if (!ops.length) return true;
+  const found = localizarItemEmOps(ops, s.id)
+    || (s.origemItemId ? localizarItemEmOps(ops, s.origemItemId) : null);
+  if (!found) return true; // pode ser item ainda apenas no Contrato
+  return !found.item.cancelado && !found.item.removidoDoContrato;
+}
+
 /**
  * A Central é uma fila operacional, não um arquivo histórico.
  * Histórico continua preservado nos contratos/OP/Fluxo de Caixa.
@@ -54,9 +76,13 @@ export function filtrarSolicitacoesOperacionais(
   list: Solicitacao[],
   orders: StoredOrder[],
   hoje = hojeISO(),
+  ops: OrdemProducao[] = [],
 ): Solicitacao[] {
   const byId = new Map((orders || []).map((o) => [String(o.id), o] as const));
   return (list || []).filter((s) => {
+    // Solicitação vinculada a item cancelado/removido é histórico, nunca tarefa.
+    if (!itemOperacionalDaSolicitacao(s, ops)) return false;
+
     const pedidoId = String(s.pedidoId || "").trim();
     if (!pedidoId) return true; // solicitação manual sem contrato
     const order = byId.get(pedidoId);
@@ -67,15 +93,18 @@ export function filtrarSolicitacoesOperacionais(
 
 export async function fetchSolicitacoes(): Promise<Solicitacao[]> {
   const atuais = await base.fetchSolicitacoes();
+  // base.fetchSolicitacoes acabou de ler as OPs oficiais e atualizar o espelho
+  // local; reaproveitamos esse espelho para não fazer outra chamada à planilha.
+  const ops = getOrdensLocal();
   try {
     // fetchOrdersFromSheet usa cache compartilhado; normalmente esta leitura já
     // foi preenchida pela própria montagem da Central.
     const orders = await fetchOrdersFromSheet();
-    return filtrarSolicitacoesOperacionais(atuais, orders);
+    return filtrarSolicitacoesOperacionais(atuais, orders, hojeISO(), ops);
   } catch {
-    // Falha aberta: se a planilha de contratos estiver temporariamente fora,
-    // não escondemos solicitações reais por engano.
-    return atuais;
+    // Se contratos falharem temporariamente, ainda removemos itens já
+    // cancelados/retirados do planejamento sem esconder os demais por engano.
+    return (atuais || []).filter((s) => itemOperacionalDaSolicitacao(s, ops));
   }
 }
 
@@ -97,19 +126,6 @@ function registrarLogLote(
   payload: Record<string, unknown>,
 ): OrdemProducao {
   return logAction(op, `__LHL_SOL__|${id}|${kind}|${encodePayload(payload)}`);
-}
-
-function localizarItemEmOps(
-  ops: Iterable<OrdemProducao>,
-  id: string,
-): { op: OrdemProducao; item: ItemCompra } | null {
-  for (const op of ops) {
-    const item = (op.compras || []).find((c) =>
-      c.solicitacaoId === id || c.id === id || c.origemContratoItemId === id,
-    );
-    if (item) return { op, item };
-  }
-  return null;
 }
 
 async function localizarNoBatch(id: string): Promise<{ op: OrdemProducao; item: ItemCompra }> {
@@ -146,6 +162,11 @@ async function aplicarNoBatch(id: string, acao: AcaoLote, motivo = "") {
   const ctx = batchContext;
   if (!ctx) throw new Error("Lote não inicializado.");
   const { op, item } = await localizarNoBatch(id);
+
+  if (item.cancelado || item.removidoDoContrato) {
+    throw new Error("Item cancelado ou removido do contrato não pode ser processado novamente.");
+  }
+
   const status = compraStatusOf(item);
 
   if (acao === "autorizar") {
@@ -153,7 +174,6 @@ async function aplicarNoBatch(id: string, acao: AcaoLote, motivo = "") {
       ctx.imediatas.add(id);
       return { ok: true, jaAutorizada: true };
     }
-    if (item.cancelado) throw new Error("Item cancelado não pode ser autorizado.");
     let next: OrdemProducao = {
       ...op,
       compras: op.compras.map((c) => c.id === item.id
