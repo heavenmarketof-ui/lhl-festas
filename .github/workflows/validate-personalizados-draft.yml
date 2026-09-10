@@ -1,0 +1,29 @@
+name: Validar rascunho Loja Personalizados
+
+on:
+  push:
+    branches:
+      - draft/loja-personalizados
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Testar e compilar sem publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Baixar rascunho
+        uses: actions/checkout@v4
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependências
+        run: npm ci
+      - name: Executar testes
+        run: npm test
+      - name: Compilar rascunho
+        run: npm run build
