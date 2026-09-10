@@ -27,7 +27,7 @@ function orderComItem(destino: "aprovacao" | "orcamento" = "aprovacao"): StoredO
   } as StoredOrder;
 }
 
-function opComItem(statusCompra: any, solicitacaoId?: string): OrdemProducao {
+function opComItem(statusCompra: any, solicitacaoId?: string, origemContratoItemId: string | undefined = "planejado-1"): OrdemProducao {
   return {
     id: "op-1",
     contratoId: "contrato-11-out",
@@ -50,7 +50,7 @@ function opComItem(statusCompra: any, solicitacaoId?: string): OrdemProducao {
         comprado: false,
         tipo: "Consumo",
         statusCompra,
-        origemContratoItemId: "planejado-1",
+        origemContratoItemId,
         solicitacaoId,
       },
     ],
@@ -80,6 +80,10 @@ describe("reconciliação de solicitações financeiras", () => {
   it("também recupera item ainda parado antes da autorização", () => {
     expect(itensAprovacaoSemSolicitacao(orderComItem(), opComItem("Aguardando orçamento"))).toHaveLength(1);
     expect(itensAprovacaoSemSolicitacao(orderComItem(), opComItem("Orçamento recebido"))).toHaveLength(1);
+  });
+
+  it("recupera OP histórica sem origemContratoItemId por descrição e valor inequívocos", () => {
+    expect(itensAprovacaoSemSolicitacao(orderComItem(), opComItem("Aguardando autorização", undefined, undefined))).toHaveLength(1);
   });
 
   it("não duplica solicitação já vinculada", () => {
