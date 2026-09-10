@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: lhl-festas-production
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Publicar produção Cloudflare
@@ -20,7 +24,6 @@ jobs:
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GAS_ENDPOINT_URL: ${{ secrets.GAS_ENDPOINT_URL }}
       GAS_SHARED_TOKEN: ${{ secrets.GAS_SHARED_TOKEN }}
       GAS_LEADS_ADMIN_TOKEN: ${{ secrets.GAS_LEADS_ADMIN_TOKEN }}
@@ -49,12 +52,5 @@ jobs:
         run: |
           npm test
           npm run build
-      - name: Sincronizar segredo Supabase no Worker
-        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY != '' }}
-        shell: bash
-        run: printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-      - name: Informar ausência do segredo Supabase
-        if: ${{ env.SUPABASE_SERVICE_ROLE_KEY == '' }}
-        run: echo "SUPABASE_SERVICE_ROLE_KEY não está cadastrada nos Secrets do GitHub; escritas administrativas Supabase que dependem de service role continuarão indisponíveis."
       - name: Publicar no Cloudflare
         run: npx wrangler deploy
