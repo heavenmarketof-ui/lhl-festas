@@ -2,16 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import ModalidadeLanding from "@/components/public/ModalidadeLanding";
 
 const d = (id: string) => `https://drive.google.com/thumbnail?id=${id}&sz=w1800`;
-const HERO = d("1RhHiAwt-AMy_SYeYb3DeR5oAP9AInWQ6");
-const GALLERY = [
-  HERO,
-  d("1YJUA1G3Qn2uwfSWn__iAbTWKDd-eMjTu"),
-  d("1lPR3hKeeyibMSse1xzyK6ZfSz0zUV4ov"),
-  d("1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9"),
-  d("1JctWsVWkfUZ8pHNdfT4szvCyKwbiU5Vf"),
-  d("1U6PvbuxKOGNEJKFktWuzZmdWiNXlQp6m"),
-  d("1gHPUNzUDwzgfH0K5F0KIXaE0OkYSfhQ7"),
-];
+
+// Curadoria exclusiva de festas realmente montadas pela LHL.
+// Não misturar aqui imagens de Festa na Mesa ou Peg & Monte.
+const Tiana = d("1RhHiAwt-AMy_SYeYb3DeR5oAP9AInWQ6");
+const Moranguinho = d("1QvxmzbjJNCanILqUWuDwAE9Yw9hnKANs");
+const Princesas = d("1YJUA1G3Qn2uwfSWn__iAbTWKDd-eMjTu");
+const Jurassic = d("1d5xpnRNkiSECrh5FlkSC8DnISWWDBMh9");
+
+const HERO = Tiana;
+const GALLERY = [Tiana, Moranguinho, Princesas, Jurassic];
 
 export const Route = createFileRoute("/decoracao-com-montagem")({
   head: () => ({
