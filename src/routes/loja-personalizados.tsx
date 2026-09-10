@@ -6,7 +6,10 @@ export const Route = createFileRoute("/loja-personalizados")({
     meta: [
       { title: "Loja de Personalizados | LHL Festas" },
       { name: "description", content: "Caixinhas, lembrancinhas, toppers, convites e personalizados para festas. Monte sua seleção e finalize o orçamento com a LHL Festas pelo WhatsApp." },
-      { name: "robots", content: "noindex,nofollow" },
+      { name: "robots", content: "index,follow" },
+    ],
+    links: [
+      { rel: "canonical", href: "https://www.lhlfestas.com.br/loja-personalizados" },
     ],
   }),
   component: PersonalizadosStore,
