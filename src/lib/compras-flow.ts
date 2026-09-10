@@ -31,8 +31,18 @@ async function resolverPedidoParaPlanejamento(contratoId:string,order?:StoredOrd
   return encontrado;
 }
 
-export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;status:CompraStatus;order?:StoredOrder|null;solicitacao?:Solicitacao|null;confirmacao?:ConfirmacaoCompra}):Promise<AvancoResultado>{
-  const {op:opRecebida,itemId,status,order,solicitacao,confirmacao}=params;
+export async function mudarEtapaCompra(params:{
+  op:OrdemProducao;
+  itemId:string;
+  status:CompraStatus;
+  order?:StoredOrder|null;
+  solicitacao?:Solicitacao|null;
+  confirmacao?:ConfirmacaoCompra;
+  /** A tela acabou de carregar a OP oficial. saveOrdem fará a fusão anti-perda. */
+  usarOpAtual?:boolean;
+}):Promise<AvancoResultado>{
+  const {op:opRecebida,itemId,status,order,solicitacao,confirmacao,usarOpAtual}=params;
+
   // Orçamento, envio para aprovação e autorização são PLANEJAMENTO e podem existir
   // antes do primeiro recebimento. A trava financeira começa apenas quando a LHL
   // efetivamente realiza/paga a compra (preparação operacional real).
@@ -40,18 +50,55 @@ export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;st
   const orderAtual=exigeOperacaoLiberada
     ? await assertOperacaoLiberada(opRecebida.contratoId,order)
     : await resolverPedidoParaPlanejamento(opRecebida.contratoId,order);
-  let op=opRecebida;try{const lista=await fetchOrdens();const fresca=lista.find(o=>o.id===opRecebida.id);if(fresca?.compras?.some(c=>c.id===itemId))op=fresca}catch{}
-  const itemBruto=op.compras.find(c=>c.id===itemId);if(!itemBruto)throw new Error("Item de compra não encontrado.");
+
+  // Quando a ação parte da Central, a OP já veio da planilha nesta mesma tela.
+  // Não fazemos outra leitura completa aqui: saveOrdem já relê a versão remota
+  // e executa merge anti-perda imediatamente antes de gravar.
+  let op=opRecebida;
+  if(!usarOpAtual){
+    try{
+      const lista=await fetchOrdens();
+      const fresca=lista.find(o=>o.id===opRecebida.id);
+      if(fresca?.compras?.some(c=>c.id===itemId))op=fresca;
+    }catch{}
+  }
+
+  const itemBruto=op.compras.find(c=>c.id===itemId);
+  if(!itemBruto)throw new Error("Item de compra não encontrado.");
+  if(itemBruto.cancelado||itemBruto.removidoDoContrato){
+    throw new Error("Este item foi cancelado ou removido do contrato e não deve ser comprado novamente.");
+  }
+
   let item=reconciliarItemComSolicitacao(itemBruto,solicitacao??undefined);
-  if(solicitacaoAprovada(solicitacao)&&NIVEL_COMPRA[compraStatusOf(item)]<NIVEL_COMPRA["Compra autorizada"])item={...item,statusCompra:"Compra autorizada"};
+  if(solicitacaoAprovada(solicitacao)&&NIVEL_COMPRA[compraStatusOf(item)]<NIVEL_COMPRA["Compra autorizada"]){
+    item={...item,statusCompra:"Compra autorizada"};
+  }
   if(item!==itemBruto)op={...op,compras:op.compras.map(c=>c.id===itemId?item:c)};
   validarEtapa(item,status,solicitacao);
 
-  const aplicaConfirmacao=(c:ItemCompra):ItemCompra=>status==="Compra realizada"&&confirmacao?{...c,fornecedor:confirmacao.fornecedor??c.fornecedor,valorReal:confirmacao.valorReal??c.valorReal,dataCompra:confirmacao.dataCompra||c.dataCompra,formaPagamento:confirmacao.formaPagamento||c.formaPagamento,observacao:confirmacao.observacao??c.observacao}:c;
-  let atual:OrdemProducao={...op,compras:op.compras.map(c=>{if(c.id!==itemId)return c;c=item;const atualStatus=compraStatusOf(c);if(NIVEL_COMPRA[status]<NIVEL_COMPRA[atualStatus])return c;return applyCompraStatus(aplicaConfirmacao(c),status)})};
-  atual=logAction(atual,`Compra "${descricaoCompra(item)}" → ${status}`);
-  const opServidor=await fetchOrdens().then(list=>list.find(o=>o.id===op.id));if(opServidor){const {mergeOrdens}=await import("./producao-api");atual=mergeOrdens(opServidor,atual)}
+  const aplicaConfirmacao=(c:ItemCompra):ItemCompra=>status==="Compra realizada"&&confirmacao?{
+    ...c,
+    fornecedor:confirmacao.fornecedor??c.fornecedor,
+    valorReal:confirmacao.valorReal??c.valorReal,
+    dataCompra:confirmacao.dataCompra||c.dataCompra,
+    formaPagamento:confirmacao.formaPagamento||c.formaPagamento,
+    observacao:confirmacao.observacao??c.observacao,
+  }:c;
 
+  let atual:OrdemProducao={
+    ...op,
+    compras:op.compras.map(c=>{
+      if(c.id!==itemId)return c;
+      c=item;
+      const atualStatus=compraStatusOf(c);
+      if(NIVEL_COMPRA[status]<NIVEL_COMPRA[atualStatus])return c;
+      return applyCompraStatus(aplicaConfirmacao(c),status);
+    }),
+  };
+  atual=logAction(atual,`Compra "${descricaoCompra(item)}" → ${status}`);
+
+  // Uma única persistência para a etapa. saveOrdem já garante merge com o
+  // servidor; a antiga releitura extra aqui duplicava o tempo de cada clique.
   if(status!=="Pago") atual=await saveOrdem(atual);
 
   let solicitacaoCriada=false,patrimonioCriado=false,lancamentoId:string|undefined;
@@ -59,28 +106,85 @@ export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;st
   const valor=valorRealCompra(salvo)||valorPrevistoCompra(salvo);
 
   if(status==="Aguardando autorização"&&!salvo.solicitacaoId){
-    const criada=await criarSolicitacao({tipo:"compra_materiais",origem:"ordem_producao",pedidoId:op.contratoId,pedidoCliente:orderAtual.nome||"",ordemProducao:op.numero,origemItemId:salvo.id,itens:[{descricao:salvo.descricao,quantidade:salvo.quantidade||1,unidade:salvo.unidade,valor}],fornecedor:salvo.fornecedor||"",categoria:"Fornecedor",conta:"Caixa",formaPagamento:salvo.formaPagamento||"PIX",valor,descricao:`${salvo.descricao} — ${orderAtual.nome||"Pedido"} (${op.numero})`,observacoes:salvo.fornecedor?`Fornecedor: ${salvo.fornecedor}`:"",dataPrevista:salvo.dataCompra||new Date().toISOString().slice(0,10)}) as {id?:string}|undefined;
+    const criada=await criarSolicitacao({
+      tipo:"compra_materiais",
+      origem:"ordem_producao",
+      pedidoId:op.contratoId,
+      pedidoCliente:orderAtual.nome||"",
+      ordemProducao:op.numero,
+      origemItemId:salvo.id,
+      itens:[{descricao:salvo.descricao,quantidade:salvo.quantidade||1,unidade:salvo.unidade,valor}],
+      fornecedor:salvo.fornecedor||"",
+      categoria:"Fornecedor",
+      conta:"Caixa",
+      formaPagamento:salvo.formaPagamento||"PIX",
+      valor,
+      descricao:`${salvo.descricao} — ${orderAtual.nome||"Pedido"} (${op.numero})`,
+      observacoes:salvo.fornecedor?`Fornecedor: ${salvo.fornecedor}`:"",
+      dataPrevista:salvo.dataCompra||new Date().toISOString().slice(0,10),
+    }) as {id?:string}|undefined;
     const solicitacaoId=String(criada?.id||"").trim();
     if(!solicitacaoId)throw new Error("A solicitação financeira não retornou um identificador válido.");
-    solicitacaoCriada=true;atual=await saveOrdem(logAction({...atual,compras:atual.compras.map(c=>c.id===itemId?{...c,solicitacaoId}:c)},`Solicitação Financeira criada para "${descricaoCompra(salvo)}"`));salvo=atual.compras.find(c=>c.id===itemId)??salvo;
+    solicitacaoCriada=true;
+    atual=await saveOrdem(logAction({
+      ...atual,
+      compras:atual.compras.map(c=>c.id===itemId?{...c,solicitacaoId}:c),
+    },`Solicitação Financeira criada para "${descricaoCompra(salvo)}"`));
+    salvo=atual.compras.find(c=>c.id===itemId)??salvo;
   }
 
-  if(status==="Compra realizada"&&salvo.solicitacaoId){try{const {marcarCompradaSemFinanceiro}=await import("./solicitacoes-api");await marcarCompradaSemFinanceiro({id:salvo.solicitacaoId,valorReal:valorRealCompra(salvo)||undefined,fornecedor:confirmacao?.fornecedor||salvo.fornecedor||"",dataCompra:salvo.dataCompra||new Date().toISOString().slice(0,10)})}catch(e){console.error("[Sincronização] Falha ao atualizar solicitação:",e)}}
+  // Desde a migração da Central para OP/Google Sheets, a própria OP é a fonte
+  // da solicitação. Não existe mais motivo para chamar uma segunda rotina e
+  // salvar a mesma compra novamente após "Compra realizada".
 
   if(status==="Pago"){
     if(!(solicitacao||confirmacao))throw new Error("Confirme os dados do pagamento antes de marcar como pago.");
-    const res=await registrarPagamentoSolicitacao({id:solicitacao?.id||item.solicitacaoId||"",valor,fornecedor:confirmacao?.fornecedor||salvo.fornecedor||"",formaPagamento:confirmacao?.formaPagamento||salvo.formaPagamento||"PIX",conta:confirmacao?.conta||"Caixa",dataPagamento:salvo.dataCompra||new Date().toISOString().slice(0,10),observacoes:confirmacao?.observacao||salvo.observacao||""}) as {lancamentoId?:string}|undefined;
+    const res=await registrarPagamentoSolicitacao({
+      id:solicitacao?.id||item.solicitacaoId||"",
+      valor,
+      fornecedor:confirmacao?.fornecedor||salvo.fornecedor||"",
+      formaPagamento:confirmacao?.formaPagamento||salvo.formaPagamento||"PIX",
+      conta:confirmacao?.conta||"Caixa",
+      dataPagamento:salvo.dataCompra||new Date().toISOString().slice(0,10),
+      observacoes:confirmacao?.observacao||salvo.observacao||"",
+    }) as {lancamentoId?:string}|undefined;
     lancamentoId=res?.lancamentoId;
     atual=await saveOrdem(logAction(atual,`Pagamento registrado no Fluxo de Caixa para "${descricaoCompra(salvo)}"${lancamentoId?` (lançamento ${lancamentoId})`:""}`));
     salvo=atual.compras.find(c=>c.id===itemId)??salvo;
   }
 
   if((status==="Compra realizada"||status==="Pago")&&salvo.tipo==="Patrimônio"&&!salvo.integrado){
-    const patrimonio:PatrimonioItem={id:crypto.randomUUID(),nome:salvo.descricao,categoria:"Outros",quantidade:salvo.quantidade||1,valorAquisicao:String(valor),dataCompra:salvo.dataCompra||new Date().toISOString().slice(0,10),observacoes:`Cadastrado pela ${op.numero}${orderAtual.nome?` — ${orderAtual.nome}`:""}`,status:"Ativo",createdAt:new Date().toISOString(),ativo:"Sim"};
-    await createPatrimonioOnSheet(patrimonio);patrimonioCriado=true;atual=await saveOrdem(logAction({...atual,compras:atual.compras.map(c=>c.id===itemId?{...c,integrado:true}:c)},`Patrimônio cadastrado a partir de "${descricaoCompra(salvo)}"`));
+    const patrimonio:PatrimonioItem={
+      id:crypto.randomUUID(),
+      nome:salvo.descricao,
+      categoria:"Outros",
+      quantidade:salvo.quantidade||1,
+      valorAquisicao:String(valor),
+      dataCompra:salvo.dataCompra||new Date().toISOString().slice(0,10),
+      observacoes:`Cadastrado pela ${op.numero}${orderAtual.nome?` — ${orderAtual.nome}`:""}`,
+      status:"Ativo",
+      createdAt:new Date().toISOString(),
+      ativo:"Sim",
+    };
+    await createPatrimonioOnSheet(patrimonio);
+    patrimonioCriado=true;
+    atual=await saveOrdem(logAction({
+      ...atual,
+      compras:atual.compras.map(c=>c.id===itemId?{...c,integrado:true}:c),
+    },`Patrimônio cadastrado a partir de "${descricaoCompra(salvo)}"`));
   }
 
-  return {op:atual,solicitacaoCriada,patrimonioCriado,lancamentoId,mensagem:solicitacaoCriada?"Aguardando autorização financeira.":patrimonioCriado?"Compra registrada com sucesso e item cadastrado no Patrimônio.":COMPRA_STATUS_MENSAGEM[status]};
+  return {
+    op:atual,
+    solicitacaoCriada,
+    patrimonioCriado,
+    lancamentoId,
+    mensagem:solicitacaoCriada
+      ?"Aguardando autorização financeira."
+      :patrimonioCriado
+        ?"Compra registrada com sucesso e item cadastrado no Patrimônio."
+        :COMPRA_STATUS_MENSAGEM[status],
+  };
 }
 
 function validarEtapa(item:ItemCompra,destino:CompraStatus,solicitacao?:Solicitacao|null){
