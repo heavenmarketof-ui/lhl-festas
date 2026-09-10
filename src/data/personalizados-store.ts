@@ -177,6 +177,7 @@ export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
     price: 7.2,
     unit: "un",
     category: "Convites",
+    imageId: "https://img.elo7.com.br/product/zoom/35F5185/caixa-livro-alice-no-pais-das-maravilhas-caixa-livro.jpg",
     description: "Convite físico em formato de caixinha livro com arte personalizada.",
   },
   {
