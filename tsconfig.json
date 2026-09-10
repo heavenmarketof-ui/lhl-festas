@@ -25,6 +25,7 @@
       "@/lib/producao-api": ["./src/lib/producao-api-lhl.ts"],
       "@/lib/sheets-api": ["./src/lib/sheets-api-lhl.ts"],
       "@/lib/financeiro-api": ["./src/lib/financeiro-api-lhl.ts"],
+      "@/lib/solicitacoes-api": ["./src/lib/solicitacoes-api-lhl.ts"],
       "@/*": ["./src/*"]
     }
   }
