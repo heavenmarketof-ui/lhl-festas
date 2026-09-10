@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { filtrarSolicitacoesOperacionais } from "@/lib/solicitacoes-api";
 import type { Solicitacao } from "@/lib/solicitacoes-types";
 import type { StoredOrder } from "@/lib/orders-storage";
+import type { OrdemProducao } from "@/lib/producao-api";
 
 function solicitacao(id: string, pedidoId: string): Solicitacao {
   return {
@@ -52,6 +53,50 @@ function order(id: string, dataEvento: string, status = "Pendente"): StoredOrder
   } as StoredOrder;
 }
 
+function opComItem(
+  idSolicitacao: string,
+  opts?: { cancelado?: boolean; removidoDoContrato?: boolean },
+): OrdemProducao {
+  return {
+    id: "op-1",
+    contratoId: "c-futuro",
+    numero: "OP-1",
+    criadoEm: "2026-09-01T12:00:00.000Z",
+    atualizadoEm: "2026-09-09T12:00:00.000Z",
+    status: "Compras",
+    compras: [{
+      id: idSolicitacao,
+      descricao: "Item",
+      quantidade: 1,
+      unidade: "un",
+      observacao: "",
+      fornecedor: "",
+      valorOrcado: 10,
+      valorReal: 0,
+      formaPagamento: "PIX",
+      pago: false,
+      comprado: false,
+      tipo: "Consumo",
+      statusCompra: "Compra autorizada",
+      solicitacaoId: idSolicitacao,
+      cancelado: opts?.cancelado,
+      removidoDoContrato: opts?.removidoDoContrato,
+    }],
+    producao: [],
+    separacao: [],
+    conferencia: {
+      comprasOk: false,
+      producaoOk: true,
+      kitProntoOk: false,
+      conferidoPor: "",
+      data: "",
+      observacoes: "",
+    },
+    historico: [],
+    patrimoniosReservados: [],
+  } as OrdemProducao;
+}
+
 describe("fila operacional da Central de Solicitações", () => {
   it("mantém apenas contratos operacionais atuais/futuros e solicitações manuais", () => {
     const list = [
@@ -77,5 +122,23 @@ describe("fila operacional da Central de Solicitações", () => {
       [order("c-hoje", "2026-09-09")],
       "2026-09-09",
     )).toHaveLength(1);
+  });
+
+  it("não devolve para Compras autorizadas item já cancelado", () => {
+    expect(filtrarSolicitacoesOperacionais(
+      [solicitacao("sol-cancelada", "c-futuro")],
+      [order("c-futuro", "2026-10-11")],
+      "2026-09-10",
+      [opComItem("sol-cancelada", { cancelado: true })],
+    )).toHaveLength(0);
+  });
+
+  it("não devolve para Compras autorizadas item removido do contrato", () => {
+    expect(filtrarSolicitacoesOperacionais(
+      [solicitacao("sol-removida", "c-futuro")],
+      [order("c-futuro", "2026-10-11")],
+      "2026-09-10",
+      [opComItem("sol-removida", { removidoDoContrato: true })],
+    )).toHaveLength(0);
   });
 });
