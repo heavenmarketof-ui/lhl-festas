@@ -1,14 +1,15 @@
 // ============================================================================
 // Gateway seguro Frontend → Server Function → Apps Script → Google Sheets.
-// O navegador nunca conhece a URL do Apps Script nem os tokens.
+// O navegador nunca conhece a URL do Apps Script nem os tokens internos.
 // - Ações públicas: lista branca, validação de tamanho e limites básicos.
-// - Ações administrativas: sessão Supabase válida + papel "admin".
+// - Ações administrativas: token Supabase explícito + papel "admin".
 // - Em Codespaces: leitura alternativa somente GET para desenvolvimento.
 // ============================================================================
 
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 import { getServerEnv } from "@/lib/runtime-env.server";
 
 const PUBLIC_POST_ACTIONS = new Set(["create", "leadsCreate", "leadsMarkWaOpened"]);
@@ -26,50 +27,46 @@ const publicRateCache = new Map<string, RateEntry>();
 const ADMIN_ROLE_TTL_MS = 15_000;
 const adminRoleCache = new Map<string, number>();
 
-async function assertAdmin(context: { userId: string; accessToken: string }) {
-  const now = Date.now();
-  const cachedUntil = adminRoleCache.get(context.userId) ?? 0;
-  if (cachedUntil > now) return;
-
+async function authenticateAdmin(accessToken: string) {
   const supabaseUrl = getServerEnv("SUPABASE_URL");
   const publishableKey = getServerEnv("SUPABASE_PUBLISHABLE_KEY");
-  if (!supabaseUrl || !publishableKey || !context.accessToken) {
-    adminRoleCache.delete(context.userId);
-    throw new Error("Não foi possível validar a permissão administrativa.");
+  if (!supabaseUrl || !publishableKey || !accessToken) {
+    throw new Error("Não foi possível validar a sessão administrativa.");
   }
 
-  try {
+  const supabase = createClient<Database>(supabaseUrl, publishableKey, {
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
+
+  const { data, error } = await supabase.auth.getClaims(accessToken);
+  const userId = String(data?.claims?.sub || "");
+  if (error || !userId) throw new Error("Sessão administrativa inválida ou expirada.");
+
+  const now = Date.now();
+  const cachedUntil = adminRoleCache.get(userId) ?? 0;
+  if (cachedUntil <= now) {
     const response = await fetch(`${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/has_role`, {
       method: "POST",
       headers: {
         apikey: publishableKey,
-        Authorization: `Bearer ${context.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ _user_id: context.userId, _role: "admin" }),
+      body: JSON.stringify({ _user_id: userId, _role: "admin" }),
     });
 
-    let data: unknown = false;
-    try {
-      data = await response.json();
-    } catch {
-      data = false;
+    let ok: unknown = false;
+    try { ok = await response.json(); } catch { ok = false; }
+    if (!response.ok || ok !== true) {
+      adminRoleCache.delete(userId);
+      throw new Error("Acesso restrito a administradores.");
     }
-
-    if (!response.ok || data !== true) {
-      adminRoleCache.delete(context.userId);
-      console.warn(`[auth] validação admin recusada pelo Supabase (${response.status})`);
-      throw new Error("Forbidden: acesso restrito a administradores");
-    }
-  } catch (error) {
-    adminRoleCache.delete(context.userId);
-    if (error instanceof Error && error.message.startsWith("Forbidden:")) throw error;
-    console.error("[auth] falha ao consultar permissão administrativa", error);
-    throw new Error("Não foi possível validar a permissão administrativa.");
+    adminRoleCache.set(userId, now + ADMIN_ROLE_TTL_MS);
   }
 
-  adminRoleCache.set(context.userId, now + ADMIN_ROLE_TTL_MS);
+  return { userId, accessToken };
 }
 
 function requestIp(): string {
@@ -142,10 +139,12 @@ export const gasPublicPost = createServerFn({ method: "POST" })
 /* --------------------------- Administrativo --------------------------- */
 
 export const gasAdminGet = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: { query?: string }) => ({ query: String(input?.query || "").slice(0, 4000) }))
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context as any);
+  .validator((input: { query?: string; accessToken?: string }) => ({
+    query: String(input?.query || "").slice(0, 4000),
+    accessToken: String(input?.accessToken || "").slice(0, 10000),
+  }))
+  .handler(async ({ data }) => {
+    await authenticateAdmin(data.accessToken);
     const { callGas } = await import("./sheets-endpoint.server");
     return { text: await callGas({ method: "GET", query: data.query }) };
   });
@@ -179,10 +178,12 @@ export const gasDevConnectionStatus = createServerFn({ method: "POST" })
   });
 
 export const gasAdminPost = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((input: { body: Record<string, unknown> }) => input)
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context as any);
+  .validator((input: { body: Record<string, unknown>; accessToken?: string }) => ({
+    body: input?.body || {},
+    accessToken: String(input?.accessToken || "").slice(0, 10000),
+  }))
+  .handler(async ({ data }) => {
+    await authenticateAdmin(data.accessToken);
     const { callGas, leadsAdminToken } = await import("./sheets-endpoint.server");
     const body = withLeadsToken(data.body || {}, leadsAdminToken());
     return { text: await callGas({ method: "POST", body }) };
