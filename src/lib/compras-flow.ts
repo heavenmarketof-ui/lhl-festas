@@ -22,9 +22,24 @@ export type ConfirmacaoCompra={fornecedor?:string;valorReal?:number;dataCompra?:
 export function solicitacaoAprovada(s?:Solicitacao|null){return s?.status==="autorizada"||s?.status==="lancada"||s?.status==="comprada"}
 export function solicitacaoPaga(s?:Solicitacao|null){return s?.status==="lancada"}
 
+async function resolverPedidoParaPlanejamento(contratoId:string,order?:StoredOrder|null):Promise<StoredOrder>{
+  if(order)return order;
+  const {fetchOrdersFromSheet}=await import("./sheets-api");
+  const lista=await fetchOrdersFromSheet({force:true});
+  const encontrado=lista.find(o=>o.id===contratoId);
+  if(!encontrado)throw new Error("Contrato não encontrado para criar a solicitação de compra.");
+  return encontrado;
+}
+
 export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;status:CompraStatus;order?:StoredOrder|null;solicitacao?:Solicitacao|null;confirmacao?:ConfirmacaoCompra}):Promise<AvancoResultado>{
   const {op:opRecebida,itemId,status,order,solicitacao,confirmacao}=params;
-  const orderAtual=await assertOperacaoLiberada(opRecebida.contratoId,order);
+  // Orçamento, envio para aprovação e autorização são PLANEJAMENTO e podem existir
+  // antes do primeiro recebimento. A trava financeira começa apenas quando a LHL
+  // efetivamente realiza/paga a compra (preparação operacional real).
+  const exigeOperacaoLiberada=status==="Compra realizada"||status==="Pago";
+  const orderAtual=exigeOperacaoLiberada
+    ? await assertOperacaoLiberada(opRecebida.contratoId,order)
+    : await resolverPedidoParaPlanejamento(opRecebida.contratoId,order);
   let op=opRecebida;try{const lista=await fetchOrdens();const fresca=lista.find(o=>o.id===opRecebida.id);if(fresca?.compras?.some(c=>c.id===itemId))op=fresca}catch{}
   const itemBruto=op.compras.find(c=>c.id===itemId);if(!itemBruto)throw new Error("Item de compra não encontrado.");
   let item=reconciliarItemComSolicitacao(itemBruto,solicitacao??undefined);
@@ -37,7 +52,6 @@ export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;st
   atual=logAction(atual,`Compra "${descricaoCompra(item)}" → ${status}`);
   const opServidor=await fetchOrdens().then(list=>list.find(o=>o.id===op.id));if(opServidor){const {mergeOrdens}=await import("./producao-api");atual=mergeOrdens(opServidor,atual)}
 
-  // Regra crítica: PAGO só é persistido depois que o lançamento financeiro existe.
   if(status!=="Pago") atual=await saveOrdem(atual);
 
   let solicitacaoCriada=false,patrimonioCriado=false,lancamentoId:string|undefined;
@@ -46,7 +60,9 @@ export async function mudarEtapaCompra(params:{op:OrdemProducao;itemId:string;st
 
   if(status==="Aguardando autorização"&&!salvo.solicitacaoId){
     const criada=await criarSolicitacao({tipo:"compra_materiais",origem:"ordem_producao",pedidoId:op.contratoId,pedidoCliente:orderAtual.nome||"",ordemProducao:op.numero,origemItemId:salvo.id,itens:[{descricao:salvo.descricao,quantidade:salvo.quantidade||1,unidade:salvo.unidade,valor}],fornecedor:salvo.fornecedor||"",categoria:"Fornecedor",conta:"Caixa",formaPagamento:salvo.formaPagamento||"PIX",valor,descricao:`${salvo.descricao} — ${orderAtual.nome||"Pedido"} (${op.numero})`,observacoes:salvo.fornecedor?`Fornecedor: ${salvo.fornecedor}`:"",dataPrevista:salvo.dataCompra||new Date().toISOString().slice(0,10)}) as {id?:string}|undefined;
-    solicitacaoCriada=true;atual=await saveOrdem(logAction({...atual,compras:atual.compras.map(c=>c.id===itemId?{...c,solicitacaoId:String(criada?.id||"")}:c)},`Solicitação Financeira criada para "${descricaoCompra(salvo)}"`));salvo=atual.compras.find(c=>c.id===itemId)??salvo;
+    const solicitacaoId=String(criada?.id||"").trim();
+    if(!solicitacaoId)throw new Error("A solicitação financeira não retornou um identificador válido.");
+    solicitacaoCriada=true;atual=await saveOrdem(logAction({...atual,compras:atual.compras.map(c=>c.id===itemId?{...c,solicitacaoId}:c)},`Solicitação Financeira criada para "${descricaoCompra(salvo)}"`));salvo=atual.compras.find(c=>c.id===itemId)??salvo;
   }
 
   if(status==="Compra realizada"&&salvo.solicitacaoId){try{const {marcarCompradaSemFinanceiro}=await import("./solicitacoes-api");await marcarCompradaSemFinanceiro({id:salvo.solicitacaoId,valorReal:valorRealCompra(salvo)||undefined,fornecedor:confirmacao?.fornecedor||salvo.fornecedor||"",dataCompra:salvo.dataCompra||new Date().toISOString().slice(0,10)})}catch(e){console.error("[Sincronização] Falha ao atualizar solicitação:",e)}}
