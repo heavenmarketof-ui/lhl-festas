@@ -89,7 +89,10 @@ export async function resolveOperacaoGate(
 ): Promise<{ order: StoredOrder | null; lancamentos: Lancamento[]; status: OperacaoGateStatus }> {
   const [orders, lancamentos] = await Promise.all([
     orderHint ? Promise.resolve([orderHint]) : fetchOrdersFromSheet({ force: true }),
-    fetchLancamentos({ force: true }),
+    // O Fluxo de Caixa já possui cache com invalidação nas escritas. Forçar uma
+    // nova leitura em cada clique tornava Registrar Compra desnecessariamente
+    // lento sem aumentar a segurança do dado.
+    fetchLancamentos(),
   ]);
 
   const order = orderHint ?? orders.find((o) => o.id === contratoId) ?? null;
