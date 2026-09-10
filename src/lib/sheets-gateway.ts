@@ -1,6 +1,7 @@
 // ============================================================================
 // Cliente do gateway seguro (navegador → Server Function → Apps Script).
-// Nenhuma URL, token ou segredo trafega/pertence ao bundle do navegador.
+// Nenhuma URL, token ou segredo do Apps Script trafega/pertence ao bundle.
+// A sessão Supabase atual é enviada apenas para autenticar ações administrativas.
 // ============================================================================
 
 import {
@@ -10,6 +11,7 @@ import {
   gasDevReadonlyGet,
   gasDevConnectionStatus,
 } from "./sheets-gateway.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 const SHEETS_TIMEOUT_MS = 12000;
 
@@ -28,6 +30,13 @@ async function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+async function adminAccessToken(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession();
+  const token = data.session?.access_token || "";
+  if (error || !token) throw new Error("Sessão administrativa expirada. Entre novamente no Admin.");
+  return token;
 }
 
 function parse(text: string): any {
@@ -76,7 +85,8 @@ export async function sheetGet(query = ""): Promise<any> {
     return validateReadJson(parse(text));
   }
 
-  const { text } = await withTimeout(gasAdminGet({ data: { query } }), "Leitura da planilha");
+  const accessToken = await adminAccessToken();
+  const { text } = await withTimeout(gasAdminGet({ data: { query, accessToken } }), "Leitura da planilha");
   return validateReadJson(parse(text));
 }
 
@@ -90,7 +100,8 @@ export async function sheetPost(body: Record<string, unknown>): Promise<any> {
   if (adminWriteBlockedInPreview() && !readonlyAction) {
     throw new Error("Modo de visualização ativo: alterações estão bloqueadas neste ambiente de desenvolvimento.");
   }
-  const { text } = await withTimeout(gasAdminPost({ data: { body } }), `Ação ${action || "administrativa"}`);
+  const accessToken = await adminAccessToken();
+  const { text } = await withTimeout(gasAdminPost({ data: { body, accessToken } }), `Ação ${action || "administrativa"}`);
   const json = parse(text);
   return readonlyAction ? validateReadJson(json) : validateWriteJson(json);
 }
