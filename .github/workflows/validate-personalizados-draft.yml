@@ -10,9 +10,9 @@ permissions:
 
 jobs:
   validate:
-    name: Testar e compilar sem publicar
+    name: Testar, compilar e gerar preview sem publicar
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Baixar rascunho
         uses: actions/checkout@v4
@@ -27,3 +27,35 @@ jobs:
         run: npm test
       - name: Compilar rascunho
         run: npm run build
+      - name: Instalar navegador para preview
+        run: npx --yes playwright@1.55.0 install chromium
+      - name: Gerar screenshot desktop
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/lhl-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/loja-personalizados >/dev/null; then break; fi
+            sleep 1
+          done
+          npx --yes playwright@1.55.0 screenshot --full-page --viewport-size="1440,1100" http://127.0.0.1:4173/loja-personalizados personalizados-preview-desktop.png
+          kill $PREVIEW_PID || true
+      - name: Gerar screenshot mobile
+        shell: bash
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/lhl-preview-mobile.log 2>&1 &
+          PREVIEW_PID=$!
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/loja-personalizados >/dev/null; then break; fi
+            sleep 1
+          done
+          npx --yes playwright@1.55.0 screenshot --full-page --viewport-size="390,844" http://127.0.0.1:4173/loja-personalizados personalizados-preview-mobile.png
+          kill $PREVIEW_PID || true
+      - name: Salvar previews para revisão
+        uses: actions/upload-artifact@v4
+        with:
+          name: loja-personalizados-preview
+          path: |
+            personalizados-preview-desktop.png
+            personalizados-preview-mobile.png
+          retention-days: 7
