@@ -206,6 +206,49 @@ body:has(#orcamento) section:not(:first-of-type) .max-w-3xl p {
   margin-right: auto;
 }
 
+/* HEROS DAS MODALIDADES
+   Mesma leitura visual da home: conteúdo e foto se fundem por um degradê suave. */
+body:has(a[href="#opcoes"]) main > section:first-child > div {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+body:has(a[href="#opcoes"]) main > section:first-child > div::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: linear-gradient(
+    90deg,
+    #f8ebe6 0%,
+    #f8ebe6 37%,
+    rgba(248,235,230,1) 41%,
+    rgba(248,235,230,.96) 44%,
+    rgba(248,235,230,.82) 47%,
+    rgba(248,235,230,.62) 50%,
+    rgba(248,235,230,.38) 53%,
+    rgba(248,235,230,.18) 56%,
+    rgba(248,235,230,.06) 59%,
+    transparent 64%
+  );
+}
+
+body:has(a[href="#opcoes"]) main > section:first-child > div > div:first-child {
+  position: relative;
+  z-index: 3;
+}
+
+body:has(a[href="#opcoes"]) main > section:first-child > div > div:last-child {
+  position: relative;
+  z-index: 1;
+}
+
+body:has(a[href="#opcoes"]) main > section:first-child > div > div:last-child > div:last-child {
+  z-index: 4;
+}
+
 /* Tablet: imagem e texto deixam de competir; empilham com proporções previsíveis. */
 @media (max-width: 1100px) {
   body:has(#inicio) #inicio > div,
@@ -263,6 +306,22 @@ body:has(#orcamento) section:not(:first-of-type) .max-w-3xl p {
   }
 }
 
+@media (max-width: 1023px) {
+  body:has(a[href="#opcoes"]) main > section:first-child > div::after {
+    background: linear-gradient(
+      180deg,
+      #f8ebe6 0%,
+      #f8ebe6 47%,
+      rgba(248,235,230,.96) 50%,
+      rgba(248,235,230,.78) 53%,
+      rgba(248,235,230,.48) 56%,
+      rgba(248,235,230,.22) 59%,
+      rgba(248,235,230,.06) 62%,
+      transparent 67%
+    );
+  }
+}
+
 @media (max-width: 767px) {
   body:has(#inicio) #inicio > div > div:first-child {
     padding: 3.25rem 1.1rem !important;
@@ -308,5 +367,18 @@ body:has(#orcamento) section:not(:first-of-type) .max-w-3xl p {
 
   body:has(#orcamento) > div > section:first-of-type img {
     aspect-ratio: 4 / 4.6 !important;
+  }
+
+  body:has(a[href="#opcoes"]) main > section:first-child > div::after {
+    background: linear-gradient(
+      180deg,
+      #f8ebe6 0%,
+      #f8ebe6 43%,
+      rgba(248,235,230,.96) 47%,
+      rgba(248,235,230,.76) 51%,
+      rgba(248,235,230,.45) 55%,
+      rgba(248,235,230,.18) 59%,
+      transparent 64%
+    );
   }
 }
