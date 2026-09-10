@@ -124,7 +124,9 @@ export function orderCalendarLevel(o: StoredOrder, todayISO: string, in7ISO: str
     if (isAtrasada(opAtual, o)) return "red";
   }
   if (countItensPendentes(d?.observacoesInternas) > 0) return "yellow";
-  const baseData = toDateISO(d?.dataRetirada) || toDateISO(d?.dataEvento);
+  // Na Agenda, a referência temporal do cliente é sempre a DATA DA FESTA.
+  // Retirada/devolução são informações logísticas e não posicionam nem priorizam o evento no calendário.
+  const baseData = toDateISO(d?.dataEvento);
   if (baseData && baseData >= todayISO && baseData <= in7ISO) return "red";
   return "orange";
 }
