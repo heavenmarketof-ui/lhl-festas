@@ -1,15 +1,6 @@
 # Sistema Oficial LHL Festas
 
-Este repositório é o projeto independente e oficial da LHL Festas.
-
-## Regra de separação
-
-Este projeto **não é sincronizado com o Lovable** e não deve ser enviado para o projeto antigo.
-
-- `heavenmarketof-ui/lhl-festas` → desenvolvimento oficial independente.
-- `heavenmarketof-ui/lhl-festas-abf33ac5` → sistema antigo / referência de leitura enquanto a migração não termina.
-
-O sistema antigo continua operando normalmente até que este projeto esteja totalmente validado e pronto para assumir o domínio oficial.
+Este repositório é o projeto oficial e independente da LHL Festas.
 
 ## Arquitetura atual
 
@@ -18,9 +9,10 @@ O sistema antigo continua operando normalmente até que este projeto esteja tota
 - Vite 7
 - Node.js 22
 - Tailwind CSS
-- Google Sheets + Apps Script para dados operacionais já existentes
-- Supabase para recursos que ainda dependem da integração atual
-- Cloudflare preparado como destino de hospedagem independente
+- Google Sheets + Apps Script para dados operacionais
+- Supabase para autenticação e recursos ainda mantidos nessa base
+- Cloudflare como hospedagem de produção
+- Catálogo público armazenado no próprio repositório em `src/data/catalogo-oficial.json`
 
 ## Áreas públicas
 
@@ -28,17 +20,19 @@ O sistema antigo continua operando normalmente até que este projeto esteja tota
 - Catálogo
 - Festa na Mesa
 - Peg & Monte
+- Decoração com Montagem
 - Tema Personalizado
+- Loja de Personalizados
 - Orçamento
-- Reserva e páginas de confirmação ainda mantidas durante a migração
+- Reserva e páginas de confirmação
 
-Domínio oficial planejado:
+Domínio oficial:
 
 `https://www.lhlfestas.com.br`
 
 ## Admin
 
-A estrutura administrativa nova está organizada em:
+A estrutura administrativa está organizada em:
 
 - Hoje
 - CRM / Leads
@@ -52,12 +46,6 @@ A estrutura administrativa nova está organizada em:
 - Patrimônio
 - Solicitações
 - Auditoria
-
-### Regra operacional central
-
-Pré-contrato sem recebimento confirmado não libera operação.
-
-Um recebimento real de contrato libera Agenda, Operação, Produção e Compras. Caução é garantia e **não** conta como receita nem como pagamento do serviço.
 
 ## Desenvolvimento
 
@@ -76,9 +64,9 @@ npm run build
 
 ## Validação automática
 
-O workflow `.github/workflows/validate.yml` executa o build automaticamente no GitHub quando há alterações nas branches de desenvolvimento e em pull requests.
+O workflow `.github/workflows/validate.yml` valida alterações de desenvolvimento e pull requests.
 
-A intenção é detectar problemas de compilação sem depender do Lovable ou de uma publicação externa.
+O workflow `.github/workflows/deploy-cloudflare.yml` executa testes, build e publicação da branch `main` no Cloudflare.
 
 ## Variáveis e segredos
 
@@ -86,22 +74,8 @@ Segredos nunca devem ser versionados.
 
 Arquivos locais como `.env`, `.env.local` e variantes permanecem fora do Git através do `.gitignore`.
 
-Variáveis atualmente usadas pelo projeto incluem, conforme o ambiente:
+As variáveis usadas pelo projeto são documentadas em `.env.example`.
 
-- `GAS_SHARED_TOKEN`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
+## Fonte oficial
 
-Nunca coloque os valores reais dessas variáveis no README, em commits ou em arquivos versionados.
-
-## Diretriz de migração
-
-Enquanto a migração estiver em andamento:
-
-1. desenvolver e testar somente neste repositório;
-2. usar o sistema antigo apenas como referência e operação atual;
-3. preservar compatibilidade com os dados existentes;
-4. validar fluxo comercial, financeiro e operacional antes do corte;
-5. somente depois conectar `www.lhlfestas.com.br` ao novo sistema.
+A branch `main` deste repositório é a fonte oficial de produção. Alterações devem ser desenvolvidas, validadas e publicadas a partir deste projeto.
