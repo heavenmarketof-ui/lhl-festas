@@ -68,14 +68,14 @@ function AgendaPage() {
     return map;
   }, [orders, lancamentos]);
 
-  const ordersLiberadas = useMemo(
-    () => orders.filter((o) => o.status !== "Cancelado" && gateByOrder.get(o.id)?.liberada),
-    [orders, gateByOrder],
+  const agendaOrders = useMemo(
+    () => orders.filter((o) => o.status !== "Cancelado" && o.status !== "Excluído"),
+    [orders],
   );
 
   const eventsByDay = useMemo(() => {
     const map = new Map<string, StoredOrder[]>();
-    for (const order of ordersLiberadas) {
+    for (const order of agendaOrders) {
       const iso = toDateISO(order.details?.dataEvento);
       if (!iso) continue;
       const list = map.get(iso) || [];
@@ -83,20 +83,23 @@ function AgendaPage() {
       map.set(iso, list);
     }
     return map;
-  }, [ordersLiberadas]);
+  }, [agendaOrders]);
 
   const noMesAtual = (o: StoredOrder) => {
     const iso = toDateISO(o.details?.dataEvento);
-    if (!iso || o.status === "Cancelado") return false;
+    if (!iso || o.status === "Cancelado" || o.status === "Excluído") return false;
     const d = new Date(`${iso}T12:00:00`);
     return d.getMonth() === cursor.getMonth() && d.getFullYear() === cursor.getFullYear();
   };
 
   const aguardandoSinalList = useMemo(
     () => orders
-      .filter((o) => noMesAtual(o) && !gateByOrder.get(o.id)?.liberada)
+      .filter((o) => {
+        const iso = toDateISO(o.details?.dataEvento);
+        return noMesAtual(o) && !!iso && iso >= todayISO && !gateByOrder.get(o.id)?.liberada;
+      })
       .sort((a, b) => (toDateISO(a.details?.dataEvento) || "9999-12-31").localeCompare(toDateISO(b.details?.dataEvento) || "9999-12-31")),
-    [orders, gateByOrder, cursor],
+    [orders, gateByOrder, cursor, todayISO],
   );
 
   const resumo = useMemo(() => {
@@ -124,7 +127,7 @@ function AgendaPage() {
           <div>
             <div className="text-xs font-semibold uppercase tracking-[.18em] text-[#b27b4e]">Operação</div>
             <h1 className="mt-2 font-serif text-4xl text-[#651421] sm:text-5xl">Agenda</h1>
-            <p className="mt-2 max-w-2xl text-sm text-[#7b676a]">Visão operacional das festas com recebimento confirmado. Contratos sem sinal ficam visíveis abaixo, mas fora do calendário operacional.</p>
+            <p className="mt-2 max-w-2xl text-sm text-[#7b676a]">Histórico e operação das festas por data do evento. Festas finalizadas permanecem no calendário; apenas canceladas ou excluídas deixam de aparecer.</p>
           </div>
           <Button variant="outline" className="h-11 rounded-full border-[#dfd0c9] bg-white" onClick={() => load(true)} disabled={refreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} /> Atualizar agenda
