@@ -50,6 +50,9 @@ export const HORARIO_AVISO =
 
 export type ContractDetails = {
   dataEvento: string;
+  horaInicioFesta: string;
+  horaTerminoFesta: string;
+  horaMontagem: string;
   dataRetirada: string;
   horaRetirada: string;
   dataDevolucao: string;

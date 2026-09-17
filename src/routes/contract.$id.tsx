@@ -89,7 +89,10 @@ function ContractPrint() {
     ["Serviço", isMontagem ? "Festa com montagem e desmontagem no local" : "Locação com retirada pelo cliente"],
     ["Data do Evento", formatDateBR(d?.dataEvento)],
   ];
-  if (!isMontagem) {
+  if (isMontagem) {
+    eventoRows.push(["Horário da Montagem", d?.horaMontagem || "—"]);
+    eventoRows.push(["Horário da Festa", d?.horaInicioFesta && d?.horaTerminoFesta ? `${d.horaInicioFesta} às ${d.horaTerminoFesta}` : d?.horaInicioFesta || d?.horaTerminoFesta || "—"]);
+  } else {
     eventoRows.push(["Retirada", formatDateBR(d?.dataRetirada)]);
     eventoRows.push(["Devolução", formatDateBR(d?.dataDevolucao)]);
   }

@@ -21,6 +21,9 @@ export type SheetOrderPayload = {
   modalidade: string;
   plano: string;
   dataEvento: string;
+  horaInicioFesta?: string;
+  horaTerminoFesta?: string;
+  horaMontagem?: string;
   dataRetirada?: string;
   horaRetirada?: string;
   dataDevolucao?: string;
@@ -146,6 +149,9 @@ function mapRow(r: SheetRow): StoredOrder {
     createdAt: String(r.createdAt ?? new Date().toISOString()),
     details: {
       dataEvento: toDateISO(r.dataEvento),
+      horaInicioFesta: toTimeHHmm(r.horaInicioFesta),
+      horaTerminoFesta: toTimeHHmm(r.horaTerminoFesta),
+      horaMontagem: toTimeHHmm(r.horaMontagem),
       dataRetirada: toDateISO(r.dataRetirada),
       horaRetirada: toTimeHHmm(r.horaRetirada),
       dataDevolucao: toDateISO(r.dataDevolucao),
