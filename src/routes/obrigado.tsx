@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Heart, CheckCircle2, MessageCircle, Sparkles } from "lucide-react";
+import { ArrowRight, Gift, Heart, CheckCircle2, MessageCircle, Sparkles } from "lucide-react";
 import logo from "@/assets/lhl-logo.png";
 
 const WHATSAPP_URL = "https://wa.me/5511925543380?text=Ol%C3%A1!%20Quero%20fazer%20uma%20festa%20com%20a%20LHL%20Festas.";
@@ -72,6 +72,14 @@ function ThankYou() {
 
         <div className="mt-8 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground/85">
           O atendimento continua pelo <strong>WhatsApp</strong> — fique de olho nas mensagens.
+        </div>
+
+        <div className="mt-5 rounded-2xl border border-[#e7c8bd] bg-[#fff8f4] p-5 text-left">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary/10 text-primary"><Gift className="h-5 w-5" /></div>
+            <div><p className="font-serif text-xl font-semibold text-primary">Complete sua festa com personalizados</p><p className="mt-1 text-sm leading-relaxed text-foreground/75">Conheça nossas caixinhas, lembrancinhas, toppers e outros detalhes feitos no tema da sua festa.</p></div>
+          </div>
+          <Button asChild variant="outline" className="mt-4 h-11 w-full rounded-full border-primary/30 text-primary hover:bg-primary/5"><Link to="/loja-personalizados">Conhecer a Loja de Personalizados<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
 
         <p className="font-script text-2xl sm:text-3xl text-primary mt-8">
