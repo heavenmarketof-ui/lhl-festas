@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { fmtBRL, fetchLancamentos, parseValor } from "@/lib/financeiro-api";
+import { fmtBRL, parseValor } from "@/lib/financeiro-api";
 import { formatDateBR } from "@/lib/date-utils";
-import { fetchOrderByIdPublic } from "@/lib/sheets-api";
-import { getContractPaymentStatus } from "@/lib/pagamentos";
+import type { ContractPaymentStatus } from "@/lib/pagamentos";
 import {
   atualizarStatusParcela, gerarPlanoParcelas, listarParcelas,
   registrarPagamentoParcela, salvarParcelas, cancelarPlanoParcelas,
@@ -17,34 +16,19 @@ import {
 
 const cor=(s:string)=>s==="pago"?"bg-emerald-100 text-emerald-800":s==="vencido"?"bg-red-100 text-red-800":s==="enviado"?"bg-blue-100 text-blue-800":s==="gerado"?"bg-amber-100 text-amber-800":"bg-muted text-muted-foreground";
 const cents=(n:number)=>Math.round((Number.isFinite(n)?n:0)*100)/100;
+export const calcularSaldoParcelavel=(pagamento:Pick<ContractPaymentStatus,"saldoNegociado"|"vendaConfirmada">,valorRestante?:string)=>{const restanteDeclarado=Math.max(0,parseValor(valorRestante));return cents(Math.max(0,pagamento.vendaConfirmada?pagamento.saldoNegociado:(restanteDeclarado>0?restanteDeclarado:pagamento.saldoNegociado)))};
 
-export function BoletoParcelas({contratoId,cliente,saldoPendente,dataEvento,onPagamentoRegistrado}:{contratoId:string;cliente:string;saldoPendente:number;dataEvento?:string;onPagamentoRegistrado?:()=>void}){
+export function BoletoParcelas({contratoId,cliente,pagamento,valorRestante,dataEvento,onPagamentoRegistrado}:{contratoId:string;cliente:string;pagamento:ContractPaymentStatus;valorRestante?:string;dataEvento?:string;onPagamentoRegistrado?:()=>void}){
  const [parcelas,setParcelas]=useState<Parcela[]>([]),[draft,setDraft]=useState<ParcelaInput[]>([]),[qtd,setQtd]=useState(2),[primeiro,setPrimeiro]=useState(""),[saving,setSaving]=useState(false),[pagando,setPagando]=useState<string|null>(null),[cancelando,setCancelando]=useState(false),[valores,setValores]=useState<Record<string,string>>({});
- const [saldoParcelavel,setSaldoParcelavel]=useState(Math.max(0,saldoPendente||0));
- const [totalRecebido,setTotalRecebido]=useState(0);
- const [vendaConfirmada,setVendaConfirmada]=useState(false);
+ const [saldoParcelavel,setSaldoParcelavel]=useState(Math.max(0,pagamento.saldoNegociado||0));
+ const totalRecebido=cents(pagamento.totalRecebido);
+ const vendaConfirmada=pagamento.vendaConfirmada;
 
  async function carregar(){try{const ps=await listarParcelas(contratoId);setParcelas(ps);setDraft(ps.map(p=>({id:p.id,numero:p.numero,total:p.total,valor:p.valor,vencimento:p.vencimento,status:p.status,observacoes:p.observacoes})))}catch{toast.error("Não foi possível carregar os boletos.")}}
 
  useEffect(()=>{
-   let vivo=true;
-   setSaldoParcelavel(Math.max(0,saldoPendente||0));
-   Promise.all([fetchOrderByIdPublic(contratoId),fetchLancamentos({force:true})]).then(([order,lanc])=>{
-     if(!vivo||!order)return;
-     const p=getContractPaymentStatus(order,lanc);
-     const restanteDeclarado=Math.max(0,parseValor(order.details?.valorRestante));
-     const valorTotal=Math.max(0,parseValor(order.details?.valorTotal));
-     // Boleto usa o SALDO NEGOCIADO, não o "A Receber" contábil.
-     // Em pré-contrato sem nenhum recebimento, todo o valor ainda pode ser parcelado.
-     const calculado=p.vendaConfirmada
-       ? p.saldoNegociado
-       : (restanteDeclarado>0?restanteDeclarado:(valorTotal>0?valorTotal:p.saldoNegociado));
-     setSaldoParcelavel(cents(Math.max(0,calculado)));
-     setTotalRecebido(cents(p.totalRecebido));
-     setVendaConfirmada(p.vendaConfirmada);
-   }).catch(()=>{});
-   return()=>{vivo=false};
- },[contratoId,saldoPendente]);
+   setSaldoParcelavel(calcularSaldoParcelavel(pagamento,valorRestante));
+ },[pagamento.saldoNegociado,pagamento.vendaConfirmada,valorRestante]);
 
  useEffect(()=>{const timer=window.setTimeout(()=>void carregar(),250);return()=>window.clearTimeout(timer)},[contratoId]);
 
