@@ -108,9 +108,18 @@ export async function salvarParcelasServer(ctx: Ctx, input: { contratoId: string
     };
   });
 
-  if (rows.length) {
-    const { error } = await ctx.supabase.from("contrato_parcelas").upsert(rows, { onConflict: "contrato_id,numero" });
-    if (error) throw new Error(error.message);
+  const existentes = rows.filter((row) => row.id);
+  const novas = rows.filter((row) => !row.id).map(({ id: _id, ...row }) => row);
+
+  for (const row of existentes) {
+    const { id, ...patch } = row;
+    const { error } = await ctx.supabase.from("contrato_parcelas").update(patch).eq("id", id);
+    if (error) throw new Error(`Falha ao atualizar a parcela ${row.numero}: ${error.message}`);
+  }
+
+  if (novas.length) {
+    const { error } = await ctx.supabase.from("contrato_parcelas").insert(novas);
+    if (error) throw new Error(`Falha ao criar os boletos: ${error.message}`);
   }
   return listarParcelasServer(ctx, contratoId);
 }
