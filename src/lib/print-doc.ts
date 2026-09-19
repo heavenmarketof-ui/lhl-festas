@@ -50,6 +50,31 @@ async function waitForAssets(root: ParentNode): Promise<void> {
   await nextPaint();
 }
 
+/**
+ * Garante que imagens essenciais mantenham o tamanho do documento quando o
+ * html2canvas cria sua própria cópia da página. Alguns navegadores móveis
+ * ignoram temporariamente classes CSS e usam o tamanho original do arquivo.
+ */
+export function applyPdfImageDimensions(root: ParentNode): void {
+  root.querySelectorAll<HTMLImageElement>("img[data-pdf-width]").forEach((img) => {
+    const width = Number(img.dataset.pdfWidth);
+    const height = Number(img.dataset.pdfHeight);
+    if (Number.isFinite(width) && width > 0) {
+      img.width = width;
+      img.style.width = `${width}px`;
+      img.style.minWidth = `${width}px`;
+      img.style.maxWidth = `${width}px`;
+    }
+    if (Number.isFinite(height) && height > 0) {
+      img.height = height;
+      img.style.height = `${height}px`;
+      img.style.minHeight = `${height}px`;
+      img.style.maxHeight = `${height}px`;
+    }
+    img.style.objectFit = "contain";
+  });
+}
+
 export async function printElement(
   el: HTMLElement,
   opts?: { title?: string; margin?: string },
@@ -79,6 +104,8 @@ export async function printElement(
   const margin = /^[0-9.]+(?:mm|cm|in|px)$/.test(opts?.margin || "") ? opts!.margin! : "12mm";
   const safeTitle = escapeHtml(opts?.title || document.title);
   const safeBase = escapeHtml(document.baseURI);
+  const printable = el.cloneNode(true) as HTMLElement;
+  applyPdfImageDimensions(printable);
   doc.open();
   doc.write(
     `<!doctype html><html><head><meta charset="utf-8">` +
@@ -91,7 +118,7 @@ export async function printElement(
       `.no-print{display:none!important}` +
       `.a4-sheet,.a4-checklist{box-shadow:none!important;border:0!important;margin:0!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:0!important}` +
       `.avoid-break{break-inside:avoid;page-break-inside:avoid}` +
-      `</style></head><body>${el.outerHTML}</body></html>`,
+      `</style></head><body>${printable.outerHTML}</body></html>`,
   );
   doc.close();
 
@@ -151,6 +178,7 @@ export async function downloadElementPdf(
     clone.style.boxShadow = "none";
     clone.style.border = "none";
     clone.style.background = "#ffffff";
+    applyPdfImageDimensions(clone);
     container.appendChild(clone);
     document.body.appendChild(container);
 
