@@ -75,6 +75,38 @@ export function applyPdfImageDimensions(root: ParentNode): void {
   });
 }
 
+/**
+ * Converte o estilo calculado pelo navegador em estilo inline antes de o
+ * html2canvas clonar o documento. Isso evita que WebViews móveis percam o CSS
+ * do bundle durante a segunda clonagem interna da biblioteca.
+ */
+export function freezeComputedStyles(
+  root: HTMLElement,
+  readStyle: (element: Element) => CSSStyleDeclaration = (element) => window.getComputedStyle(element),
+): void {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))];
+  const snapshots = elements.map((element) => {
+    const computed = readStyle(element);
+    const declarations: Array<[string, string, string]> = [];
+    for (let index = 0; index < computed.length; index += 1) {
+      const property = computed.item(index);
+      if (!property) continue;
+      declarations.push([
+        property,
+        computed.getPropertyValue(property),
+        computed.getPropertyPriority(property),
+      ]);
+    }
+    return declarations;
+  });
+
+  elements.forEach((element, elementIndex) => {
+    snapshots[elementIndex].forEach(([property, value, priority]) => {
+      element.style.setProperty(property, value, priority);
+    });
+  });
+}
+
 export async function printElement(
   el: HTMLElement,
   opts?: { title?: string; margin?: string },
@@ -183,6 +215,8 @@ export async function downloadElementPdf(
     document.body.appendChild(container);
 
     await waitForAssets(clone);
+    freezeComputedStyles(clone);
+    await nextPaint();
     const captureHeight = Math.max(clone.scrollHeight, clone.getBoundingClientRect().height);
     const canvas = await html2canvas(clone, {
       scale: 2,
