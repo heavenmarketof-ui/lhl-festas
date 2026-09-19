@@ -27,6 +27,11 @@ export type ExclusiveItem = {
   aComprarLabel?: string;
 };
 
+/** Exibe a composição desmontável sem alterar os dados salvos do contrato. */
+export function formatExclusiveItemParts(item: Pick<ExclusiveItem, "pecas">): string {
+  return item.pecas ? ` — ${item.pecas} ferros` : "";
+}
+
 export const CATEGORY_LABELS: Record<ExclusiveCategory, string> = {
   mesa: "Mesas",
   cilindros: "Kit de Cilindros",
