@@ -112,7 +112,7 @@ function ContractPrint() {
       <main className="flex justify-center py-8 print:py-0">
         <article className="a4-sheet rounded-sm border border-[#e8d9cc] bg-white text-[#1a1410] shadow-[0_8px_40px_-12px_rgba(120,80,70,0.25)]" style={{ width: "210mm", minWidth: "210mm", minHeight: "297mm", padding: "18mm 16mm", fontFamily: "Arial, Helvetica, Verdana, sans-serif", fontSize: "16px", lineHeight: 1.75 }}>
           <header className="avoid-break mb-7 flex items-start justify-between gap-6 border-b-2 border-[#d4a5a0] pb-5">
-            <div className="flex items-center gap-4"><img src={logo} alt="LHL Festas" className="h-auto w-[64px] object-contain" /><div><p className="text-[24px] font-bold leading-none text-[#8b5a5a]">LHL Festas</p><p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#b8915a]">Prático, lindo e feito para você</p></div></div>
+            <div className="flex items-center gap-4"><img src={logo} alt="LHL Festas" width={64} height={64} data-pdf-width="64" data-pdf-height="64" className="h-auto w-[64px] object-contain" /><div><p className="text-[24px] font-bold leading-none text-[#8b5a5a]">LHL Festas</p><p className="mt-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#b8915a]">Prático, lindo e feito para você</p></div></div>
             <div className="text-right text-[15px] leading-[1.7]"><p className="text-[13px] font-bold uppercase tracking-wider text-[#8b5a5a]">Contrato Nº</p><p className="font-mono text-[16px] font-semibold">{order.id.slice(0, 8).toUpperCase()}</p><p className="mt-2 text-[13px] font-bold uppercase tracking-wider text-[#8b5a5a]">Emitido em</p><p>{new Date().toLocaleDateString("pt-BR")}</p></div>
           </header>
 
