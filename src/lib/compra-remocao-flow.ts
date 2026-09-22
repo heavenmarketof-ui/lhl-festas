@@ -1,9 +1,4 @@
 import { decidirRemocaoCompra, type DecisaoRemocaoCompra } from "./compra-remocao";
-import {
-  fetchSolicitacao,
-  cancelarSolicitacao,
-  revogarAutorizacao,
-} from "./solicitacoes-api";
 import { fetchOrdens, saveOrdem, type OrdemProducao } from "./producao-api";
 
 export type ResultadoRemocaoCompra = {
@@ -40,26 +35,11 @@ export async function removerItemCompraSeguro(
   let solicitacaoCancelada = false;
   let autorizacaoRevogada = false;
 
-  if (item.solicitacaoId) {
-    const solicitacao = await fetchSolicitacao(item.solicitacaoId);
-    if (solicitacao) {
-      if (solicitacao.lancamentoId || solicitacao.status === "lancada") {
-        throw new Error("Este item já possui lançamento financeiro. Corrija pelo Financeiro em vez de remover o histórico.");
-      }
-
-      if (solicitacao.status === "autorizada") {
-        await revogarAutorizacao(solicitacao.id);
-        autorizacaoRevogada = true;
-        await cancelarSolicitacao(solicitacao.id, "Item removido da necessidade operacional");
-        solicitacaoCancelada = true;
-      } else if (solicitacao.status === "pendente") {
-        await cancelarSolicitacao(solicitacao.id, "Item removido da necessidade operacional");
-        solicitacaoCancelada = true;
-      }
-      // "comprada" é evidência histórica: não apagamos nem tentamos reescrever
-      // o passado. Apenas o item operacional será marcado como cancelado.
-    }
-  }
+  // A solicitação vive na própria OP. Revogar, cancelar e remover em chamadas
+  // separadas criava estados intermediários e três esperas. A única gravação
+  // abaixo retira o item da fila e mantém todo o histórico já existente.
+  autorizacaoRevogada = !!item.solicitacaoId;
+  solicitacaoCancelada = !!item.solicitacaoId;
 
   const agora = new Date().toISOString();
   const historico = [
