@@ -41,6 +41,7 @@ import {
 import {
   RegistrarCompraDialog, type RegistrarCompraAlvo,
 } from "@/components/registrar-compra-dialog";
+import { recuperarComprasSemLancamento } from "@/lib/compras-recovery";
 
 export const Route = createFileRoute("/admin/solicitacoes/")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -127,6 +128,7 @@ function SolicitacoesPage() {
   const [compraAlvo, setCompraAlvo] = useState<RegistrarCompraAlvo | null>(null);
   const [retDe, setRetDe] = useState("");
   const [retAte, setRetAte] = useState("");
+  const recuperacaoIniciada = useRef(false);
 
   const fStatus = sp.status;
   const fUrgencia = sp.urgencia;
@@ -158,6 +160,22 @@ function SolicitacoesPage() {
   }, []);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    if (recuperacaoIniciada.current) return;
+    recuperacaoIniciada.current = true;
+    void recuperarComprasSemLancamento(todayISO())
+      .then((resultado) => {
+        if (resultado.recuperadas > 0) {
+          toast.success(`${resultado.recuperadas} compra(s) recuperada(s) no Fluxo de Caixa — ${fmtBRL(resultado.total)}.`);
+          void load(true);
+        }
+        if (resultado.falhas.length > 0) {
+          toast.error(`${resultado.falhas.length} compra(s) ainda precisam de atenção: ${resultado.falhas.join(", ")}`);
+        }
+      })
+      .catch((e) => toast.error(e instanceof Error ? e.message : "Não foi possível recuperar as compras no Fluxo de Caixa."));
+  }, [load]);
 
   const findItemOPForSolicitacao = useCallback((s: Solicitacao): ItemAlvo | null => {
     for (const op of ops) {
