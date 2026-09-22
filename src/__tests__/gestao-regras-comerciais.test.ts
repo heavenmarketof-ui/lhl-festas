@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getGestaoData } from "@/lib/gestao/aggregate";
 import type { Snapshot } from "@/lib/gestao/aggregate";
 import type { PeriodoCursor } from "@/lib/gestao/periodo";
@@ -58,6 +58,9 @@ function entrada(id: string, contratoId: string, data: string, valor: number, ca
 }
 
 describe("Gestão — regras comerciais soberanas", () => {
+  beforeAll(() => vi.setSystemTime(new Date("2026-09-09T12:00:00.000Z")));
+  afterAll(() => vi.useRealTimers());
+
   it("separa pedidos, vendas do mês, faturamento de festas entregues e caixa recebido", () => {
     const snap: Snapshot = {
       orders: [
