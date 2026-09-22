@@ -240,10 +240,9 @@ function SolicitacoesPage() {
   }, [views, fStatus, fUrgencia, q, retDe, retAte, findItemOPForSolicitacao, reconciliarStatus]);
 
   const alvoCompra = useCallback((s: SolicitacaoView): RegistrarCompraAlvo | null => {
-    if (s.status !== "autorizada" && s.status !== "comprada") return null;
-    if (s.lancamentoId) return null;
+    if (s.status !== "autorizada" && s.status !== "comprada" && s.status !== "lancada") return null;
     const found = findItemOPForSolicitacao(s);
-    if (!found || found.item.statusCompra === "Pago") return null;
+    if (!found) return null;
     return {
       op: found.op,
       item: found.item,

@@ -122,6 +122,8 @@ export type PagamentoSolicitacao = {
   conta?: string;
   dataPagamento?: string;
   observacoes?: string;
+  /** O chamador salvará a OP já atualizada depois de confirmar o caixa. */
+  somenteFinanceiro?: boolean;
 };
 
 export type ResultadoLote = {
@@ -441,6 +443,18 @@ async function salvarItem(
   return saveOrdem(next);
 }
 
+export function registrarPagamentoNoHistorico(
+  op: OrdemProducao,
+  solicitacaoId: string,
+  lancamentoId: string,
+  valor: number,
+): OrdemProducao {
+  return withSolLog(op, solicitacaoId, "PAGAMENTO_REGISTRADO", {
+    lancamentoId,
+    detalhe: `Saída confirmada no Fluxo de Caixa por ${valor.toFixed(2)}.`,
+  });
+}
+
 export async function fetchSolicitacao(id: string): Promise<Solicitacao | null> {
   const list = await fetchSolicitacoes();
   return list.find((s) => s.id === id) || null;
@@ -696,8 +710,10 @@ export async function registrarPagamentoSolicitacao(input: PagamentoSolicitacao)
   let ctx = await localizarSolicitacao(input.id);
   let { op, item } = ctx;
   const s = solicitacaoDeItem(op, item, ctx.order, { idPreferido: input.id });
-  if (s.status === "lancada") return { ok: true, lancamentoId: s.lancamentoId, jaLancada: true };
-  if (s.status !== "autorizada" && s.status !== "comprada") {
+  // Nunca considere apenas o log da OP como prova do lançamento: uma gravação
+  // anterior pode ter sido interrompida entre a OP e a planilha financeira.
+  // A chave determinística permite reparar a saída sem criar duplicidade.
+  if (s.status !== "autorizada" && s.status !== "comprada" && s.status !== "lancada") {
     throw new Error("Somente compras autorizadas ou realizadas podem ter o pagamento registrado.");
   }
 
@@ -709,9 +725,9 @@ export async function registrarPagamentoSolicitacao(input: PagamentoSolicitacao)
   const conta = text(input.conta) || meta.conta || "Caixa";
   const data = text(input.dataPagamento) || new Date().toISOString().slice(0, 10);
   const observacoes = text(input.observacoes) || item.observacao || "";
-  const lancamentoId = meta.lancamentoId || crypto.randomUUID();
+  const lancamentoId = meta.lancamentoId || `fluxo-solicitacao-${input.id}`;
 
-  if (!meta.lancamentoId) {
+  if (!meta.lancamentoId && !input.somenteFinanceiro) {
     op = await salvarItem(op, item.id, (c) => ({ ...c, solicitacaoId: input.id }), {
       id: input.id,
       kind: "PAGAMENTO_RESERVADO",
@@ -760,19 +776,21 @@ export async function registrarPagamentoSolicitacao(input: PagamentoSolicitacao)
   }
   if (!existe) throw new Error("O lançamento financeiro ainda não foi confirmado. A solicitação foi mantida para nova tentativa.");
 
-  const qtd = item.quantidade || 1;
-  await salvarItem(op, item.id, (c) => ({
-    ...applyCompraStatus(c, "Pago"),
-    solicitacaoId: input.id,
-    fornecedor: fornecedor || c.fornecedor,
-    formaPagamento: forma,
-    valorReal: valorFinal / qtd,
-    dataCompra: c.dataCompra || data,
-  }), {
-    id: input.id,
-    kind: "PAGAMENTO_REGISTRADO",
-    payload: { lancamentoId, detalhe: `Saída confirmada no Fluxo de Caixa por ${valorFinal.toFixed(2)}.` },
-  });
+  if (!input.somenteFinanceiro) {
+    const qtd = item.quantidade || 1;
+    await salvarItem(op, item.id, (c) => ({
+      ...applyCompraStatus(c, "Pago"),
+      solicitacaoId: input.id,
+      fornecedor: fornecedor || c.fornecedor,
+      formaPagamento: forma,
+      valorReal: valorFinal / qtd,
+      dataCompra: c.dataCompra || data,
+    }), {
+      id: input.id,
+      kind: "PAGAMENTO_REGISTRADO",
+      payload: { lancamentoId, detalhe: `Saída confirmada no Fluxo de Caixa por ${valorFinal.toFixed(2)}.` },
+    });
+  }
 
   return { ok: true, lancamentoId, jaLancada: false };
 }

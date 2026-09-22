@@ -3,7 +3,7 @@
 // ============================================================================
 import type { StoredOrder } from "./orders-storage";
 import type { Solicitacao } from "./solicitacoes-types";
-import { criarSolicitacao, registrarPagamentoSolicitacao } from "./solicitacoes-api";
+import { criarSolicitacao, registrarPagamentoNoHistorico, registrarPagamentoSolicitacao } from "./solicitacoes-api";
 import { createPatrimonioOnSheet, type PatrimonioItem } from "./patrimonio-api";
 import { assertOperacaoLiberada } from "./operacao-gate";
 import {
@@ -76,10 +76,10 @@ export async function mudarEtapaCompra(params:{
   if(item!==itemBruto)op={...op,compras:op.compras.map(c=>c.id===itemId?item:c)};
   validarEtapa(item,status,solicitacao);
 
-  const aplicaConfirmacao=(c:ItemCompra):ItemCompra=>status==="Compra realizada"&&confirmacao?{
+  const aplicaConfirmacao=(c:ItemCompra):ItemCompra=>(status==="Compra realizada"||status==="Pago")&&confirmacao?{
     ...c,
     fornecedor:confirmacao.fornecedor??c.fornecedor,
-    valorReal:confirmacao.valorReal??c.valorReal,
+    valorReal:confirmacao.valorReal!=null?confirmacao.valorReal/(c.quantidade||1):c.valorReal,
     dataCompra:confirmacao.dataCompra||c.dataCompra,
     formaPagamento:confirmacao.formaPagamento||c.formaPagamento,
     observacao:confirmacao.observacao??c.observacao,
@@ -147,8 +147,12 @@ export async function mudarEtapaCompra(params:{
       conta:confirmacao?.conta||"Caixa",
       dataPagamento:salvo.dataCompra||new Date().toISOString().slice(0,10),
       observacoes:confirmacao?.observacao||salvo.observacao||"",
+      somenteFinanceiro:true,
     }) as {lancamentoId?:string}|undefined;
     lancamentoId=res?.lancamentoId;
+    if(lancamentoId){
+      atual=registrarPagamentoNoHistorico(atual,solicitacao?.id||item.solicitacaoId||"",lancamentoId,valor);
+    }
     atual=await saveOrdem(logAction(atual,`Pagamento registrado no Fluxo de Caixa para "${descricaoCompra(salvo)}"${lancamentoId?` (lançamento ${lancamentoId})`:""}`));
     salvo=atual.compras.find(c=>c.id===itemId)??salvo;
   }
@@ -193,7 +197,7 @@ function validarEtapa(item:ItemCompra,destino:CompraStatus,solicitacao?:Solicita
   if(destino==="Compra autorizada"&&compraStatusOf(item)==="Aguardando autorização"&&!solicitacaoAprovada(solicitacao))throw new Error(COMPRA_BLOQUEIO_MENSAGEM);
   if(destino==="Compra realizada"&&compraStatusOf(item)!=="Compra autorizada"&&compraStatusOf(item)!=="Compra realizada")throw new Error(COMPRA_BLOQUEIO_MENSAGEM);
   if(destino==="Pago"){
-    if(compraStatusOf(item)!=="Compra realizada")throw new Error("Marque a compra como realizada antes de registrar o pagamento.");
+    if(compraStatusOf(item)!=="Compra realizada"&&compraStatusOf(item)!=="Compra autorizada"&&compraStatusOf(item)!=="Pago")throw new Error("A compra precisa estar autorizada antes de registrar o pagamento.");
     if(!solicitacao&&!item.solicitacaoId)throw new Error("Este item não possui Solicitação Financeira vinculada — envie para aprovação primeiro.");
     if(solicitacao&&!solicitacaoAprovada(solicitacao))throw new Error(COMPRA_BLOQUEIO_MENSAGEM);
   }

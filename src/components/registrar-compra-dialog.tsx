@@ -156,6 +156,34 @@ export function RegistrarCompraDialog({
     }
   };
 
+  const handleConfirmarCompleto = async () => {
+    setLoading(true);
+    try {
+      const res = await mudarEtapaCompra({
+        op: currentOp,
+        itemId: currentItem.id,
+        status: "Pago",
+        order: currentOrder,
+        solicitacao: solicitacaoEfetiva,
+        usarOpAtual: true,
+        confirmacao: {
+          valorReal,
+          conta,
+          formaPagamento,
+          dataCompra: new Date().toISOString().split("T")[0],
+        },
+      });
+      handleSuccess(res.op);
+      toast.success("Compra e saída registradas no Fluxo de Caixa.");
+      handleOpenChange(false);
+    } catch (error) {
+      console.error("Erro ao registrar compra e saída:", error);
+      toast.error(error instanceof Error ? error.message : "Falha ao registrar compra e saída.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Dialog open={currentOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -179,14 +207,27 @@ export function RegistrarCompraDialog({
                 <Label htmlFor="valorReal" className="text-sm font-bold text-primary">VALOR REAL PAGO (TOTAL)</Label>
                 <MoneyInput id="valorReal" value={valorReal} onChange={setValorReal} className="text-lg font-bold text-emerald-700" />
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Forma de pagamento</Label>
+                  <Select value={formaPagamento} onValueChange={setFormaPagamento}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{FORMAS_PAGAMENTO.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] uppercase text-muted-foreground">Conta de origem</Label>
+                  <Select value={conta} onValueChange={setConta}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{CONTAS_PADRAO.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">O recebimento do contrato é validado somente ao confirmar, sem uma consulta extra ao abrir esta tela.</p>
             </div>
 
-            <DialogFooter>
-              <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancelar</Button>
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={handleConfirmarCompra} disabled={loading}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR COMPRA
+            <DialogFooter className="flex-col gap-2 sm:flex-col">
+              <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold" onClick={handleConfirmarCompleto} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}CONFIRMAR COMPRA E LANÇAR NO FLUXO
               </Button>
+              <div className="flex w-full justify-between gap-2">
+                <Button variant="ghost" onClick={() => handleOpenChange(false)}>Cancelar</Button>
+                <Button variant="outline" onClick={handleConfirmarCompra} disabled={loading}>Registrar sem lançar agora</Button>
+              </div>
             </DialogFooter>
           </>
         )}
