@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { kitLabels, type StoredOrder, type KitChecklist } from "@/lib/orders-storage";
+import { contratoTemMontagem, kitLabels, type StoredOrder, type KitChecklist } from "@/lib/orders-storage";
 import { fetchOrdersFromSheet } from "@/lib/sheets-api";
 import { fetchLancamentos, type Lancamento } from "@/lib/financeiro-api";
 import { getContractPaymentStatus, indexRecebimentos } from "@/lib/pagamentos";
@@ -24,7 +24,7 @@ function ChecklistPrint(){
  const {id}=Route.useParams();const [order,setOrder]=useState<StoredOrder|null>(null),[loaded,setLoaded]=useState(false),[lancamentos,setLancamentos]=useState<Lancamento[]>([]),[busy,setBusy]=useState<"pdf"|"print"|null>(null);
  useEffect(()=>{void Promise.all([fetchLancamentos().catch(()=>[] as Lancamento[]),fetchOrdersFromSheet({includeDeleted:true,force:true})]).then(([l,orders])=>{setLancamentos(l);const o=orders.find(x=>x.id===id);if(o&&String(o.status)!=="Excluído")setOrder(o)}).finally(()=>setLoaded(true))},[id]);
  if(!loaded)return null;if(!order)return <div className="flex min-h-screen flex-col items-center justify-center gap-4"><p className="font-serif text-2xl text-primary">Contrato não encontrado</p><Button asChild variant="ghost"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4"/>Voltar</Link></Button></div>;
- const d=order.details;const isMontagem=d?.servicoMontagem==="Sim";const pagamento=getContractPaymentStatus(order,indexRecebimentos(lancamentos));const fmt=(n:number)=>n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+ const d=order.details;const isMontagem=contratoTemMontagem(order.modalidade,d?.servicoMontagem);const pagamento=getContractPaymentStatus(order,indexRecebimentos(lancamentos));const fmt=(n:number)=>n.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
  const kitItems=(Object.keys(kitLabels) as (keyof KitChecklist)[]).map(k=>({label:kitLabels[k],qty:Number(d?.kit?.[k])||0,group:KIT_GROUP[k]})).filter(x=>x.qty>0);
  const rawExtras:{label:string;qty:number}[]=[];for(const raw of String(d?.demaisPecas||"").split(/\r?\n|;/)){const line=raw.trim();if(!line)continue;const m=line.match(/^(.+?)\s*[:\-]\s*(\d+)/);rawExtras.push(m?{label:m[1].trim(),qty:Number(m[2])}:{label:line,qty:1})}
  const structures:{model:StructureModel;qty:number;sourceLabel:string}[]=[];const extraItems:{label:string;qty:number;group:GroupKey}[]=[];for(const it of rawExtras){const model=matchStructureModel(it.label);if(model)structures.push({model,qty:it.qty,sourceLabel:it.label});else extraItems.push({...it,group:classifyExtra(it.label)})}
