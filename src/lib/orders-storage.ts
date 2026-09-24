@@ -48,6 +48,16 @@ export type TipoFesta = typeof TIPO_FESTA_OPTIONS[number] | "";
 export const HORARIO_AVISO =
   "Retiradas e devoluções: segunda a sábado, 9h às 18h. Não realizamos aos domingos.";
 
+/**
+ * Identifica contratos em que a LHL executa montagem e desmontagem.
+ * A modalidade é a fonte principal; o campo de serviço mantém compatibilidade
+ * com contratos antigos que foram cadastrados antes da modalidade oficial.
+ */
+export function contratoTemMontagem(modalidade?: string, servicoMontagem?: string): boolean {
+  const modalidadeNormalizada = String(modalidade || "").trim().toLocaleLowerCase("pt-BR");
+  return modalidadeNormalizada.includes("montagem") || String(servicoMontagem || "").trim().toLocaleLowerCase("pt-BR") === "sim";
+}
+
 export type ContractDetails = {
   dataEvento: string;
   horaInicioFesta: string;

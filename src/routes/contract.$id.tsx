@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { kitLabels, buildEnderecoCompleto, HORARIO_AVISO, type StoredOrder, type KitChecklist } from "@/lib/orders-storage";
+import { kitLabels, buildEnderecoCompleto, contratoTemMontagem, HORARIO_AVISO, type StoredOrder, type KitChecklist } from "@/lib/orders-storage";
 import { getOrderFromSheet } from "@/lib/orders-cache";
 import { formatDateBR } from "@/lib/date-utils";
 import { kitItemsFor } from "@/data/kits";
@@ -38,7 +38,7 @@ function ContractPrint() {
   if (!order) return <StateMessage title="Contrato não encontrado" />;
 
   const d = order.details;
-  const isMontagem = String(d?.servicoMontagem || "Não") === "Sim";
+  const isMontagem = contratoTemMontagem(order.modalidade, d?.servicoMontagem);
   const kitItensContrato = kitItemsFor(order.modalidade, order.plano);
   const fmtMoney = (s?: string) => {
     const n = Number(s);
