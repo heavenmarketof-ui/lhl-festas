@@ -5,7 +5,7 @@ import type { PersonalizadoProduct } from "./personalizados-store";
 export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   {
     "id": "centro-mesa",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Mickey",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -14,7 +14,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-02",
-    "name": "Centro de Mesa: Cachepô com laço — Minnie",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -23,7 +23,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-03",
-    "name": "Centro de Mesa: Cachepô com laço — Cinderela",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -32,7 +32,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-04",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Toy Story",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -41,7 +41,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-05",
-    "name": "Centro de Mesa: Cachepô com laço — Goku",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -50,7 +50,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-06",
-    "name": "Centro de Mesa: Cachepô quadrado — Fazendinha",
+    "name": "Centro de Mesa: Cachepô quadrado",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -59,7 +59,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-07",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Encanto",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -68,7 +68,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-08",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Chá de bebê",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -77,7 +77,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-09",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Ursinho",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -86,7 +86,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-10",
-    "name": "Centro de Mesa: Porta-guardanapos triangular — Safari",
+    "name": "Centro de Mesa: Porta-guardanapos triangular",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -95,7 +95,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-11",
-    "name": "Centro de Mesa: Cachepô com laço — Sol e arco-íris",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -104,7 +104,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-12",
-    "name": "Centro de Mesa: Caixa com alça — Circo",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -113,7 +113,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-13",
-    "name": "Centro de Mesa: Cachepô quadrado com laço — Safari",
+    "name": "Centro de Mesa: Cachepô quadrado com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -122,7 +122,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-14",
-    "name": "Centro de Mesa: Cachepô com laço — Bluey rosa",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -131,7 +131,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-15",
-    "name": "Centro de Mesa: Cachepô com laço — Bluey azul",
+    "name": "Centro de Mesa: Cachepô com laço",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -140,7 +140,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-16",
-    "name": "Centro de Mesa: Caixa com alça — Bingo",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -149,7 +149,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-17",
-    "name": "Centro de Mesa: Caixa com alça — Bolofofos",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -158,7 +158,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-18",
-    "name": "Centro de Mesa: Cachepô aberto — Bolofofos",
+    "name": "Centro de Mesa: Cachepô aberto",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -167,7 +167,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-20",
-    "name": "Centro de Mesa: Caixa com alça — Coelhinha",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -176,7 +176,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-21",
-    "name": "Centro de Mesa: Caixa com alça — Princesas",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -185,7 +185,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-22",
-    "name": "Centro de Mesa: Caixa sextavada — Stitch",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -194,7 +194,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-23",
-    "name": "Centro de Mesa: Caixa sextavada — Pooh",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -203,7 +203,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-24",
-    "name": "Centro de Mesa: Caixa sextavada — Rapunzel",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -212,7 +212,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-25",
-    "name": "Centro de Mesa: Caixa sextavada — Pikachu",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -221,7 +221,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-26",
-    "name": "Centro de Mesa: Cachepô quadrado — Sol",
+    "name": "Centro de Mesa: Cachepô quadrado",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -230,7 +230,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-27",
-    "name": "Centro de Mesa: Caixa sextavada — Sol lilás",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -239,7 +239,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-28",
-    "name": "Centro de Mesa: Caixa sextavada — Sol azul",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -248,7 +248,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-29",
-    "name": "Centro de Mesa: Caixa com alça — 3 Palavrinhas",
+    "name": "Centro de Mesa: Caixa com alça",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -257,7 +257,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-30",
-    "name": "Centro de Mesa: Caixa sextavada — Capitã Marvel",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -266,7 +266,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-31",
-    "name": "Centro de Mesa: Caixa sextavada — Arca de Noé",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -275,7 +275,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-32",
-    "name": "Centro de Mesa: Caixa sextavada — Bolofofos",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -284,7 +284,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-34",
-    "name": "Centro de Mesa: Cachepô quadrado — Mundo Bita",
+    "name": "Centro de Mesa: Cachepô quadrado",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",
@@ -293,7 +293,7 @@ export const REVIEWED_PERSONALIZADOS: PersonalizadoProduct[] = [
   },
   {
     "id": "centro-mesa-35",
-    "name": "Centro de Mesa: Caixa sextavada — Espaço",
+    "name": "Centro de Mesa: Caixa sextavada",
     "price": 5.85,
     "unit": "un",
     "category": "Centros de Mesa",

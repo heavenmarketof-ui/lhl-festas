@@ -120,7 +120,7 @@ export default function PersonalizadosStore() {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, "_blank", "noopener,noreferrer");
   }
 
-  const featured = PERSONALIZADOS_PRODUCTS.filter((product) => product.featured && product.imageId).slice(0, 3);
+  const featured = ["centro-mesa-03", "milk", "maletinha"].flatMap(id => PERSONALIZADOS_PRODUCTS.filter(product => product.id === id && product.imageId));
 
   return (
     <div className="min-h-screen bg-[#fffaf6] text-[#2b2022]">
@@ -177,7 +177,7 @@ export default function PersonalizadosStore() {
               <img
                 src={personalizadoImage(featured[0].imageId, 1800)}
                 alt="Personalizados para festa LHL Festas"
-                className="absolute right-0 top-0 hidden h-full w-[57%] object-cover object-center lg:block"
+                className="absolute right-0 top-0 hidden h-full w-[57%] object-contain object-center p-8 lg:block"
               />
             ) : null}
             <div className="pointer-events-none absolute inset-0 z-[1] hidden bg-[linear-gradient(90deg,#fff9f5_0%,#fff9f5_38%,rgba(255,249,245,1)_42%,rgba(255,249,245,.96)_45%,rgba(255,249,245,.82)_48%,rgba(255,249,245,.62)_51%,rgba(255,249,245,.38)_54%,rgba(255,249,245,.18)_57%,rgba(255,249,245,.06)_60%,transparent_66%)] lg:block" />
