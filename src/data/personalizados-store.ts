@@ -1,12 +1,13 @@
-export type PersonalizadoCategory = "Caixinhas" | "Lembrancinhas" | "Mesa & Bolo" | "Convites";
+export type PersonalizadoCategory = "Caixinhas" | "Lembrancinhas" | "Mesa & Bolo" | "Centros de Mesa" | "Convites";
 
 export type PersonalizadoProduct = {
   id: string;
   name: string;
-  price: number;
+  price: number | null;
   unit: "un" | "letra" | "arte";
   category: PersonalizadoCategory;
   imageId?: string;
+  gallery?: Array<{ imageId: string; label: string }>;
   description: string;
   featured?: boolean;
 };
@@ -16,13 +17,14 @@ export const PERSONALIZADOS_CATEGORIES: Array<"Todos" | PersonalizadoCategory> =
   "Caixinhas",
   "Lembrancinhas",
   "Mesa & Bolo",
+  "Centros de Mesa",
   "Convites",
 ];
 
 // PREÇOS PÚBLICOS DE VENDA.
 // A base de custo da produção não deve ser armazenada no repositório/site público.
 // Estes valores foram calculados fora do código aplicando +50% sobre o custo informado.
-export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
+const BASE_PRODUCTS: PersonalizadoProduct[] = [
   {
     id: "dupla-bis",
     name: "Caixinha Dupla BIS",
@@ -238,9 +240,17 @@ export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
   },
 ];
 
+// Fotos revisadas visualmente a partir do catálogo da parceria.
+// Preços por família reaproveitam exclusivamente a tabela pública existente.
+import { REVIEWED_PERSONALIZADOS } from "./personalizados-reviewed";
+export const PERSONALIZADOS_PRODUCTS: PersonalizadoProduct[] = [
+ ...BASE_PRODUCTS.filter(p => p.id !== "tubete-adesivo" && !REVIEWED_PERSONALIZADOS.some(r => r.id === p.id)),
+ ...REVIEWED_PERSONALIZADOS,
+];
+
 export function personalizadoImage(imageId?: string, width = 900) {
   if (!imageId) return "";
-  if (/^data:/i.test(imageId)) return imageId;
+  if (/^(data:|\/)/i.test(imageId)) return imageId;
   if (/^https?:\/\//i.test(imageId)) return imageId;
   return `https://drive.google.com/thumbnail?id=${imageId}&sz=w${width}`;
 }

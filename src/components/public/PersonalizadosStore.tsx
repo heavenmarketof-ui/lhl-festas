@@ -1,3 +1,4 @@
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -34,6 +35,9 @@ function unitLabel(product: PersonalizadoProduct) {
 }
 
 export default function PersonalizadosStore() {
+  const [viewingProduct, setViewingProduct] = useState<PersonalizadoProduct | null>(null);
+  const [selectedPhotos, setSelectedPhotos] = useState<Record<string, string>>({});
+  const productPhoto = (product: PersonalizadoProduct) => selectedPhotos[product.id] || product.imageId;
   const [menuOpen, setMenuOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -57,12 +61,17 @@ export default function PersonalizadosStore() {
   const cartLines = useMemo(() => {
     return PERSONALIZADOS_PRODUCTS.flatMap((product) => {
       const quantity = cart[product.id] || 0;
-      return quantity > 0 ? [{ product, quantity, subtotal: quantity * product.price }] : [];
+      return quantity > 0 ? [{ product, quantity, subtotal: product.price === null ? null : quantity * product.price }] : [];
     });
   }, [cart]);
 
   const itemCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
-  const total = cartLines.reduce((sum, line) => sum + line.subtotal, 0);
+  const total = cartLines.reduce((sum, line) => sum + (line.subtotal ?? 0), 0);
+  const hasPricePending = cartLines.some(line => line.product.price === null);
+  const estimateLabel = hasPricePending ? "Subtotal dos itens com preço" : "Estimativa";
+  const estimateValue = hasPricePending && total === 0 ? "Sob consulta" : formatPersonalizadoPrice(total);
+
+
 
   function changeQuantity(id: string, delta: number) {
     setCart((current) => {
@@ -82,10 +91,15 @@ export default function PersonalizadosStore() {
     });
   }
 
+  function referenceLine(product: PersonalizadoProduct) {
+    const photo = productPhoto(product);
+    return photo && !/^(data:|https?:|\/)/i.test(photo) ? `\n  Referência: https://drive.google.com/file/d/${photo}/view` : "";
+  }
+
   function openWhatsApp() {
     if (!cartLines.length) return;
     const lines = cartLines.map(({ product, quantity, subtotal }) =>
-      `• ${quantity}x ${product.name} — ${formatPersonalizadoPrice(subtotal)}${product.unit === "letra" ? " (quantidade de letras)" : ""}`
+      `• ${quantity}x ${product.name} — ${subtotal === null ? "Sob consulta" : formatPersonalizadoPrice(subtotal)}${product.unit === "letra" ? " (quantidade de letras)" : ""}${referenceLine(product)}`
     );
     const message = [
       "Olá! Vim pela Loja de Personalizados da LHL Festas e quero finalizar meu orçamento.",
@@ -97,7 +111,8 @@ export default function PersonalizadosStore() {
       "",
       "Itens selecionados:",
       ...lines,
-      `Estimativa dos personalizados: ${formatPersonalizadoPrice(total)}`,
+      `${estimateLabel}: ${estimateValue}`,
+      hasPricePending ? "Itens sob consulta não estão incluídos no subtotal e precisam de cotação." : "",
       observacoes ? `Observações: ${observacoes}` : "",
       "",
       "Quero confirmar disponibilidade, prazo de produção e detalhes da personalização.",
@@ -109,6 +124,17 @@ export default function PersonalizadosStore() {
 
   return (
     <div className="min-h-screen bg-[#fffaf6] text-[#2b2022]">
+      <Dialog open={viewingProduct !== null} onOpenChange={open => { if (!open) setViewingProduct(null); }}>
+        <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto bg-[#fffaf6]">
+          <DialogTitle>{viewingProduct?.name}</DialogTitle>
+          <DialogDescription>Escolha a foto de referência para seu orçamento. Tema, nome e cores podem ser personalizados.</DialogDescription>
+          {viewingProduct ? <>
+            <img src={personalizadoImage(productPhoto(viewingProduct), 900)} alt={viewingProduct.name} className="mx-auto h-[min(45vh,400px)] w-full object-contain" />
+            <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">{viewingProduct.gallery?.map((photo,index) => <button key={photo.imageId} type="button" aria-label={`Escolher referência ${index+1}: ${photo.label}`} aria-pressed={productPhoto(viewingProduct) === photo.imageId} className={`aspect-square overflow-hidden rounded-xl border-2 ${productPhoto(viewingProduct) === photo.imageId ? "border-[#d76578]" : "border-transparent"}`} onClick={() => setSelectedPhotos(current => ({...current,[viewingProduct.id]:photo.imageId}))}><img loading="lazy" src={personalizadoImage(photo.imageId,300)} alt={photo.label} className="h-full w-full object-contain" /></button>)}</div>
+            <button type="button" className="rounded-full bg-[#d76578] px-5 py-3 text-sm font-semibold text-white" onClick={() => { setSelectedPhotos(current=>({...current,[viewingProduct.id]:productPhoto(viewingProduct)||""})); changeQuantity(viewingProduct.id,1); setViewingProduct(null); }}>Adicionar com esta referência</button>
+          </> : null}
+        </DialogContent>
+      </Dialog>
       <header className="sticky top-0 z-40 border-b border-[#eadbd5]/80 bg-[#fffaf6]/95 backdrop-blur">
         <div className="mx-auto flex h-[74px] max-w-[1500px] items-center justify-between px-5 md:px-8 lg:h-[82px]">
           <Link to="/" aria-label="LHL Festas">
@@ -239,7 +265,7 @@ export default function PersonalizadosStore() {
                   <article key={product.id} className="group flex min-h-full flex-col overflow-hidden rounded-[28px] border border-[#eadbd5] bg-white shadow-[0_10px_30px_rgba(82,42,49,.05)]">
                     <div className="relative aspect-[4/3.2] overflow-hidden bg-[#fae9e5]">
                       {product.imageId ? (
-                        <img src={personalizadoImage(product.imageId, 900)} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]" />
+                        <img src={personalizadoImage(productPhoto(product), 900)} alt={product.name} loading="lazy" className="h-full w-full object-contain p-2 transition duration-500 group-hover:scale-[1.025]" />
                       ) : (
                         <div className="flex h-full flex-col items-center justify-center gap-2 text-[#b88991]">
                           <ImageIcon className="h-8 w-8" />
@@ -250,10 +276,11 @@ export default function PersonalizadosStore() {
                     </div>
                     <div className="flex flex-1 flex-col p-5">
                       <h3 className="font-serif text-2xl leading-none text-[#302326]">{product.name}</h3>
+                      {product.gallery && product.gallery.length > 1 ? <button type="button" className="mt-3 self-start text-xs font-semibold text-[#b95063] underline underline-offset-4" onClick={() => setViewingProduct(product)}>Ver {product.gallery.length} fotos e escolher referência</button> : null}
                       <p className="mt-3 min-h-[52px] text-xs leading-relaxed text-[#725f63]">{product.description}</p>
                       <div className="mt-auto flex items-end justify-between gap-3 border-t border-[#f0e1db] pt-4">
                         <div>
-                          <div className="font-serif text-[1.7rem] leading-none text-[#b95063]">{formatPersonalizadoPrice(product.price)}</div>
+                          <div className="font-serif text-[1.7rem] leading-none text-[#b95063]">{product.price === null ? "Sob consulta" : formatPersonalizadoPrice(product.price)}</div>
                           <div className="mt-1 text-[10px] uppercase tracking-[.12em] text-[#9a8186]">{unitLabel(product)}</div>
                         </div>
                         {quantity === 0 ? (
@@ -317,8 +344,8 @@ export default function PersonalizadosStore() {
                     <div className="mt-1 font-serif text-2xl text-[#302326]">{cartLines.length ? `${itemCount} item(ns)` : "Nenhum item adicionado"}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-[.14em] text-[#9a8186]">Estimativa</div>
-                    <div className="mt-1 font-serif text-2xl text-[#b95063]">{formatPersonalizadoPrice(total)}</div>
+                    <div className="text-[10px] uppercase tracking-[.14em] text-[#9a8186]">{estimateLabel}</div>
+                    <div className="mt-1 font-serif text-2xl text-[#b95063]">{estimateValue}</div>
                   </div>
                 </div>
                 <button type="button" onClick={() => setCartOpen(true)} className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-[#b95063]">Revisar produtos <ChevronRight className="h-4 w-4" /></button>
@@ -390,11 +417,11 @@ export default function PersonalizadosStore() {
                   {cartLines.map(({ product, quantity, subtotal }) => (
                     <div key={product.id} className="grid grid-cols-[72px_1fr] gap-3 rounded-[20px] border border-[#eadbd5] bg-white p-3">
                       <div className="aspect-square overflow-hidden rounded-[14px] bg-[#fae9e5]">
-                        {product.imageId ? <img src={personalizadoImage(product.imageId, 300)} alt="" className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center"><ImageIcon className="h-5 w-5 text-[#c699a1]" /></div>}
+                        {product.imageId ? <img src={personalizadoImage(productPhoto(product), 300)} alt="" className="h-full w-full object-contain" /> : <div className="grid h-full place-items-center"><ImageIcon className="h-5 w-5 text-[#c699a1]" /></div>}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                          <div><div className="font-semibold text-[#433336]">{product.name}</div><div className="mt-1 text-xs text-[#9a8186]">{formatPersonalizadoPrice(product.price)} {unitLabel(product)}</div></div>
+                          <div><div className="font-semibold text-[#433336]">{product.name}</div><div className="mt-1 text-xs text-[#9a8186]">{product.price === null ? "Sob consulta" : formatPersonalizadoPrice(product.price)} {unitLabel(product)}</div></div>
                           <button type="button" onClick={() => removeItem(product.id)} className="p-1.5 text-[#a97b83] hover:text-[#b95063]" aria-label={`Remover ${product.name}`}><Trash2 className="h-4 w-4" /></button>
                         </div>
                         <div className="mt-3 flex items-center justify-between gap-3">
@@ -403,7 +430,7 @@ export default function PersonalizadosStore() {
                             <span className="min-w-7 text-center text-xs font-bold">{quantity}</span>
                             <button type="button" onClick={() => changeQuantity(product.id, 1)} className="grid h-7 w-7 place-items-center rounded-full bg-[#d76578] text-white"><Plus className="h-3 w-3" /></button>
                           </div>
-                          <div className="font-serif text-xl text-[#b95063]">{formatPersonalizadoPrice(subtotal)}</div>
+                          <div className="font-serif text-xl text-[#b95063]">{subtotal === null ? "Sob consulta" : formatPersonalizadoPrice(subtotal)}</div>
                         </div>
                       </div>
                     </div>
@@ -413,8 +440,8 @@ export default function PersonalizadosStore() {
             </div>
 
             <div className="border-t border-[#eadbd5] bg-white px-5 py-5 sm:px-6">
-              <div className="flex items-center justify-between"><span className="text-sm text-[#6f5d61]">Estimativa</span><strong className="font-serif text-3xl font-normal text-[#b95063]">{formatPersonalizadoPrice(total)}</strong></div>
-              <p className="mt-1 text-[10px] leading-relaxed text-[#947d82]">Frete/retirada, prazo e ajustes de arte não estão confirmados nesta etapa.</p>
+              <div className="flex items-center justify-between"><span className="text-sm text-[#6f5d61]">{estimateLabel}</span><strong className="font-serif text-3xl font-normal text-[#b95063]">{estimateValue}</strong></div>
+              <p className="mt-1 text-[10px] leading-relaxed text-[#947d82]">{hasPricePending ? "Itens sob consulta serão cotados à parte e não estão incluídos no subtotal. " : ""}Frete/retirada, prazo e ajustes de arte não estão confirmados nesta etapa.</p>
               <button type="button" disabled={!cartLines.length} onClick={() => { setCartOpen(false); document.getElementById("personalizacao")?.scrollIntoView({ behavior: "smooth" }); }} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-[#d76578] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-45">
                 Continuar orçamento <ArrowRight className="h-4 w-4" />
               </button>
