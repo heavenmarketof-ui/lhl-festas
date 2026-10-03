@@ -65,12 +65,17 @@ export function gerarPlanoParcelas(opts: { quantidade: number; valorTotal: numbe
 }
 
 /** Pagamento idempotente: cada parcela usa um ID financeiro determinístico. */
-export async function registrarPagamentoParcela(opts: { parcela: Parcela; contratoCliente: string; valorPago: number; data?: string }): Promise<Parcela> {
+export async function registrarPagamentoParcela(opts: { parcela: Parcela; contratoCliente: string; valorPago: number; data?: string; lancarNoFluxo?: boolean }): Promise<Parcela> {
   const lancamentoId = `boleto-parcela-${opts.parcela.id}`;
   const dataPagamento = opts.data || new Date().toISOString().slice(0, 10);
-  const authData = await withAdminAccessToken({ id: opts.parcela.id, valorPago: opts.valorPago, lancamentoId });
-  const result = await registrarPagamentoParcelaFn({ data: authData } as any) as { parcela: Parcela; criarLancamento: boolean };
-  const atuais = await fetchLancamentos({ force: true }).catch(() => [] as Lancamento[]);
+  if (opts.parcela.status === "pago") return opts.parcela;
+  if (opts.lancarNoFluxo === false) {
+    const data = await withAdminAccessToken({ id: opts.parcela.id, valorPago: opts.valorPago, lancamentoId, data: dataPagamento });
+    const result = await registrarPagamentoParcelaFn({ data } as any) as { parcela: Parcela };
+    return result.parcela;
+  }
+  // Falha de leitura deve interromper o registro, nunca presumir caixa vazio.
+  const atuais = await fetchLancamentos({ force: true });
   if (!atuais.some((l) => l.id === lancamentoId)) {
     const lancamento: Lancamento = {
       id: lancamentoId, data: dataPagamento, tipo: "Entrada", categoria: "Pagamento Boleto",
@@ -82,5 +87,7 @@ export async function registrarPagamentoParcela(opts: { parcela: Parcela; contra
     };
     await createLancamento(lancamento);
   }
+  const data = await withAdminAccessToken({ id: opts.parcela.id, valorPago: opts.valorPago, lancamentoId, data: dataPagamento });
+  const result = await registrarPagamentoParcelaFn({ data } as any) as { parcela: Parcela };
   return result.parcela;
 }
