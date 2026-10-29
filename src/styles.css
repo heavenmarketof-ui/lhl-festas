@@ -541,3 +541,35 @@ body:has(#orcamento) footer a {
 @media (prefers-reduced-motion: reduce) {
   .heaven-theme { scroll-behavior: auto; }
 }
+
+
+/* Reserva — identidade do emblema oficial LHL, limitada a esta página. */
+body:has(#reserva-lhl) {
+  --background: #fff8f2;
+  --foreground: #421b24;
+  --card: #fffdfa;
+  --card-foreground: #421b24;
+  --primary: #701725;
+  --primary-foreground: #fffaf5;
+  --secondary: #f7dcd6;
+  --secondary-foreground: #701725;
+  --muted: #f8ede8;
+  --muted-foreground: #765851;
+  --accent: #f5dfd9;
+  --accent-foreground: #701725;
+  --border: #e7ccc3;
+  --input: #ddc0b7;
+  --ring: #a67635;
+  --gold: #9b6a29;
+  --gold-foreground: #421b24;
+  --gradient-elegant: linear-gradient(135deg, #701725, #962d40);
+  --shadow-soft: 0 12px 40px -14px rgb(112 23 37 / 18%);
+  background: var(--background);
+}
+#reserva-lhl header {
+  background: radial-gradient(ellipse at top, #f7ddd6 0%, #fff8f2 72%);
+}
+#reserva-lhl input[type="radio"],
+#reserva-lhl input[type="checkbox"] { accent-color: #701725; }
+#reserva-lhl input:focus-visible,
+#reserva-lhl select:focus-visible { outline: 2px solid #a67635; outline-offset: 2px; }

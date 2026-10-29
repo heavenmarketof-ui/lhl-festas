@@ -16,7 +16,7 @@ import { postOrderToSheet } from "@/lib/sheets-api";
 import { validateReserva } from "@/lib/reserva-validation";
 import KitPicker from "@/components/kits/KitPicker";
 import { modalidadeIdFromLabel } from "@/data/kits";
-import logo from "@/assets/lhl-logo-reserva.jpg";
+import logo from "@/assets/lhl-logo-transparente.png";
 
 export const Route = createFileRoute("/reserva")({
   component: Index,
@@ -225,10 +225,10 @@ function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div id="reserva-lhl" className="min-h-screen bg-background">
       <Toaster position="top-center" richColors />
       <header className="px-6 pt-10 pb-8 text-center">
-        <img src={logo} alt="LHL Festas" className="mx-auto w-44 sm:w-56 drop-shadow-sm" />
+        <img src={logo} alt="LHL Festas" className="mx-auto h-44 w-44 object-contain sm:h-52 sm:w-52" style={{clipPath:"circle(49.4% at 50% 50%)"}} />
         <h1 className="mt-6 text-4xl sm:text-5xl text-primary tracking-wide">LHL Festas</h1>
         <p className="font-script text-2xl sm:text-3xl text-gold mt-1">Sua festa, do seu jeito</p>
         <p className="mt-4 text-sm sm:text-base uppercase tracking-[0.25em] text-muted-foreground">Prático, lindo e feito para você</p>
