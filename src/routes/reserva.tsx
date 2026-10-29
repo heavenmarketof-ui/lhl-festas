@@ -16,7 +16,7 @@ import { postOrderToSheet } from "@/lib/sheets-api";
 import { validateReserva } from "@/lib/reserva-validation";
 import KitPicker from "@/components/kits/KitPicker";
 import { modalidadeIdFromLabel } from "@/data/kits";
-import logo from "@/assets/lhl-logo.png";
+import logo from "@/assets/lhl-logo-reserva.jpg";
 
 export const Route = createFileRoute("/reserva")({
   component: Index,
@@ -52,7 +52,7 @@ const empty = {
 
 const ACEITE_ITEMS = [
   "Estou ciente das condições desta solicitação de reserva.",
-  "Estou ciente de que a confirmação da data ocorre mediante sinal de 50% do valor acordado.",
+  "Estou ciente de que a confirmação da data ocorre mediante o pagamento do sinal, conforme combinado com a equipe.",
   "Estou ciente de que o saldo restante e a caução, quando aplicável, serão informados pela equipe conforme a modalidade contratada.",
   "Nas modalidades com retirada, comprometo-me a cuidar dos itens enquanto estiverem sob minha responsabilidade.",
   "Estou ciente de que retirada, devolução, montagem e desmontagem seguem o combinado para a modalidade contratada.",
@@ -285,7 +285,7 @@ function Index() {
           <Divider />
           <div className="mt-6 rounded-2xl border border-border/60 bg-accent/20 p-5">
             <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Condições da reserva</p>
-            <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor é calculado automaticamente nesta página. A data é confirmada após o pagamento do sinal de <strong>50% do valor acordado</strong>. O saldo restante e a caução, quando aplicável, serão informados pela equipe conforme a modalidade e a negociação.</p>
+            <p className="text-sm text-foreground leading-relaxed">Esta é uma <strong>solicitação de reserva</strong>. Nenhum valor é calculado automaticamente nesta página. A data é confirmada mediante o <strong>pagamento do sinal</strong>, conforme combinado com a equipe. O saldo restante e a caução, quando aplicável, serão informados pela equipe conforme a modalidade e a negociação.</p>
           </div>
 
           <Divider />
