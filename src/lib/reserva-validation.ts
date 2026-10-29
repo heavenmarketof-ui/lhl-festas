@@ -1,6 +1,10 @@
 import { modalidadeIdFromLabel } from "@/data/kits";
 
 export type ReservaValidationInput = {
+  tipoPessoa?: string;
+  responsavel?: string;
+  mesmoEndereco?: string;
+  eventoRua?: string; eventoNumero?: string; eventoBairro?: string; eventoCidade?: string; eventoCep?: string;
   nome: string;
   cpf: string;
   telefone: string;
@@ -34,6 +38,17 @@ export function isValidCpf(value: string): boolean {
   return check === Number(cpf[10]);
 }
 
+export function isValidCnpj(value: string): boolean {
+  const cnpj = value.toUpperCase().replace(/[.\/\-\s]/g, "");
+  if (!/^[A-Z0-9]{12}\d{2}$/.test(cnpj) || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const check = (base: string) => {
+    let weight = base.length - 7;
+    const sum = [...base].reduce((total, char) => {const result = total + (char.charCodeAt(0)-48)*weight; weight = weight === 2 ? 9 : weight-1; return result;}, 0);
+    return sum % 11 < 2 ? 0 : 11 - sum % 11;
+  };
+  return check(cnpj.slice(0,12)) === Number(cnpj[12]) && check(cnpj.slice(0,13)) === Number(cnpj[13]);
+}
+
 export function isValidPhone(value: string): boolean {
   const phone = digits(value);
   return phone.length === 10 || phone.length === 11;
@@ -58,8 +73,15 @@ export function isFutureOrTodayIsoDate(value: string): boolean {
 }
 
 export function validateReserva(input: ReservaValidationInput): string | null {
-  if (input.nome.trim().length < 3) return "Informe seu nome completo.";
-  if (!isValidCpf(input.cpf)) return "Informe um CPF válido.";
+  if (input.nome.trim().length < 3) return input.tipoPessoa === "PJ" ? "Informe a razão social da empresa." : "Informe seu nome completo.";
+  if (input.tipoPessoa === "PJ") {
+    if (!isValidCnpj(input.cpf)) return "Informe um CNPJ válido.";
+    if ((input.responsavel || "").trim().length < 3) return "Informe o nome do responsável pelo contato.";
+  } else if (!isValidCpf(input.cpf)) return "Informe um CPF válido.";
+  if (input.mesmoEndereco === "Não") {
+    if ([input.eventoRua,input.eventoBairro,input.eventoCidade].some(v=>(v||"").trim().length<2) || !(input.eventoNumero||"").trim()) return "Preencha o endereço completo do evento.";
+    if (!isValidCep(input.eventoCep || "")) return "Informe um CEP válido para o evento.";
+  }
   if (!isValidPhone(input.telefone)) return "Informe um telefone válido com DDD.";
   if (!isValidEmail(input.email)) return "Informe um e-mail válido.";
   if (input.rua.trim().length < 2 || !input.numero.trim() || input.bairro.trim().length < 2 || input.cidade.trim().length < 2) {

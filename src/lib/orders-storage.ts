@@ -41,7 +41,7 @@ export type BalaoTipo = string;
 
 export const TIPO_FESTA_OPTIONS = [
   "Aniversário", "Chá de Bebê", "Chá Bar", "Chá Revelação",
-  "Batizado", "Casamento", "Noivado", "Corporativo", "Outro",
+  "Batizado", "Casamento", "Noivado", "Corporativo", "Confraternização", "Inauguração", "Outro",
 ] as const;
 export type TipoFesta = typeof TIPO_FESTA_OPTIONS[number] | "";
 
@@ -341,6 +341,7 @@ export const WHATSAPP_NUMBER = "5511925543380";
 export function buildWhatsAppMessage(o: {
   nome: string; cpf: string; telefone: string; email: string;
   endereco: string;
+  tipoPessoa?: string; responsavel?: string; enderecoEvento?: string; localEvento?: string;
   tema: string; modalidade: string; plano: string;
   dataEvento: string;
   nomeAniversariante?: string; idadeAniversariante?: string; tipoFesta?: string;
@@ -350,14 +351,17 @@ export function buildWhatsAppMessage(o: {
     "Olá, LHL Festas! Gostaria de enviar minha *solicitação de reserva*.",
     "",
     "*DADOS DO CLIENTE*",
-    `Nome: ${o.nome}`,
-    `CPF: ${o.cpf}`,
+    `${o.tipoPessoa === "PJ" ? "Razão social" : "Nome"}: ${o.nome}`,
+    ...(o.responsavel ? [`Responsável pelo contato: ${o.responsavel}`] : []),
+    `${o.tipoPessoa === "PJ" ? "CNPJ" : "CPF"}: ${o.cpf}`,
     `Telefone: ${o.telefone}`,
     `E-mail: ${o.email}`,
     `Endereço: ${o.endereco}`,
     "",
     "*DADOS DA FESTA*",
-    `Tipo da Festa: ${o.tipoFesta || "—"}`,
+    `Tipo do evento: ${o.tipoFesta || "—"}`,
+    ...(o.localEvento ? [`Local: ${o.localEvento}`] : []),
+    ...(o.enderecoEvento ? [`Endereço do evento: ${o.enderecoEvento}`] : []),
     ...(o.nomeAniversariante ? [`Aniversariante: ${o.nomeAniversariante}`] : []),
     ...(o.idadeAniversariante ? [`Idade: ${o.idadeAniversariante}`] : []),
     `Tema escolhido: ${o.tema}`,

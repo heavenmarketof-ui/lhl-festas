@@ -4,7 +4,6 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
   buildWhatsAppMessage,
@@ -41,6 +40,8 @@ export const Route = createFileRoute("/reserva")({
 });
 
 const empty = {
+  tipoPessoa: "PF", responsavel: "", mesmoEndereco: "Sim", complemento: "",
+  eventoRua: "", eventoNumero: "", eventoBairro: "", eventoCidade: "", eventoCep: "", eventoComplemento: "", localEvento: "",
   nome: "", cpf: "", telefone: "", email: "",
   rua: "", numero: "", bairro: "", cidade: "", cep: "",
   tema: "",
@@ -66,6 +67,8 @@ function Index() {
 
   const set = (k: keyof typeof empty) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const allAceites = aceites.every(Boolean);
+  const empresa = form.tipoPessoa === "PJ";
+  const corporativo = ["Corporativo", "Confraternização", "Inauguração"].includes(form.tipoFesta);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -84,15 +87,19 @@ function Index() {
     const isMontagem = modalidadeIdFromLabel(form.modalidade) === "festa-com-montagem";
     const nowIso = new Date().toISOString();
     const enderecoCompleto = buildEnderecoCompleto(form);
+    const enderecoEvento = form.mesmoEndereco === "Sim" ? enderecoCompleto : buildEnderecoCompleto({rua:form.eventoRua,numero:form.eventoNumero,bairro:form.eventoBairro,cidade:form.eventoCidade,cep:form.eventoCep});
+    const complementoEvento = form.mesmoEndereco === "Sim" ? form.complemento : form.eventoComplemento;
+    const observacoesReserva = [empresa ? `Pessoa jurídica — Responsável pelo contato: ${form.responsavel.trim()}` : "Pessoa física", form.complemento.trim() ? `Complemento do endereço do contratante: ${form.complemento.trim()}` : "", `Local do evento: ${form.localEvento.trim() || "Não informado"}`, `Endereço do evento: ${enderecoEvento}${complementoEvento.trim() ? ` — Complemento: ${complementoEvento.trim()}` : ""}`, form.mesmoEndereco === "Sim" ? "Evento no mesmo endereço do contratante." : "Evento em endereço diferente do contratante."].filter(Boolean).join("\n");
 
     const details: ContractDetails = {
+      horaInicioFesta: "", horaTerminoFesta: "", horaMontagem: "",
       dataEvento: form.dataEvento,
       dataRetirada: "",
       horaRetirada: "",
       dataDevolucao: "",
       horaDevolucao: "",
-      nomeAniversariante: form.nomeAniversariante,
-      idadeAniversariante: form.idadeAniversariante,
+      nomeAniversariante: corporativo ? "" : form.nomeAniversariante,
+      idadeAniversariante: corporativo ? "" : form.idadeAniversariante,
       tipoFesta: form.tipoFesta,
       valorTotal: "",
       valorSinal: "",
@@ -101,7 +108,7 @@ function Index() {
       kit: { ...emptyKit },
       balaoTipo: "",
       demaisPecas: "",
-      observacoes: "",
+      observacoes: observacoesReserva,
       origemCliente: "",
       veioAnuncio: "Não",
       pagamentoFinalizado: "Não",
@@ -133,6 +140,10 @@ function Index() {
 
     const orderId = crypto.randomUUID();
     const msg = buildWhatsAppMessage({
+      tipoPessoa: form.tipoPessoa,
+      responsavel: empresa ? form.responsavel : "",
+      enderecoEvento: `${enderecoEvento}${complementoEvento.trim() ? ` — ${complementoEvento.trim()}` : ""}`,
+      localEvento: form.localEvento,
       nome: form.nome,
       cpf: form.cpf,
       telefone: form.telefone,
@@ -142,8 +153,8 @@ function Index() {
       modalidade: form.modalidade,
       plano: form.plano,
       dataEvento: form.dataEvento,
-      nomeAniversariante: form.nomeAniversariante,
-      idadeAniversariante: form.idadeAniversariante,
+      nomeAniversariante: corporativo ? "" : form.nomeAniversariante,
+      idadeAniversariante: corporativo ? "" : form.idadeAniversariante,
       tipoFesta: form.tipoFesta,
     });
     const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
@@ -167,15 +178,15 @@ function Index() {
         modalidade: form.modalidade,
         plano: form.plano,
         dataEvento: form.dataEvento,
-        nomeAniversariante: form.nomeAniversariante.trim(),
-        idadeAniversariante: form.idadeAniversariante.trim(),
+        nomeAniversariante: corporativo ? "" : form.nomeAniversariante.trim(),
+        idadeAniversariante: corporativo ? "" : form.idadeAniversariante.trim(),
         tipoFesta: form.tipoFesta,
         valorTotal: "",
         valorSinal: "",
         valorRestante: "",
         caucao: isMontagem ? "0" : "",
         demaisPecas: "",
-        observacoes: "",
+        observacoes: observacoesReserva,
         kitJson: JSON.stringify(details.kit),
         aceiteContrato: "Sim",
         dataHoraAceite: nowIso,
@@ -226,16 +237,18 @@ function Index() {
 
       <main className="px-4 pb-16">
         <form onSubmit={onSubmit} className="mx-auto max-w-2xl rounded-3xl bg-card border border-border/60 p-6 sm:p-10 shadow-[var(--shadow-soft)]">
-          <SectionTitle number="01" title="Dados Pessoais" />
+          <SectionTitle number="01" title="Dados do Contratante" />
+          <fieldset className="mt-6"><legend className="mb-3 text-sm font-medium">Quem está contratando?</legend><div className="flex flex-wrap gap-5">{[["PF","Pessoa física"],["PJ","Pessoa jurídica"]].map(([value,label])=><label key={value} className="flex items-center gap-2"><input type="radio" name="tipoPessoa" value={value} checked={form.tipoPessoa===value} onChange={()=>setForm(f=>({...f,tipoPessoa:value,cpf:"",nome:"",responsavel:""}))}/>{label}</label>)}</div></fieldset>
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
-            <Field label="Nome Completo" full><Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required maxLength={120} autoComplete="name" placeholder="Nome completo" /></Field>
-            <Field label="CPF"><Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required inputMode="numeric" maxLength={18} autoComplete="off" placeholder="000.000.000-00" /></Field>
+            <Field label={empresa ? "Razão social" : "Nome completo"} full><Input value={form.nome} onChange={(e) => set("nome")(e.target.value)} required maxLength={120} autoComplete="name" placeholder={empresa ? "Razão social da empresa" : "Nome completo"} /></Field>
+            <Field label={empresa ? "CNPJ" : "CPF"}><Input value={form.cpf} onChange={(e) => set("cpf")(e.target.value)} required inputMode={empresa ? "text" : "numeric"} maxLength={18} autoComplete="off" placeholder={empresa ? "00.000.000/0000-00" : "000.000.000-00"} /></Field>
+            {empresa && <Field label="Responsável pelo contato" full><Input value={form.responsavel} onChange={e=>set("responsavel")(e.target.value)} required maxLength={120} autoComplete="name" /></Field>}
             <Field label="Telefone"><Input type="tel" value={form.telefone} onChange={(e) => set("telefone")(e.target.value)} required maxLength={20} autoComplete="tel" placeholder="(00) 00000-0000" /></Field>
             <Field label="E-mail" full><Input type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} required maxLength={254} autoComplete="email" placeholder="voce@email.com" /></Field>
           </div>
 
           <Divider />
-          <SectionTitle number="02" title="Endereço" />
+          <SectionTitle number="02" title="Endereço do Contratante" />
           <div className="grid gap-5 mt-6 sm:grid-cols-2">
             <Field label="Rua" full><Input value={form.rua} onChange={(e) => set("rua")(e.target.value)} required maxLength={160} autoComplete="address-line1" placeholder="Nome da rua" /></Field>
             <Field label="Número"><Input value={form.numero} onChange={(e) => set("numero")(e.target.value)} required maxLength={20} placeholder="Nº" /></Field>
@@ -244,14 +257,20 @@ function Index() {
             <Field label="CEP"><Input value={form.cep} onChange={(e) => set("cep")(e.target.value)} required inputMode="numeric" maxLength={10} autoComplete="postal-code" placeholder="00000-000" /></Field>
           </div>
 
+          <div className="mt-5"><Field label="Complemento do contratante (opcional)"><Input value={form.complemento} onChange={e=>set("complemento")(e.target.value)} maxLength={160} placeholder="Apartamento, bloco, sala..." /></Field></div>
+          <div className="mt-8 space-y-5 rounded-xl border p-4"><h3 className="font-medium">Endereço do evento</h3>
+            <Field label="Nome do espaço (opcional)"><Input value={form.localEvento} onChange={e=>set("localEvento")(e.target.value)} maxLength={160} placeholder="Salão, buffet, empresa..." /></Field>
+            <label className="flex items-start gap-3 text-sm"><input type="checkbox" checked={form.mesmoEndereco==="Sim"} onChange={e=>set("mesmoEndereco")(e.target.checked?"Sim":"Não")} className="mt-1"/>O evento será no mesmo endereço do contratante</label>
+            {form.mesmoEndereco==="Sim" ? <p className="text-sm text-muted-foreground">Usaremos o endereço do contratante informado acima.</p> : <div className="grid gap-5 sm:grid-cols-2">{([["eventoRua","Rua"],["eventoNumero","Número"],["eventoBairro","Bairro"],["eventoCidade","Cidade"],["eventoCep","CEP"],["eventoComplemento","Complemento (opcional)"]] as const).map(([key,label])=><Field key={key} label={label}><Input value={form[key]} onChange={e=>set(key)(e.target.value)} required={key!=="eventoComplemento"} maxLength={key==="eventoCep"?10:160} inputMode={key==="eventoCep"?"numeric":"text"}/></Field>)}</div>}
+          </div>
           <Divider />
-          <SectionTitle number="03" title="Escolha da Festa" />
+          <SectionTitle number="03" title="Dados do Evento" />
           <div className="mt-6 space-y-7">
-            <Field label="Tema Escolhido" full><Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required maxLength={120} placeholder="Ex: Jardim Encantado, Princesas, Safari..." /></Field>
+            <Field label="Tema ou proposta do evento" full><Input value={form.tema} onChange={(e) => set("tema")(e.target.value)} required maxLength={120} placeholder="Ex: Jardim Encantado, Princesas, Safari..." /></Field>
             <div className="grid gap-5 sm:grid-cols-2">
-              <Field label="Tipo da Festa"><select value={form.tipoFesta} onChange={(e) => set("tipoFesta")(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Selecione...</option>{["Aniversário","Chá de Bebê","Chá Bar","Chá Revelação","Batizado","Casamento","Noivado","Corporativo","Outro"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
-              <Field label="Nome do Aniversariante (se houver)"><Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} maxLength={120} placeholder="Ex: Ana Beatriz" /></Field>
-              <Field label="Idade do Aniversariante (se houver)" full><Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} maxLength={30} placeholder="Ex: 9 anos" /></Field>
+              <Field label="Tipo do evento"><select value={form.tipoFesta} onChange={(e) => set("tipoFesta")(e.target.value)} required className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"><option value="">Selecione...</option>{["Aniversário","Chá de Bebê","Chá Bar","Chá Revelação","Batizado","Casamento","Noivado","Corporativo","Confraternização","Inauguração","Outro"].map((t) => <option key={t} value={t}>{t}</option>)}</select></Field>
+              {!corporativo && <><Field label="Nome do Aniversariante (se houver)"><Input value={form.nomeAniversariante} onChange={(e) => set("nomeAniversariante")(e.target.value)} maxLength={120} placeholder="Ex: Ana Beatriz" /></Field>
+              <Field label="Idade do Aniversariante (se houver)" full><Input value={form.idadeAniversariante} onChange={(e) => set("idadeAniversariante")(e.target.value)} maxLength={30} placeholder="Ex: 9 anos" /></Field></>}
             </div>
             <KitPicker modalidade={form.modalidade} onModalidadeChange={(v) => setForm((f) => ({ ...f, modalidade: v, plano: "" }))} kit={form.plano} onKitChange={(v) => setForm((f) => ({ ...f, plano: v }))} />
           </div>
@@ -295,5 +314,5 @@ function SectionTitle({ number, title }: { number: string; title: string }) {
 function Divider() { return <div className="my-10 h-px bg-gradient-to-r from-transparent via-border to-transparent" />; }
 
 function Field({ label, full, children }: { label: string; full?: boolean; children: React.ReactNode }) {
-  return <div className={full ? "sm:col-span-2 space-y-2" : "space-y-2"}><Label className="text-xs uppercase tracking-wider text-muted-foreground">{label}</Label>{children}</div>;
+  return <div className={full ? "sm:col-span-2 space-y-2" : "space-y-2"}><label className="block space-y-2"><span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>{children}</label></div>;
 }

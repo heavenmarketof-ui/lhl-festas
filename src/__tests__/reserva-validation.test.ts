@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidCpf, validateReserva } from "@/lib/reserva-validation";
+import { isValidCpf, isValidCnpj, validateReserva } from "@/lib/reserva-validation";
 
 const valid = {
   nome: "Joana da Silva",
@@ -48,5 +48,28 @@ describe("validação da reserva pública", () => {
     expect(validateReserva({ ...valid, email: "invalido" })).toContain("e-mail");
     expect(validateReserva({ ...valid, cep: "123" })).toContain("CEP");
     expect(validateReserva({ ...valid, dataEvento: "2020-01-01" })).toContain("data");
+  });
+});
+
+
+describe("reservas de empresas e local do evento", () => {
+  it("valida CNPJ e não exige CPF para a empresa", () => {
+    expect(isValidCnpj("11.222.333/0001-81")).toBe(true);
+    expect(isValidCnpj("11.222.333/0001-82")).toBe(false);
+    expect(isValidCnpj("00.000.000/0000-00")).toBe(false);
+    expect(validateReserva({...valid,tipoPessoa:"PJ",nome:"Empresa Exemplo",cpf:"11.222.333/0001-81",responsavel:"Ana Silva"})).toBeNull();
+  });
+  it("exige responsável e documento correto para cada contratante", () => {
+    expect(validateReserva({...valid,tipoPessoa:"PJ",cpf:"11.222.333/0001-81"})).toContain("responsável");
+    expect(validateReserva({...valid,tipoPessoa:"PF",cpf:"11.222.333/0001-81"})).toContain("CPF");
+  });
+  it("usa o endereço inicial sem exigir os campos do evento", () => {
+    expect(validateReserva({...valid,mesmoEndereco:"Sim"})).toBeNull();
+  });
+  it("exige endereço e CEP do evento quando diferente", () => {
+    expect(validateReserva({...valid,mesmoEndereco:"Não"})).toContain("endereço completo do evento");
+    const outro = {...valid,mesmoEndereco:"Não",eventoRua:"Rua do Salão",eventoNumero:"22",eventoBairro:"Centro",eventoCidade:"São Caetano",eventoCep:"09500-000"};
+    expect(validateReserva(outro)).toBeNull();
+    expect(validateReserva({...outro,eventoCep:"123"})).toContain("CEP válido para o evento");
   });
 });
