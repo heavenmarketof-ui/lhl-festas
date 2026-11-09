@@ -32,3 +32,31 @@ export const listAdminEmails = createServerFn({ method: "POST" })
    return { messages: Array.isArray(payload.messages) ? payload.messages : [] };
   } finally { clearTimeout(timeout); }
  });
+
+export const sendAdminEmail = createServerFn({ method: "POST" })
+ .validator((input: { accessToken: string; to: string; subject: string; body: string }) => input)
+ .handler(async ({ data }): Promise<{ id: string }> => {
+  const { supabase, userId } = await contextFromAdminAccessToken(data.accessToken);
+  const { data: allowed, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  if (error || allowed !== true) throw new Error("Acesso restrito a administradores.");
+  const to = data.to.trim();
+  const subject = data.subject.trim();
+  const body = data.body.trim();
+  if (!/^[^\\s@,;<>]+@[^\\s@,;<>]+\\.[^\\s@,;<>]+$/.test(to) || to.length > 254) throw new Error("Informe um e-mail de destino válido.");
+  if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
+  if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
+  const apiKey = getServerEnv("RESEND_API_KEY");
+  if (!apiKey) throw new Error("Envio indisponível: configure RESEND_API_KEY como segredo no ambiente de testes.");
+  const response = await fetch("https://api.resend.com/emails", {
+   method: "POST",
+   headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+   body: JSON.stringify({ from: "LHL Festas <contato@lhlfestas.com.br>", to: [to], subject, text: body }),
+   signal: AbortSignal.timeout(15000),
+  });
+  const payload = await response.json().catch(() => ({})) as { id?: string; message?: string };
+  if (!response.ok || !payload.id) {
+   console.error("Mail send provider HTTP", response.status);
+   throw new Error(response.status === 403 ? "Domínio ainda não autorizado no provedor de envio." : "Falha ao enviar e-mail. Confira a configuração do provedor e tente novamente.");
+  }
+  return { id: payload.id };
+ });
