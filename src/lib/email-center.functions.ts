@@ -42,7 +42,7 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   const to = data.to.trim();
   const subject = data.subject.trim();
   const body = data.body.trim();
-  if (!/^[^\\s@,;<>]+@[^\\s@,;<>]+\\.[^\\s@,;<>]+$/.test(to) || to.length > 254) throw new Error("Informe um e-mail de destino válido.");
+  if (!/^[^@ ,;<>]+@[^@ ,;<>]+[.][^@ ,;<>]+$/.test(to) || to.length > 254) throw new Error("Informe um e-mail de destino válido.");
   if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
   if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
   const apiKey = getServerEnv("RESEND_API_KEY");
