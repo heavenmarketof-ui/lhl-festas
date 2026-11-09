@@ -46,7 +46,20 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
   if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
   const apiKey = getServerEnv("RESEND_API_KEY");
-  if (!apiKey) throw new Error("Envio indisponível: configure RESEND_API_KEY como segredo no ambiente de testes.");
+  if (!apiKey) {
+   const { env: nativeEnv } = await import("cloudflare:workers");
+   const native = nativeEnv as unknown as Record<string, unknown>;
+   const bindings = (globalThis as typeof globalThis & { __LHL_RUNTIME_BINDINGS__?: Record<string, unknown> }).__LHL_RUNTIME_BINDINGS__;
+   const source = [native, bindings ?? {}];
+   const diagnostics = {
+    native: typeof native.RESEND_API_KEY === "string" && native.RESEND_API_KEY.length > 0,
+    request: typeof bindings?.RESEND_API_KEY === "string" && bindings.RESEND_API_KEY.length > 0,
+    mailTokenPresent: source.some((value) => typeof value.MAIL_ADMIN_TOKEN === "string" && value.MAIL_ADMIN_TOKEN.length > 0),
+    resendSimilarNames: source.some((value) => Object.keys(value).some((key) => key.includes("RESEND") && key !== "RESEND_API_KEY")),
+   };
+   console.error("Resend secret unavailable (presence only)", diagnostics);
+   throw new Error(`RESEND_API_KEY indisponível nesta implantação (diagnóstico: native=${Number(diagnostics.native)}, request=${Number(diagnostics.request)}, mail=${Number(diagnostics.mailTokenPresent)}, similar=${Number(diagnostics.resendSimilarNames)}).`);
+  }
   const response = await fetch("https://api.resend.com/emails", {
    method: "POST",
    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
