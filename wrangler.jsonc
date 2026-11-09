@@ -5,6 +5,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "keep_vars": true,
+  "services": [
+    { "binding": "MAIL_RECEIVER", "service": "lhl-email-receiver" }
+  ],
   "observability": {
     "enabled": true
   }
