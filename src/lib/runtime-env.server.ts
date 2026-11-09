@@ -25,6 +25,11 @@ export function getServerEnv(name: string): string {
     return runtimeValue.trim();
   }
 
+  const nativeValue = (cloudflareEnv as unknown as RuntimeBindings)?.[name];
+  if (typeof nativeValue === "string" && nativeValue.trim()) {
+    return nativeValue.trim();
+  }
+
   const processValue = typeof process !== "undefined" ? process.env?.[name] : undefined;
   return typeof processValue === "string" ? processValue.trim() : "";
 }
