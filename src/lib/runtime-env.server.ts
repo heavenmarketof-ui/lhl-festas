@@ -25,3 +25,13 @@ export function getServerEnv(name: string): string {
   const processValue = typeof process !== "undefined" ? process.env?.[name] : undefined;
   return typeof processValue === "string" ? processValue.trim() : "";
 }
+
+/** Recupera um Service Binding Cloudflare sem expor segredos ao cliente. */
+export function getServerServiceBinding(name: string): { fetch: typeof fetch } | null {
+  const bindings = (globalThis as GlobalWithBindings)[GLOBAL_KEY];
+  const value = bindings?.[name];
+  if (value && typeof value === "object" && "fetch" in value && typeof value.fetch === "function") {
+    return value as { fetch: typeof fetch };
+  }
+  return null;
+}
