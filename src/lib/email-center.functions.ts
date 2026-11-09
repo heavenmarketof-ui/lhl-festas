@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { contextFromAdminAccessToken } from "@/lib/admin-action-auth.server";
-import { getServerEnv } from "@/lib/runtime-env.server";
+import { getServerEnv, getServerServiceBinding } from "@/lib/runtime-env.server";
 
 export type MailSummary = {
  id: string; message_id: string; sender: string; recipient: string;
@@ -15,12 +15,12 @@ export const listAdminEmails = createServerFn({ method: "POST" })
   const { data: allowed, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (error || allowed !== true) throw new Error("Acesso restrito a administradores.");
   const token = getServerEnv("MAIL_ADMIN_TOKEN");
-  const url = getServerEnv("MAIL_WORKER_URL");
-  if (!token || !url || !url.startsWith("https://")) throw new Error("Central de e-mails ainda não configurada no servidor.");
+  const receiver = getServerServiceBinding("MAIL_RECEIVER");
+  if (!token || !receiver) throw new Error("Service Binding MAIL_RECEIVER não configurado na pré-visualização.");
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-   const response = await fetch(new URL("/internal/messages",url), {
+   const response = await receiver.fetch("https://lhl-email-receiver/internal/messages", {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     signal: controller.signal, cache: "no-store"
    });
