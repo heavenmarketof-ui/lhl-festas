@@ -24,7 +24,10 @@ export const listAdminEmails = createServerFn({ method: "POST" })
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
     signal: controller.signal, cache: "no-store"
    });
-   if (!response.ok) throw new Error("Não foi possível consultar a caixa de entrada.");
+   if (!response.ok) {
+    console.error("Mail receiver returned HTTP", response.status);
+    throw new Error(`Falha na consulta ao receptor (HTTP ${response.status}).`);
+   }
    const payload = await response.json() as { messages?: MailSummary[] };
    return { messages: Array.isArray(payload.messages) ? payload.messages : [] };
   } finally { clearTimeout(timeout); }
