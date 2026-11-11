@@ -15,15 +15,18 @@ export default {
    if (!env.RESEND_API_KEY) return json({error:"Send service unavailable"},503);
    let input;
    try { input = await request.json(); } catch { return json({error:"Invalid JSON"},400); }
-   const to = typeof input?.to === "string" ? input.to.trim() : "";
+   const to = input?.to;
+   const cc = input?.cc ?? [];
+   const bcc = input?.bcc ?? [];
+   const validList = (list) => Array.isArray(list) && list.every(x => typeof x === "string" && x.length <= 254 && /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/.test(x));
    const subject = typeof input?.subject === "string" ? input.subject.trim() : "";
    const body = typeof input?.body === "string" ? input.body.trim() : "";
-   if (!/^[^@ ,;<>]+@[^@ ,;<>]+[.][^@ ,;<>]+$/.test(to) || to.length > 254 || !subject || subject.length > 200 || !body || body.length > 50000) return json({error:"Invalid message"},400);
+   if (!validList(to) || !to.length || !validList(cc) || !validList(bcc) || to.length + cc.length + bcc.length > 50 || !subject || subject.length > 200 || !body || body.length > 50000) return json({error:"Invalid message"},400);
    try {
     const response = await fetch("https://api.resend.com/emails",{
      method:"POST",
      headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
-     body:JSON.stringify({from:"LHL Festas <contato@lhlfestas.com.br>",to:[to],subject,text:body}),
+     body:JSON.stringify({from:"LHL Festas <contato@lhlfestas.com.br>",to,cc,bcc,subject,text:body}),
      signal:AbortSignal.timeout(15000)
     });
     const result = await response.json().catch(()=>({}));
