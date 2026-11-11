@@ -71,3 +71,36 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   }
   return { id: payload.id };
  });
+
+async function authorizedReceiver(accessToken: string) {
+ const { supabase, userId } = await contextFromAdminAccessToken(accessToken);
+ const { data: allowed, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+ if (error || allowed !== true) throw new Error("Acesso restrito a administradores.");
+ const token = getServerEnv("MAIL_ADMIN_TOKEN");
+ const receiver = getServerServiceBinding("MAIL_RECEIVER");
+ if (!token || !receiver) throw new Error("Serviço de e-mails indisponível.");
+ return {token,receiver};
+}
+export type SentMail = {id:string;recipients:string;cc:string;bcc:string;subject:string;body:string;attachment_names:string;sent_at:string};
+export const listSentEmails = createServerFn({method:"POST"})
+ .validator((input:{accessToken:string})=>input)
+ .handler(async ({data}):Promise<{messages:SentMail[]}>=>{
+  const {token,receiver}=await authorizedReceiver(data.accessToken);
+  const response=await receiver.fetch("https://lhl-email-receiver/internal/sent",{headers:{Authorization:"Bearer "+token},signal:AbortSignal.timeout(10000)});
+  if(!response.ok) throw new Error("Não foi possível carregar os enviados.");
+  return await response.json() as {messages:SentMail[]};
+ });
+export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string};
+export const readAdminEmail = createServerFn({method:"POST"})
+ .validator((input:{accessToken:string;id:string})=>input)
+ .handler(async ({data}):Promise<{message:MailDetail}>=>{
+  const {token,receiver}=await authorizedReceiver(data.accessToken);
+  if(!/^[a-zA-Z0-9-]{1,100}$/.test(data.id)) throw new Error("Mensagem inválida.");
+  const response=await receiver.fetch("https://lhl-email-receiver/internal/message?id="+encodeURIComponent(data.id),{headers:{Authorization:"Bearer "+token},signal:AbortSignal.timeout(10000)});
+  if(!response.ok) throw new Error("Não foi possível abrir esta mensagem.");
+  const payload=await response.json() as {message:Omit<MailDetail,"body">&{raw_message:string}};
+  const raw=payload.message.raw_message;
+  const split=raw.search(/\r?\n\r?\n/);
+  const body=split>=0?raw.slice(split).replace(/^\r?\n\r?\n/,""):raw;
+  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:body.slice(0,150000)}};
+ });
