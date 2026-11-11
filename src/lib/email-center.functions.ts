@@ -157,7 +157,22 @@ function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
    }
    return;
   }
-  const name=disposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??type.match(/name\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1];
+  const contentId=get("Content-ID");
+  const isExplicitAttachment=/^attachment\b/i.test(disposition.trim());
+  if(!isExplicitAttachment && (/^inline\b/i.test(disposition.trim())||contentId))return;
+  const decodeMimeName=(value:string)=>{
+   const decodeWord=(_match:string,charset:string,mode:string,payload:string)=>{
+    try{
+     const bytes=mode.toUpperCase()==="B"?Uint8Array.from(atob(payload),c=>c.charCodeAt(0)):Uint8Array.from(payload.replace(/_/g," ").replace(/=([0-9A-F]{2})/gi,(_m,h)=>String.fromCharCode(parseInt(h,16))),c=>c.charCodeAt(0));
+     return new TextDecoder(charset,{fatal:false}).decode(bytes);
+    }catch{return payload;}
+   };
+   return value.replace(/=\?([^?]+)\?([bq])\?([^?]+)\?=/gi,decodeWord);
+  };
+  const extended=disposition.match(/filename\*\s*=\s*(?:UTF-8''|utf-8'[^']*')([^;\s]+)/i)?.[1];
+  const regular=disposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??disposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[2];
+  const fallback=type.match(/name\s*=\s*(?:"([^"]+)"|([^;\s]+))/i);
+  const name=extended?decodeURIComponent(extended):decodeMimeName(regular??fallback?.[1]??fallback?.[2]??"");
   if(!name||!(/attachment/i.test(disposition)||/filename\s*=/i.test(disposition)))return;
   const filename=name.replace(/[\\/\x00-\x1f]/g,"_").slice(0,150);
   if(!filename)return;
