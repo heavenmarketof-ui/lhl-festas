@@ -8,9 +8,24 @@ export default {
   if (url.pathname === "/health") return json({ready: Boolean(env.MAIL_DB),service:"lhl-email-receiver"});
   const isList = url.pathname === "/internal/messages" && request.method === "GET";
   const isSend = url.pathname === "/internal/send" && request.method === "POST";
-  if (!isList && !isSend) return new Response("Not found",{status:404});
+  const isDetail = url.pathname === "/internal/message" && request.method === "GET";
+  const isSent = url.pathname === "/internal/sent" && request.method === "GET";
+  if (!isList && !isSend && !isDetail && !isSent) return new Response("Not found",{status:404});
   const auth = request.headers.get("authorization");
   if (!env.MAIL_ADMIN_TOKEN || auth !== "Bearer " + env.MAIL_ADMIN_TOKEN) return json({error:"Unauthorized"},401);
+  if (isDetail) {
+   if (!env.MAIL_DB) return json({error:"Storage unavailable"},503);
+   const id = url.searchParams.get("id");
+   if (!id || id.length > 100) return json({error:"Invalid id"},400);
+   const item = await env.MAIL_DB.prepare("SELECT id,sender,recipient,subject,received_at,raw_message FROM mail_messages WHERE id=?").bind(id).first();
+   return item ? json({message:item}) : json({error:"Not found"},404);
+  }
+  if (isSent) {
+   if (!env.MAIL_DB) return json({error:"Storage unavailable"},503);
+   await env.MAIL_DB.exec("CREATE TABLE IF NOT EXISTS mail_sent (id TEXT PRIMARY KEY, recipients TEXT NOT NULL, cc TEXT NOT NULL DEFAULT '[]', bcc TEXT NOT NULL DEFAULT '[]', subject TEXT NOT NULL, body TEXT NOT NULL, attachment_names TEXT NOT NULL DEFAULT '[]', sent_at TEXT NOT NULL DEFAULT (datetime('now')))");
+   const result = await env.MAIL_DB.prepare("SELECT id,recipients,cc,bcc,subject,body,attachment_names,sent_at FROM mail_sent ORDER BY sent_at DESC LIMIT 100").all();
+   return json({messages:result.results});
+  }
   if (isSend) {
    if (!env.RESEND_API_KEY) return json({error:"Send service unavailable"},503);
    let input;
@@ -35,6 +50,12 @@ export default {
     if (!response.ok || typeof result.id !== "string") {
      console.error("Resend HTTP",response.status);
      return json({error:"Provider rejected request",status:response.status},502);
+    }
+    if (env.MAIL_DB) {
+     try {
+      await env.MAIL_DB.exec("CREATE TABLE IF NOT EXISTS mail_sent (id TEXT PRIMARY KEY, recipients TEXT NOT NULL, cc TEXT NOT NULL DEFAULT '[]', bcc TEXT NOT NULL DEFAULT '[]', subject TEXT NOT NULL, body TEXT NOT NULL, attachment_names TEXT NOT NULL DEFAULT '[]', sent_at TEXT NOT NULL DEFAULT (datetime('now')))");
+      await env.MAIL_DB.prepare("INSERT INTO mail_sent (id,recipients,cc,bcc,subject,body,attachment_names) VALUES (?,?,?,?,?,?,?)").bind(result.id,JSON.stringify(to),JSON.stringify(cc),JSON.stringify(bcc),subject,body,JSON.stringify(attachments.map(a=>a.filename))).run();
+     } catch(err) { console.error("Sent mail history persistence failed",String(err)); }
     }
     return json({id:result.id});
    } catch(error) {
