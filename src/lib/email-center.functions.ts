@@ -90,7 +90,7 @@ export const listSentEmails = createServerFn({method:"POST"})
   if(!response.ok) throw new Error("Não foi possível carregar os enviados.");
   return await response.json() as {messages:SentMail[]};
  });
-function parseReadableEmail(raw: string): string {
+function parseReadableEmail(raw: string): {text:string;html:string|null} {
  const splitPart=(source:string)=>{
   const normalized=source.replace(/\r\n/g,"\n");
   const index=normalized.indexOf("\n\n");
@@ -132,9 +132,7 @@ function parseReadableEmail(raw: string): string {
   return {plain:[],html:[]};
  };
  const result=collect(raw,0);
- if(result.plain.length)return result.plain.filter(Boolean).join("\n\n").slice(0,150000);
- if(result.html.length)return result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim().slice(0,150000);
- return "(Esta mensagem não contém texto legível.)";
+ const text=result.plain.length?result.plain.filter(Boolean).join("\n\n").slice(0,150000):result.html.length?result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").trim().slice(0,150000):"(Esta mensagem não contém texto legível.)";\n return {text,html:result.html.length?result.html.join("\n").slice(0,250000):null};
 }
 export type ReceivedAttachment = {filename:string;contentType:string;contentBase64:string;size:number};
 function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
@@ -202,7 +200,7 @@ function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
  scan(raw,0);
  return results;
 }
-export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string;attachments:ReceivedAttachment[]};
+export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string;html:string|null;attachments:ReceivedAttachment[]};
 export const readAdminEmail = createServerFn({method:"POST"})
  .validator((input:{accessToken:string;id:string})=>input)
  .handler(async ({data}):Promise<{message:MailDetail}>=>{
@@ -212,6 +210,6 @@ export const readAdminEmail = createServerFn({method:"POST"})
   if(!response.ok) throw new Error("Não foi possível abrir esta mensagem.");
   const payload=await response.json() as {message:Omit<MailDetail,"body">&{raw_message:string}};
   const raw=payload.message.raw_message;
-  const body=parseReadableEmail(raw);
-  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:body.slice(0,150000),attachments:extractReceivedAttachments(raw)}};
+  const parsed=parseReadableEmail(raw);
+  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:parsed.text,html:parsed.html,attachments:extractReceivedAttachments(raw)}};
  });
