@@ -136,7 +136,58 @@ function parseReadableEmail(raw: string): string {
  if(result.html.length)return result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim().slice(0,150000);
  return "(Esta mensagem não contém texto legível.)";
 }
-export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string};
+export type ReceivedAttachment = {filename:string;contentType:string;contentBase64:string;size:number};
+function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
+ const results:ReceivedAttachment[]=[];
+ const scan=(source:string,depth:number)=>{
+  if(depth>8||results.length>=10)return;
+  const normalized=source.replace(/\r\n/g,"\n");
+  const split=normalized.indexOf("\n\n");
+  if(split<0)return;
+  const header=normalized.slice(0,split).replace(/\n[ \t]+/g," ");
+  const body=normalized.slice(split+2);
+  const get=(name:string)=>header.match(new RegExp("^"+name+":\\s*(.*)$","im"))?.[1]??"";
+  const type=get("Content-Type");
+  const disposition=get("Content-Disposition");
+  const boundary=type.match(/boundary\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??type.match(/boundary\s*=\s*([^;\s]+)/i)?.[1];
+  if(/multipart\//i.test(type)&&boundary){
+   for(const chunk of body.split("--"+boundary).slice(1)){
+    if(chunk.startsWith("--"))break;
+    scan(chunk.replace(/^\n/,""),depth+1);
+   }
+   return;
+  }
+  const name=disposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??type.match(/name\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1];
+  if(!name||!(/attachment/i.test(disposition)||/filename\s*=/i.test(disposition)))return;
+  const filename=name.replace(/[\\/\x00-\x1f]/g,"_").slice(0,150);
+  if(!filename)return;
+  const encoding=get("Content-Transfer-Encoding");
+  let base64="";
+  if(/base64/i.test(encoding))base64=body.replace(/\s/g,"");
+  else if(/quoted-printable/i.test(encoding)){
+   const joined=body.replace(/=\n/g,"");
+   const bytes:number[]=[];
+   for(let i=0;i<joined.length;i++){
+    if(joined[i]==="="&&/^[0-9a-f]{2}$/i.test(joined.slice(i+1,i+3))){bytes.push(parseInt(joined.slice(i+1,i+3),16));i+=2;}
+    else bytes.push(...new TextEncoder().encode(joined[i]));
+   }
+   let binary="";for(const b of bytes)binary+=String.fromCharCode(b);
+   base64=btoa(binary);
+  }else{
+   const bytes=new TextEncoder().encode(body.trimEnd());
+   let binary="";for(const b of bytes)binary+=String.fromCharCode(b);
+   base64=btoa(binary);
+  }
+  if(!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))return;
+  const size=Math.floor(base64.length*3/4)-(base64.endsWith("==")?2:base64.endsWith("=")?1:0);
+  if(size>0&&size<=5*1024*1024&&results.reduce((n,a)=>n+a.size,0)+size<=7*1024*1024){
+   results.push({filename,contentType:type.split(";")[0].trim()||"application/octet-stream",contentBase64:base64,size});
+  }
+ };
+ scan(raw,0);
+ return results;
+}
+export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string;attachments:ReceivedAttachment[]};
 export const readAdminEmail = createServerFn({method:"POST"})
  .validator((input:{accessToken:string;id:string})=>input)
  .handler(async ({data}):Promise<{message:MailDetail}>=>{
@@ -147,5 +198,5 @@ export const readAdminEmail = createServerFn({method:"POST"})
   const payload=await response.json() as {message:Omit<MailDetail,"body">&{raw_message:string}};
   const raw=payload.message.raw_message;
   const body=parseReadableEmail(raw);
-  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:body.slice(0,150000)}};
+  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:body.slice(0,150000),attachments:extractReceivedAttachments(raw)}};
  });
