@@ -34,7 +34,7 @@ export const listAdminEmails = createServerFn({ method: "POST" })
  });
 
 export const sendAdminEmail = createServerFn({ method: "POST" })
- .validator((input: { accessToken: string; to: string; cc: string; bcc: string; subject: string; body: string }) => input)
+ .validator((input: { accessToken: string; to: string; cc: string; bcc: string; subject: string; body: string; attachments: {filename:string;content:string}[] }) => input)
  .handler(async ({ data }): Promise<{ id: string }> => {
   const { supabase, userId } = await contextFromAdminAccessToken(data.accessToken);
   const { data: allowed, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
@@ -50,13 +50,15 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   const body = data.body.trim();
   if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
   if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
+  const attachments = data.attachments ?? [];
+  if (!Array.isArray(attachments) || attachments.length > 5 || attachments.some(a => !a || typeof a.filename !== "string" || !/^[^\\/]{1,150}$/.test(a.filename) || typeof a.content !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/.test(a.content)) || attachments.reduce((n,a)=>n+a.content.length,0)>7_000_000) throw new Error("Envie até 5 anexos, com limite total de 5 MB.");
   const token = getServerEnv("MAIL_ADMIN_TOKEN");
   const receiver = getServerServiceBinding("MAIL_RECEIVER");
   if (!token || !receiver) throw new Error("Serviço de envio não configurado nesta implantação.");
   const response = await receiver.fetch("https://lhl-email-receiver/internal/send", {
    method: "POST",
    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-   body: JSON.stringify({ to, cc, bcc, subject, body }),
+   body: JSON.stringify({ to, cc, bcc, subject, body, attachments }),
    signal: AbortSignal.timeout(15000),
   });
   const payload = await response.json().catch(() => ({})) as { id?: string; error?: string; status?: number };
