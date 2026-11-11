@@ -34,15 +34,20 @@ export const listAdminEmails = createServerFn({ method: "POST" })
  });
 
 export const sendAdminEmail = createServerFn({ method: "POST" })
- .validator((input: { accessToken: string; to: string; subject: string; body: string }) => input)
+ .validator((input: { accessToken: string; to: string; cc: string; bcc: string; subject: string; body: string }) => input)
  .handler(async ({ data }): Promise<{ id: string }> => {
   const { supabase, userId } = await contextFromAdminAccessToken(data.accessToken);
   const { data: allowed, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   if (error || allowed !== true) throw new Error("Acesso restrito a administradores.");
-  const to = data.to.trim();
+  const parseRecipients = (value: string) => value.split(/[,;\n]+/).map(x => x.trim()).filter(Boolean);
+  const to = parseRecipients(data.to);
+  const cc = parseRecipients(data.cc);
+  const bcc = parseRecipients(data.bcc);
+  const recipients = [...to, ...cc, ...bcc];
+  const emailPattern = /^[^@\s,;<>]+@[^@\s,;<>]+\.[^@\s,;<>]+$/;
+  if (!to.length || recipients.length > 50 || recipients.some(x => x.length > 254 || !emailPattern.test(x))) throw new Error("Confira os destinatários. Informe pelo menos um Para, com até 50 endereços válidos no total.");
   const subject = data.subject.trim();
   const body = data.body.trim();
-  if (!/^[^@ ,;<>]+@[^@ ,;<>]+[.][^@ ,;<>]+$/.test(to) || to.length > 254) throw new Error("Informe um e-mail de destino válido.");
   if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
   if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
   const token = getServerEnv("MAIL_ADMIN_TOKEN");
@@ -51,7 +56,7 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   const response = await receiver.fetch("https://lhl-email-receiver/internal/send", {
    method: "POST",
    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-   body: JSON.stringify({ to, subject, body }),
+   body: JSON.stringify({ to, cc, bcc, subject, body }),
    signal: AbortSignal.timeout(15000),
   });
   const payload = await response.json().catch(() => ({})) as { id?: string; error?: string; status?: number };
