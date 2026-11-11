@@ -90,6 +90,52 @@ export const listSentEmails = createServerFn({method:"POST"})
   if(!response.ok) throw new Error("Não foi possível carregar os enviados.");
   return await response.json() as {messages:SentMail[]};
  });
+function parseReadableEmail(raw: string): string {
+ const splitPart=(source:string)=>{
+  const normalized=source.replace(/\r\n/g,"\n");
+  const index=normalized.indexOf("\n\n");
+  const header=index>=0?normalized.slice(0,index):"";
+  const content=index>=0?normalized.slice(index+2):normalized;
+  const unfolded=header.replace(/\n[ \t]+/g," ");
+  const get=(name:string)=>unfolded.match(new RegExp("^"+name+":\\s*(.*)$","im"))?.[1]??"";
+  return {content,type:get("Content-Type"),encoding:get("Content-Transfer-Encoding")};
+ };
+ const decode=(value:string,encoding:string)=>{
+  if(/base64/i.test(encoding)){
+   try {const bytes=Uint8Array.from(atob(value.replace(/\s/g,"")),x=>x.charCodeAt(0));return new TextDecoder().decode(bytes);}catch{return "";}
+  }
+  if(/quoted-printable/i.test(encoding)){
+   const joined=value.replace(/=\n/g,"");
+   const bytes:number[]=[];
+   for(let i=0;i<joined.length;i++){
+    if(joined[i]==="="&&/^[0-9a-f]{2}$/i.test(joined.slice(i+1,i+3))){bytes.push(parseInt(joined.slice(i+1,i+3),16));i+=2;}
+    else {bytes.push(...new TextEncoder().encode(joined[i]));}
+   }
+   return new TextDecoder().decode(new Uint8Array(bytes));
+  }
+  return value;
+ };
+ const collect=(source:string,depth:number):{plain:string[];html:string[]}=>{
+  if(depth>8)return {plain:[],html:[]};
+  const {content,type,encoding}=splitPart(source);
+  const boundary=type.match(/boundary\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??type.match(/boundary\s*=\s*([^;\s]+)/i)?.[1];
+  if(/multipart\//i.test(type)&&boundary){
+   const chunks=content.split("--"+boundary).slice(1);
+   const output={plain:[] as string[],html:[] as string[]};
+   for(const chunk of chunks){if(chunk.startsWith("--"))break;const part=collect(chunk.replace(/^\n/,""),depth+1);output.plain.push(...part.plain);output.html.push(...part.html);}
+   return output;
+  }
+  if(/attachment/i.test(type))return {plain:[],html:[]};
+  const decoded=decode(content,encoding).trim();
+  if(/text\/html/i.test(type))return {plain:[],html:[decoded]};
+  if(!type||/text\/plain/i.test(type))return {plain:[decoded],html:[]};
+  return {plain:[],html:[]};
+ };
+ const result=collect(raw,0);
+ if(result.plain.length)return result.plain.filter(Boolean).join("\n\n").slice(0,150000);
+ if(result.html.length)return result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").replace(/&nbsp;/g," ").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").trim().slice(0,150000);
+ return "(Esta mensagem não contém texto legível.)";
+}
 export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string};
 export const readAdminEmail = createServerFn({method:"POST"})
  .validator((input:{accessToken:string;id:string})=>input)
@@ -100,7 +146,6 @@ export const readAdminEmail = createServerFn({method:"POST"})
   if(!response.ok) throw new Error("Não foi possível abrir esta mensagem.");
   const payload=await response.json() as {message:Omit<MailDetail,"body">&{raw_message:string}};
   const raw=payload.message.raw_message;
-  const split=raw.search(/\r?\n\r?\n/);
-  const body=split>=0?raw.slice(split).replace(/^\r?\n\r?\n/,""):raw;
+  const body=parseReadableEmail(raw);
   return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:body.slice(0,150000)}};
  });
