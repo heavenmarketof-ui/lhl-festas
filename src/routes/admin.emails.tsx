@@ -4,7 +4,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { useAdminSession } from "@/lib/auth-session";
 import { supabase } from "@/integrations/supabase/client";
 import { listAdminEmails, sendAdminEmail, listSentEmails, readAdminEmail, type SentMail, type MailDetail, type MailSummary } from "@/lib/email-center.functions";
-import { Mail, Inbox, RefreshCw, ShieldCheck, Send, X, Plus, Paperclip, Reply, Forward, FileText } from "lucide-react";
+import { Mail, Inbox, RefreshCw, ShieldCheck, Send, X, Plus, Paperclip, Reply, Forward } from "lucide-react";
 
 export const Route = createFileRoute("/admin/emails")({
  component: EmailsPage,
