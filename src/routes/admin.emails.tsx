@@ -18,6 +18,8 @@ function EmailsPage() {
  const [error,setError] = useState("");
  const [compose,setCompose] = useState(false);
  const [to,setTo] = useState("");
+ const [cc,setCc] = useState("");
+ const [bcc,setBcc] = useState("");
  const [subject,setSubject] = useState("");
  const [body,setBody] = useState("");
  const [sending,setSending] = useState(false);
@@ -28,8 +30,8 @@ function EmailsPage() {
    const {data,error:sessionError}=await supabase.auth.getSession();
    const accessToken=data.session?.access_token;
    if(sessionError || !accessToken) throw new Error("Sessão expirada. Entre novamente.");
-   await sendAdminEmail({data:{accessToken,to,subject,body}});
-   setSendNotice("E-mail enviado com sucesso."); setCompose(false); setTo(""); setSubject(""); setBody("");
+   await sendAdminEmail({data:{accessToken,to,cc,bcc,subject,body}});
+   setSendNotice("E-mail enviado com sucesso."); setCompose(false); setTo(""); setCc(""); setBcc(""); setSubject(""); setBody("");
   } catch(e) { setError(e instanceof Error ? e.message : "Falha ao enviar e-mail."); }
   finally { setSending(false); }
  }
@@ -60,7 +62,7 @@ function EmailsPage() {
    <div className="rounded-2xl border bg-white p-5 shadow-sm"><ShieldCheck className="mb-3 text-[#651421]"/><h2 className="font-semibold">Acesso administrativo</h2><p className="mt-2 text-sm text-[#79585d]">Consulta protegida por sessão e papel admin</p></div>
   </div>
   {sendNotice && <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">{sendNotice}</div>}
-  {compose && <section className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-xl text-[#651421]">Nova mensagem</h2><button type="button" aria-label="Fechar" onClick={()=>setCompose(false)}><X size={20}/></button></div><form onSubmit={sendMessage} className="space-y-4"><p className="text-sm text-[#79585d]">De: contato@lhlfestas.com.br</p><label className="block text-sm font-medium">Para<input required type="email" value={to} onChange={e=>setTo(e.target.value)} className="mt-1 w-full rounded-xl border p-3" placeholder="cliente@exemplo.com"/></label><label className="block text-sm font-medium">Assunto<input required maxLength={200} value={subject} onChange={e=>setSubject(e.target.value)} className="mt-1 w-full rounded-xl border p-3"/></label><label className="block text-sm font-medium">Mensagem<textarea required rows={8} maxLength={50000} value={body} onChange={e=>setBody(e.target.value)} className="mt-1 w-full rounded-xl border p-3"/></label><button disabled={sending} type="submit" className="flex items-center gap-2 rounded-xl bg-[#651421] px-5 py-3 font-semibold text-white disabled:opacity-50"><Send size={16}/>{sending ? "Enviando..." : "Enviar e-mail"}</button></form></section>}
+  {compose && <section className="rounded-2xl border bg-white p-5 shadow-sm"><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-xl text-[#651421]">Nova mensagem</h2><button type="button" aria-label="Fechar" onClick={()=>setCompose(false)}><X size={20}/></button></div><form onSubmit={sendMessage} className="space-y-4"><p className="text-sm text-[#79585d]">De: contato@lhlfestas.com.br</p><label className="block text-sm font-medium">Para<input required type="text" value={to} onChange={e=>setTo(e.target.value)} className="mt-1 w-full rounded-xl border p-3" placeholder="cliente@exemplo.com; outro@exemplo.com"/></label><p className="text-xs text-[#79585d]">Separe vários destinatários por vírgula ou ponto e vírgula (até 50 no total).</p><label className="block text-sm font-medium">CC — Com cópia<input type="text" value={cc} onChange={e=>setCc(e.target.value)} className="mt-1 w-full rounded-xl border p-3" placeholder="pessoa1@exemplo.com; pessoa2@exemplo.com"/></label><label className="block text-sm font-medium">CCO — Cópia oculta<input type="text" value={bcc} onChange={e=>setBcc(e.target.value)} className="mt-1 w-full rounded-xl border p-3" placeholder="pessoa3@exemplo.com"/></label><p className="text-xs text-[#79585d]">Destinatários em CCO não ficam visíveis para os outros destinatários.</p><label className="block text-sm font-medium">Assunto<input required maxLength={200} value={subject} onChange={e=>setSubject(e.target.value)} className="mt-1 w-full rounded-xl border p-3"/></label><label className="block text-sm font-medium">Mensagem<textarea required rows={8} maxLength={50000} value={body} onChange={e=>setBody(e.target.value)} className="mt-1 w-full rounded-xl border p-3"/></label><button disabled={sending} type="submit" className="flex items-center gap-2 rounded-xl bg-[#651421] px-5 py-3 font-semibold text-white disabled:opacity-50"><Send size={16}/>{sending ? "Enviando..." : "Enviar e-mail"}</button></form></section>}
   {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
   <section className="overflow-hidden rounded-2xl border bg-white">
    <h2 className="border-b px-5 py-4 font-semibold">Mensagens recebidas</h2>
