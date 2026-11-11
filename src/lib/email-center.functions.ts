@@ -132,7 +132,8 @@ function parseReadableEmail(raw: string): {text:string;html:string|null} {
   return {plain:[],html:[]};
  };
  const result=collect(raw,0);
- const text=result.plain.length?result.plain.filter(Boolean).join("\n\n").slice(0,150000):result.html.length?result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").trim().slice(0,150000):"(Esta mensagem não contém texto legível.)";\n return {text,html:result.html.length?result.html.join("\n").slice(0,250000):null};
+ const text=result.plain.length?result.plain.filter(Boolean).join("\n\n").slice(0,150000):result.html.length?result.html.join("\n").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,"").replace(/<br\s*\/?\s*>/gi,"\n").replace(/<\/p\s*>/gi,"\n\n").replace(/<[^>]+>/g,"").trim().slice(0,150000):"(Esta mensagem não contém texto legível.)";
+ return {text,html:result.html.length?result.html.join("\n").slice(0,250000):null};
 }
 export type ReceivedAttachment = {filename:string;contentType:string;contentBase64:string;size:number};
 function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
