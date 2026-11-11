@@ -22,11 +22,13 @@ export default {
    const subject = typeof input?.subject === "string" ? input.subject.trim() : "";
    const body = typeof input?.body === "string" ? input.body.trim() : "";
    if (!validList(to) || !to.length || !validList(cc) || !validList(bcc) || to.length + cc.length + bcc.length > 50 || !subject || subject.length > 200 || !body || body.length > 50000) return json({error:"Invalid message"},400);
+   const attachments = input?.attachments ?? [];
+   if (!Array.isArray(attachments) || attachments.length > 5 || attachments.some(a => !a || typeof a.filename !== "string" || !/^[^\\/]{1,150}$/.test(a.filename) || typeof a.content !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/.test(a.content)) || attachments.reduce((n,a)=>n+a.content.length,0)>7_000_000) return json({error:"Invalid attachments"},400);
    try {
     const response = await fetch("https://api.resend.com/emails",{
      method:"POST",
      headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
-     body:JSON.stringify({from:"LHL Festas <contato@lhlfestas.com.br>",to,cc,bcc,subject,text:body}),
+     body:JSON.stringify({from:"LHL Festas <contato@lhlfestas.com.br>",to,cc,bcc,subject,text:body,attachments}),
      signal:AbortSignal.timeout(15000)
     });
     const result = await response.json().catch(()=>({}));
