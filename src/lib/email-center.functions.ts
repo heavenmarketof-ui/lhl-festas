@@ -45,31 +45,22 @@ export const sendAdminEmail = createServerFn({ method: "POST" })
   if (!/^[^@ ,;<>]+@[^@ ,;<>]+[.][^@ ,;<>]+$/.test(to) || to.length > 254) throw new Error("Informe um e-mail de destino válido.");
   if (!subject || subject.length > 200) throw new Error("O assunto deve ter entre 1 e 200 caracteres.");
   if (!body || body.length > 50000) throw new Error("A mensagem deve ter entre 1 e 50.000 caracteres.");
-  const apiKey = getServerEnv("RESEND_API_KEY");
-  if (!apiKey) {
-   const { env: nativeEnv } = await import("cloudflare:workers");
-   const native = nativeEnv as unknown as Record<string, unknown>;
-   const bindings = (globalThis as typeof globalThis & { __LHL_RUNTIME_BINDINGS__?: Record<string, unknown> }).__LHL_RUNTIME_BINDINGS__;
-   const source = [native, bindings ?? {}];
-   const diagnostics = {
-    native: typeof native.RESEND_API_KEY === "string" && native.RESEND_API_KEY.length > 0,
-    request: typeof bindings?.RESEND_API_KEY === "string" && bindings.RESEND_API_KEY.length > 0,
-    mailTokenPresent: source.some((value) => typeof value.MAIL_ADMIN_TOKEN === "string" && value.MAIL_ADMIN_TOKEN.length > 0),
-    resendSimilarNames: source.some((value) => Object.keys(value).some((key) => key.includes("RESEND") && key !== "RESEND_API_KEY")),
-   };
-   console.error("Resend secret unavailable (presence only)", diagnostics);
-   throw new Error(`RESEND_API_KEY indisponível nesta implantação (diagnóstico: native=${Number(diagnostics.native)}, request=${Number(diagnostics.request)}, mail=${Number(diagnostics.mailTokenPresent)}, similar=${Number(diagnostics.resendSimilarNames)}).`);
-  }
-  const response = await fetch("https://api.resend.com/emails", {
+  const token = getServerEnv("MAIL_ADMIN_TOKEN");
+  const receiver = getServerServiceBinding("MAIL_RECEIVER");
+  if (!token || !receiver) throw new Error("Serviço de envio não configurado nesta implantação.");
+  const response = await receiver.fetch("https://lhl-email-receiver/internal/send", {
    method: "POST",
-   headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-   body: JSON.stringify({ from: "LHL Festas <contato@lhlfestas.com.br>", to: [to], subject, text: body }),
+   headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+   body: JSON.stringify({ to, subject, body }),
    signal: AbortSignal.timeout(15000),
   });
-  const payload = await response.json().catch(() => ({})) as { id?: string; message?: string };
+  const payload = await response.json().catch(() => ({})) as { id?: string; error?: string; status?: number };
   if (!response.ok || !payload.id) {
-   console.error("Mail send provider HTTP", response.status);
-   throw new Error(response.status === 403 ? "Domínio ainda não autorizado no provedor de envio." : "Falha ao enviar e-mail. Confira a configuração do provedor e tente novamente.");
+   console.error("Mail gateway HTTP", response.status, payload.status ?? "");
+   if (response.status === 404) throw new Error("Receptor ainda não atualizado com o serviço de envio.");
+   if (response.status === 503) throw new Error("Configure RESEND_API_KEY como segredo no Worker lhl-email-receiver.");
+   if (response.status === 401) throw new Error("Falha de autenticação entre os Workers.");
+   throw new Error("Falha ao enviar pelo provedor de e-mails. Consulte os registros do receptor.");
   }
   return { id: payload.id };
  });
