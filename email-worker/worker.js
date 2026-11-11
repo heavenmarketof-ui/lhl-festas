@@ -6,9 +6,37 @@ export default {
  async fetch(request, env) {
   const url = new URL(request.url);
   if (url.pathname === "/health") return json({ready: Boolean(env.MAIL_DB),service:"lhl-email-receiver"});
-  if (url.pathname !== "/internal/messages" || request.method !== "GET") return new Response("Not found",{status:404});
+  const isList = url.pathname === "/internal/messages" && request.method === "GET";
+  const isSend = url.pathname === "/internal/send" && request.method === "POST";
+  if (!isList && !isSend) return new Response("Not found",{status:404});
   const auth = request.headers.get("authorization");
   if (!env.MAIL_ADMIN_TOKEN || auth !== "Bearer " + env.MAIL_ADMIN_TOKEN) return json({error:"Unauthorized"},401);
+  if (isSend) {
+   if (!env.RESEND_API_KEY) return json({error:"Send service unavailable"},503);
+   let input;
+   try { input = await request.json(); } catch { return json({error:"Invalid JSON"},400); }
+   const to = typeof input?.to === "string" ? input.to.trim() : "";
+   const subject = typeof input?.subject === "string" ? input.subject.trim() : "";
+   const body = typeof input?.body === "string" ? input.body.trim() : "";
+   if (!/^[^@ ,;<>]+@[^@ ,;<>]+[.][^@ ,;<>]+$/.test(to) || to.length > 254 || !subject || subject.length > 200 || !body || body.length > 50000) return json({error:"Invalid message"},400);
+   try {
+    const response = await fetch("https://api.resend.com/emails",{
+     method:"POST",
+     headers:{"Authorization":"Bearer "+env.RESEND_API_KEY,"Content-Type":"application/json"},
+     body:JSON.stringify({from:"LHL Festas <contato@lhlfestas.com.br>",to:[to],subject,text:body}),
+     signal:AbortSignal.timeout(15000)
+    });
+    const result = await response.json().catch(()=>({}));
+    if (!response.ok || typeof result.id !== "string") {
+     console.error("Resend HTTP",response.status);
+     return json({error:"Provider rejected request",status:response.status},502);
+    }
+    return json({id:result.id});
+   } catch(error) {
+    console.error("Resend request failed",String(error));
+    return json({error:"Send request failed"},502);
+   }
+  }
   if (!env.MAIL_DB) return json({error:"Storage unavailable"},503);
   const result = await env.MAIL_DB.prepare("SELECT id,message_id,sender,recipient,subject,received_at,status,linked_contract_id,linked_lead_id FROM mail_messages ORDER BY received_at DESC LIMIT 100").all();
   return json({messages:result.results});
