@@ -201,6 +201,45 @@ function extractReceivedAttachments(raw:string):ReceivedAttachment[]{
  scan(raw,0);
  return results;
 }
+
+function embedSafeCidImages(raw:string,html:string):string{
+ const images=new Map<string,string>();
+ let total=0;
+ const scan=(source:string,depth:number)=>{
+  if(depth>10||images.size>=25)return;
+  const normalized=source.replace(/\r\n/g,"\n");
+  const split=normalized.indexOf("\n\n");
+  if(split<0)return;
+  const header=normalized.slice(0,split).replace(/\n[ \t]+/g," ");
+  const body=normalized.slice(split+2);
+  const get=(name:string)=>header.match(new RegExp("^"+name+":\\s*(.*)$","im"))?.[1]??"";
+  const type=get("Content-Type");
+  const boundary=type.match(/boundary\s*=\s*(?:"([^"]+)"|([^;\s]+))/i)?.[1]??type.match(/boundary\s*=\s*([^;\s]+)/i)?.[1];
+  if(/multipart\//i.test(type)&&boundary){
+   for(const chunk of body.split("--"+boundary).slice(1)){
+    if(chunk.startsWith("--"))break;
+    scan(chunk.replace(/^\n/,""),depth+1);
+   }
+   return;
+  }
+  const id=get("Content-ID").trim().replace(/^<|>$/g,"").toLowerCase();
+  const mime=type.split(";")[0].trim().toLowerCase();
+  if(!id||!["image/png","image/jpeg","image/gif","image/webp"].includes(mime))return;
+  if(!/base64/i.test(get("Content-Transfer-Encoding")))return;
+  const base64=body.replace(/\s/g,"");
+  if(!base64||base64.length>700000||!/^[A-Za-z0-9+/]*={0,2}$/.test(base64))return;
+  const size=Math.floor(base64.length*3/4);
+  if(total+size>2*1024*1024)return;
+  total+=size;
+  images.set(id,"data:"+mime+";base64,"+base64);
+ };
+ scan(raw,0);
+ return html.replace(/(\bsrc\s*=\s*)(["'])(cid:([^"']+))\2/gi,(full,prefix,quote,_url,id)=>{
+  const value=images.get(id.replace(/^<|>$/g,"").toLowerCase());
+  return value?prefix+quote+value+quote:full;
+ });
+}
+
 export type MailDetail = {id:string;sender:string;recipient:string;subject:string;received_at:string;body:string;html:string|null;attachments:ReceivedAttachment[]};
 export const readAdminEmail = createServerFn({method:"POST"})
  .validator((input:{accessToken:string;id:string})=>input)
@@ -212,5 +251,5 @@ export const readAdminEmail = createServerFn({method:"POST"})
   const payload=await response.json() as {message:Omit<MailDetail,"body">&{raw_message:string}};
   const raw=payload.message.raw_message;
   const parsed=parseReadableEmail(raw);
-  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:parsed.text,html:parsed.html,attachments:extractReceivedAttachments(raw)}};
+  return {message:{id:payload.message.id,sender:payload.message.sender,recipient:payload.message.recipient,subject:payload.message.subject,received_at:payload.message.received_at,body:parsed.text,html:parsed.html?embedSafeCidImages(raw,parsed.html):null,attachments:extractReceivedAttachments(raw)}};
  });
