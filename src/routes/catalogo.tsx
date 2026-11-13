@@ -20,9 +20,9 @@ export const Route = createFileRoute("/catalogo")({
   component: CatalogoPage,
   head: () => ({
     meta: [
-      { title: "Catálogo de Temas | LHL Festas" },
+      { title: "Catálogo de Capas | LHL Festas" },
       { name: "description", content: "Explore os temas disponíveis da LHL Festas para Festa na Mesa, Peg & Monte e projetos personalizados." },
-      { property: "og:title", content: "Catálogo de Temas | LHL Festas" },
+      { property: "og:title", content: "Catálogo de Capas | LHL Festas" },
       { property: "og:description", content: "Escolha seu tema e envie sua decoração preferida direto para o orçamento da LHL Festas." },
       { property: "og:url", content: "https://www.lhlfestas.com.br/catalogo" },
     ],
@@ -94,14 +94,14 @@ function CatalogoPage() {
       <header className="sticky top-0 z-40 border-b border-white/10 text-white shadow-lg" style={{ background: `linear-gradient(90deg, ${vinhoEscuro}, ${vinho})` }}>
         <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-4 md:px-8">
           <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium text-white/85 hover:text-white"><ArrowLeft className="h-4 w-4" /> Voltar</Link>
-          <div className="text-center"><div className="font-serif text-xl text-[#f4d49b]">Catálogo LHL Festas</div><div className="text-[10px] uppercase tracking-[.2em] text-white/60">Escolha seu tema</div></div>
-          <Link to="/orcamento" className="rounded-full px-4 py-2 text-sm font-semibold text-[#4a0d18] shadow" style={{ background: rosa }}>Orçamento</Link>
+          <div className="text-center"><div className="font-serif text-xl text-[#f4d49b]">Catálogo de Capas</div><div className="text-[10px] uppercase tracking-[.2em] text-white/60">Escolha seu tema</div></div>
+          <div className="flex flex-wrap items-center justify-end gap-2"><a href="https://lhl-catalogo-decoracoes.heavenmarketof.workers.dev/" className="rounded-full border border-white/40 px-3 py-2 text-xs font-semibold text-white hover:bg-white/10 sm:text-sm">Decorações</a><Link to="/orcamento" className="rounded-full px-4 py-2 text-sm font-semibold text-[#4a0d18] shadow" style={{ background: rosa }}>Orçamento</Link></div>
         </div>
       </header>
 
       <section className="border-b" style={{ borderColor: "#ead2c8", background: `linear-gradient(135deg, ${rosaClaro}, #fffaf4)` }}>
         <div className="mx-auto grid w-full max-w-[1600px] gap-8 px-4 py-10 md:px-8 lg:grid-cols-[1fr_1.1fr] lg:items-end lg:py-14">
-          <div><span className="text-xs font-semibold uppercase tracking-[.22em]" style={{ color: dourado }}>Catálogo de temas</span><h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[.95] sm:text-6xl lg:text-7xl">Encontre a decoração que combina com a sua festa.</h1><p className="mt-5 max-w-2xl text-base leading-relaxed text-[#6d4c49] sm:text-lg">Escolha a modalidade, pesquise pelo tema e envie sua opção favorita direto para o orçamento.</p></div>
+          <div><span className="text-xs font-semibold uppercase tracking-[.22em]" style={{ color: dourado }}>Catálogo de Capas</span><h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[.95] sm:text-6xl lg:text-7xl">Encontre a decoração que combina com a sua festa.</h1><p className="mt-5 max-w-2xl text-base leading-relaxed text-[#6d4c49] sm:text-lg">Explore nossas capas e temas disponíveis. Para visualizar montagens completas, acesse também o Catálogo de Decorações.</p></div>
           <div className="rounded-3xl border bg-white/80 p-5 shadow-sm" style={{ borderColor: "#e8cfc5" }}>
             <div className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9b7470]" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar tema: Stitch, Safari, Princesas..." className="w-full rounded-full border bg-white py-3.5 pl-12 pr-5 text-base outline-none" style={{ borderColor: "#dfc5bb" }} /></div>
             <div className="mt-4 flex flex-wrap gap-2">{modalities.map((m) => <button key={m} onClick={() => setModality(m)} className="rounded-full border px-4 py-2 text-sm font-semibold" style={{ background: modality === m ? vinho : "white", color: modality === m ? "white" : vinho, borderColor: modality === m ? vinho : "#dfc5bb" }}>{m}</button>)}</div>
@@ -119,7 +119,7 @@ function CatalogoPage() {
         <section id="tema-personalizado" className="mt-16 overflow-hidden rounded-[2rem] px-6 py-10 text-white shadow-xl md:px-10" style={{ background: `linear-gradient(120deg, ${vinhoEscuro}, ${vinho})` }}><h2 className="font-serif text-4xl sm:text-5xl">Quer algo totalmente personalizado?</h2><p className="mt-4 max-w-2xl text-sm text-white/75 sm:text-base">Envie sua ideia ou uma imagem de referência e nossa equipe prepara um orçamento sob medida.</p><a href="/orcamento?tipoSolicitacao=tema-personalizado&origem=catalogo" className="mt-6 inline-flex rounded-full px-6 py-3.5 text-sm font-semibold text-[#4a0d18]" style={{ background: rosa }}>Quero um tema personalizado</a></section>
       </main>
 
-      <footer className="mt-8 border-t border-white/10 px-5 py-8 text-white" style={{ background: "#390b12" }}><div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-4 md:flex-row"><div><div className="font-serif text-xl text-[#f0cf91]">LHL Festas</div><div className="mt-1 text-xs text-white/50">Transformamos momentos em memórias especiais.</div></div><div className="flex flex-wrap items-center justify-center gap-5 text-sm text-white/70"><Link to="/">Início</Link><Link to="/orcamento">Orçamento</Link><a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2"><Instagram className="h-4 w-4" /> @lhl_festas</a></div></div></footer>
+      <footer className="mt-8 border-t border-white/10 px-5 py-8 text-white" style={{ background: "#390b12" }}><div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-between gap-4 md:flex-row"><div><div className="font-serif text-xl text-[#f0cf91]">LHL Festas</div><div className="mt-1 text-xs text-white/50">Transformamos momentos em memórias especiais.</div></div><div className="flex flex-wrap items-center justify-center gap-5 text-sm text-white/70"><Link to="/">Início</Link><Link to="/orcamento">Orçamento</Link><a href="https://lhl-catalogo-decoracoes.heavenmarketof.workers.dev/">Catálogo de Decorações</a><a href="https://www.instagram.com/lhl_festas/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2"><Instagram className="h-4 w-4" /> @lhl_festas</a></div></div></footer>
       {selected && <ThemeModal theme={selected} onClose={() => setSelected(null)} />}
     </div>
   );
