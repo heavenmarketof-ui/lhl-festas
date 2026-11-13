@@ -66,4 +66,4 @@ export const feedbackImages = [fb01, fb02, fb03, fb04, fb05, fb06];
 export const extrasImages = [extras01, extras02, extras03];
 export const personalizadoImages = [personalizado01];
 export const retiradaImages = [retirada01];
-export const logoImages = ["/logo-lhl-oficial.webp", "/logo-lhl-oficial.webp", "/logo-lhl-oficial.webp", "/logo-lhl-oficial.webp"];
+export const logoImages = [logo01, logo02, logo03, logo04];
