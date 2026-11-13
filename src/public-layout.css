@@ -382,3 +382,6 @@ body:has(a[href="#opcoes"]) main > section:first-child > div > div:last-child > 
     );
   }
 }
+
+/* Recorte circular do novo logo: elimina os cantos pretos da imagem recebida. */
+img[src*="logo-lhl-oficial.webp"]{clip-path:circle(48.5% at 50% 50%)!important;border-radius:50%!important;background:transparent!important;}
