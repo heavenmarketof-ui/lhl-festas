@@ -125,11 +125,52 @@ async function proxyCatalogImage(request: Request): Promise<Response | null> {
   return new Response("Imagem indisponível", { status: 404, headers: { "cache-control": "public, max-age=300" } });
 }
 
+
+const DECORACOES_ORIGIN = "https://lhl-catalogo-decoracoes.heavenmarketof.workers.dev";
+
+async function proxyDecoracoes(request: Request): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (url.pathname !== "/decoracoes" && !url.pathname.startsWith("/decoracoes/")) return null;
+  const suffix = url.pathname.slice("/decoracoes".length);
+  const upstreamPath = !suffix || suffix === "/" ? "/" : suffix;
+  const target = new URL(upstreamPath + url.search, DECORACOES_ORIGIN);
+  try {
+    const upstream = await fetch(target.toString(), {
+      method: "GET",
+      headers: { Accept: request.headers.get("accept") || "*/*" },
+      redirect: "follow",
+      signal: AbortSignal.timeout(20_000),
+    });
+    const headers = new Headers(upstream.headers);
+    headers.delete("content-length");
+    headers.delete("content-encoding");
+    headers.delete("set-cookie");
+    headers.set("x-content-type-options", "nosniff");
+    if ((headers.get("content-type") || "").includes("text/html")) {
+      let html = await upstream.text();
+      html = html.replace(/<head>/i, '<head><base href="/decoracoes/">');
+      headers.set("cache-control", "public, max-age=120");
+      return new Response(html, { status: upstream.status, headers });
+    }
+    headers.set("cache-control", "public, max-age=300");
+    return new Response(upstream.body, { status: upstream.status, headers });
+  } catch (error) {
+    console.error("Falha no proxy do catálogo de decorações", error);
+    return new Response("Catálogo temporariamente indisponível. Tente novamente em instantes.", {
+      status: 502,
+      headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+    });
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       setRuntimeBindings(cloudflareEnv);
       setRuntimeBindings(env);
+
+      const decoracoes = await proxyDecoracoes(request);
+      if (decoracoes) return applyResponseSecurityHeaders(request, decoracoes);
 
       const catalogImage = await proxyCatalogImage(request);
       if (catalogImage) return catalogImage;
